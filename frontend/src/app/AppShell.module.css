@@ -1,0 +1,44 @@
+/* D-16: CSS modules consuming tokens.css, which stays the authority (U-02). */
+.shell {
+  min-height: 100vh;
+  background: var(--ds-ground);
+  color: var(--ds-text);
+  font: 400 var(--ds-t-md) / 1.5 var(--ds-font);
+}
+
+.nav {
+  display: flex;
+  gap: var(--ds-3);
+  align-items: center;
+  padding: var(--ds-3) var(--ds-4);
+  background: var(--ds-surface);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.link,
+.active {
+  display: flex;
+  align-items: center;
+  min-height: var(--ds-hit-setup);
+  padding: 0 var(--ds-3);
+  border-radius: var(--ds-r-input);
+  color: var(--ds-text-2);
+  text-decoration: none;
+}
+
+.active {
+  color: var(--ds-text);
+  background: var(--ds-raised);
+}
+
+.banner {
+  padding: var(--ds-3) var(--ds-4);
+  background: var(--ds-raised);
+  border-bottom: 1px solid var(--ds-error);
+  color: var(--ds-error);
+  font: 400 var(--ds-t-sm) / 1.5 var(--ds-mono);
+}
+
+.main {
+  padding: var(--ds-4);
+}

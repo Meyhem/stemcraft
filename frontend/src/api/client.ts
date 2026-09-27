@@ -1,0 +1,105 @@
+// Same-origin by construction (D-15): relative paths only, so dev goes through
+// the Vite proxy and prod hits the static mount. No base URL, no CORS.
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    ...init,
+    headers: { 'content-type': 'application/json', ...init?.headers },
+  });
+  if (!response.ok) {
+    // N-08: carry the server's real message to the UI, never a generic one.
+    const detail = await response.text();
+    throw new Error(`${init?.method ?? 'GET'} ${path} → ${response.status}: ${detail}`);
+  }
+  return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+}
+
+export const api = {
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}) }),
+  del: (path: string) => request<void>(path, { method: 'DELETE' }),
+};
+
+export interface DepCheck {
+  name: string;
+  ok: boolean;
+  detail: string;
+}
+
+export interface Health {
+  deps: DepCheck[];
+  device: string | null;
+  sample_rate: number;
+}
+
+export type JobState = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
+
+export interface Job {
+  id: number;
+  song_id: string | null;
+  kind: string;
+  payload: Record<string, unknown>;
+  state: JobState;
+  cancel_requested: boolean;
+  progress: number;
+  device: string | null;
+  lease_until: number | null;
+  created_at: number | null;
+  started_at: number | null;
+  finished_at: number | null;
+  error: string | null;
+  result: Record<string, unknown> | null;
+}
+
+// Mirrors packages/stemcraft_lib/src/stemcraft_lib/song.py (Song, StemMix,
+// Playback, Loop, Source) — the API's song.json, serialized as-is.
+export interface StemMix {
+  gain_db: number;
+  muted: boolean;
+}
+
+export interface Playback {
+  tempo: number;
+  pitch_semitones: number;
+}
+
+export interface Loop {
+  name: string;
+  start_bar: number;
+  end_bar: number;
+}
+
+export interface Source {
+  kind: 'upload' | 'url';
+  value: string;
+}
+
+export interface Song {
+  schema_version: number;
+  id: string;
+  title: string;
+  artist: string;
+  source: Source;
+  created_at: string;
+  last_played_at: string | null;
+  mix: Record<string, StemMix>;
+  playback: Playback;
+  loops: Loop[];
+}
+
+export type SongState = 'imported' | 'separated' | 'analyzed';
+
+// Mirrors Task 9's GET /api/songs entry shape (see stemcraft_api routes/songs.py:_entry):
+// a song that fails to parse is still listed, with `unreadable` set and everything else null.
+export interface SongEntry {
+  dir: string;
+  song: Song | null;
+  state: SongState | null;
+  unreadable: string | null;
+  files: {
+    has_audio: boolean;
+    has_peaks: boolean;
+    has_stems: boolean;
+    has_analysis: boolean;
+  } | null;
+}
