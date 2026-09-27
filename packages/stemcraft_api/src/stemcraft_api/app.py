@@ -36,6 +36,12 @@ def create_app() -> FastAPI:
     app.include_router(songs.router)
     app.include_router(jobs.router)
     app.include_router(ws.router)
+
+    cfg = settings()
+    if cfg.dist_dir is not None:
+        from .static import mount_spa
+
+        mount_spa(app, cfg.dist_dir)
     return app
 
 
