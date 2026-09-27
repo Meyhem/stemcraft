@@ -33,18 +33,24 @@ def _check_ffmpeg() -> DepCheck:
         return DepCheck("ffmpeg", False, "ffmpeg is not on PATH (C-04: the only audio I/O path)")
     with tempfile.TemporaryDirectory() as tmp:
         mp3 = Path(tmp) / "probe.mp3"
-        encode = subprocess.run(
-            [exe, "-hide_banner", "-nostdin", "-f", "lavfi", "-i",
-             f"sine=frequency=440:duration=0.1:sample_rate={SAMPLE_RATE}",
-             "-ac", "2", "-codec:a", "libmp3lame", "-y", str(mp3)],
-            capture_output=True, text=True, timeout=30,
-        )
+        try:
+            encode = subprocess.run(
+                [exe, "-hide_banner", "-nostdin", "-f", "lavfi", "-i",
+                 f"sine=frequency=440:duration=0.1:sample_rate={SAMPLE_RATE}",
+                 "-ac", "2", "-codec:a", "libmp3lame", "-y", str(mp3)],
+                capture_output=True, text=True, timeout=30,
+            )
+        except subprocess.TimeoutExpired:
+            return DepCheck("ffmpeg", False, "timed out after 30s waiting for ffmpeg to encode MP3")
         if encode.returncode != 0:
             return DepCheck("ffmpeg", False, f"MP3 encode failed: {encode.stderr.strip()[-500:]}")
-        decode = subprocess.run(
-            [exe, "-hide_banner", "-nostdin", "-i", str(mp3), "-f", "null", "-"],
-            capture_output=True, text=True, timeout=30,
-        )
+        try:
+            decode = subprocess.run(
+                [exe, "-hide_banner", "-nostdin", "-i", str(mp3), "-f", "null", "-"],
+                capture_output=True, text=True, timeout=30,
+            )
+        except subprocess.TimeoutExpired:
+            return DepCheck("ffmpeg", False, "timed out after 30s waiting for ffmpeg to decode MP3")
         if decode.returncode != 0:
             return DepCheck("ffmpeg", False, f"decode failed: {decode.stderr.strip()[-500:]}")
     return DepCheck("ffmpeg", True, exe)
@@ -55,7 +61,10 @@ def _check_yt_dlp() -> DepCheck:
     if exe is None:
         # R-04: currently absent on the host. C-08 makes it refuse-to-start.
         return DepCheck("yt-dlp", False, "yt-dlp is not on PATH (C-08: required, keep it updated)")
-    proc = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=30)
+    try:
+        proc = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        return DepCheck("yt-dlp", False, "timed out after 30s waiting for yt-dlp --version")
     if proc.returncode != 0:
         return DepCheck("yt-dlp", False, proc.stderr.strip()[-500:])
     return DepCheck("yt-dlp", True, f"{exe} ({proc.stdout.strip()})")
