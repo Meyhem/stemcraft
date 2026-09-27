@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response
 from stemcraft_lib import jobs as jobs_db
 from stemcraft_lib.config import settings
-from stemcraft_lib.song import SongUnreadable, derive_files, read_song
+from stemcraft_lib.song import SongUnreadable, derive_files, find_song_dir, read_song
 
 from ..deps import get_conn
 
@@ -47,10 +47,10 @@ def _song_dirs() -> list[Path]:
 
 
 def _find_dir(song_id: str) -> Path:
-    for candidate in _song_dirs():
-        if candidate.name.split("-", 1)[0] == song_id:
-            return candidate
-    raise HTTPException(status_code=404, detail=f"no song with id {song_id}")
+    song_dir = find_song_dir(settings().songs_dir, song_id)
+    if song_dir is None:
+        raise HTTPException(status_code=404, detail=f"no song with id {song_id}")
+    return song_dir
 
 
 @router.get("/api/songs")
