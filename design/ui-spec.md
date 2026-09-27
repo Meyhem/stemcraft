@@ -164,7 +164,7 @@ assuming it can vary.
    five explicit steps ending in "analyze", so the wait is legible rather than a spinner.
 3. **Song view** — the hard screen. Bar ruler, four full-height stem lanes with beat and
    downbeat grid, A–B region, chord strip aligned to bars, transport bar. A 320 px right
-   rail holds key candidates, saved loops, tempo-ramp state and count-in — all setup
+   rail holds key candidates, saved loops and count-in — all setup
    tier, all out of the way. Every value auto-saves to `song.json`.
 4. **Scale & fretboard** — bass or guitar, generated from the selected key candidate.
    Pure arithmetic; no model, no failure mode. The page says so, because the chips above
@@ -202,5 +202,3 @@ at the current bar · `M` metronome · `1`–`4` mute stem by lane position · `
   better feedback and worse for tracking where you are in the song.
 - **U-Q2** — Should the chord strip show the *next* chord as well as the current one?
   Useful while learning, and it costs vertical space the waveform wants.
-- **U-Q3** — Does the tempo-ramp ladder belong in the right rail (setup) or on the
-  transport (performance)? It is configured rarely and watched often, which splits it.

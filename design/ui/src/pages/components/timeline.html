@@ -1,11 +1,8 @@
-<!-- @dsCard group="Components" name="Timeline & loop" subtitle="Bar ruler, beat grid, A–B region, playhead, tempo ramp" viewport="1100x1420" -->
+<!-- @dsCard group="Components" name="Timeline & loop" subtitle="Bar ruler, beat grid, A–B region, playhead" viewport="1100x1170" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Timeline — Stemcraft</title><style>/* @inject */
 .tl{position:relative}
 .tl .lanes{position:relative}
 .tl .stem-lane{height:56px}
-.ramp-steps{display:flex;gap:var(--ds-2);align-items:center}
-.ramp-steps i{display:block;width:44px;height:8px;border-radius:var(--ds-r-pill);background:var(--ds-border-strong)}
-.ramp-steps i.on{background:var(--ds-accent)}
 </style></head><body><div class="doc">
 
 <div class="sec">
@@ -67,21 +64,6 @@
   </div>
 </div>
 
-<div class="sec">
-  <h2>Tempo ramp</h2>
-  <p class="note">Optional: start slow, step up after each repetition. The ladder shows where you are and where you
-  are heading, which is the only reason to look at the screen mid-loop.</p>
-  <div class="panel panel-pad col" style="gap:var(--ds-3)">
-    <div class="row" style="justify-content:space-between">
-      <span class="cap">tempo ramp · +5% every 2 repetitions</span>
-      <span class="chip chip-run"><i class="dot"></i>ramping</span>
-    </div>
-    <div class="ramp-steps">
-      <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i>
-      <span class="num t-sm dim" style="margin-left:var(--ds-3)">70% &rarr; <b style="color:var(--ds-text)">85%</b> &rarr; 100%</span>
-    </div>
-  </div>
-</div>
 
 <div class="sec">
   <h2>Why looping never seeks</h2>
