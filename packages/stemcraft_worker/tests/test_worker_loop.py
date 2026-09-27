@@ -110,3 +110,31 @@ def test_probe_kind_completes_and_reports_its_steps(conn):
     job_id = enqueue(conn, kind="probe", payload={"steps": 3, "step_seconds": 0.01})
     run_one(conn, device="cpu")
     assert get_job(conn, job_id).result == {"steps": 3}
+
+
+def test_reclaimed_lease_is_logged_at_restart(conn, caplog):
+    # §9: a worker that died holding a lease leaves the job 'running' with a
+    # lease_until in the past. Simulate that directly, exactly like
+    # packages/stemcraft_lib/tests/test_jobs_lease.py's own reclaim test does,
+    # by claiming with a negative lease_seconds instead of actually crashing
+    # a process. The restarted worker's first run_one() call must both
+    # requeue it AND log that it did, so an operator has something to grep
+    # for (this is the log line Task 14's review found missing).
+    register("t_reclaim_log", lambda ctx: {"ok": True})
+    job_id = enqueue(conn, kind="t_reclaim_log")
+    jobs_db.claim_next(conn, device="cpu", lease_seconds=-1)
+
+    with caplog.at_level("INFO", logger="stemcraft.worker"):
+        run_one(conn, device="cpu")
+
+    assert f"reclaimed expired lease(s) for job(s): [{job_id}]" in caplog.text
+
+
+def test_no_reclaim_log_when_nothing_is_expired(conn, caplog):
+    register("t_no_reclaim_log", lambda ctx: {"ok": True})
+    enqueue(conn, kind="t_no_reclaim_log")
+
+    with caplog.at_level("INFO", logger="stemcraft.worker"):
+        run_one(conn, device="cpu")
+
+    assert "reclaimed expired lease" not in caplog.text

@@ -34,7 +34,9 @@ def _renew_until(stop: threading.Event, db_path, job_id: int) -> None:
 
 
 def run_one(conn: sqlite3.Connection, *, device: str) -> int | None:
-    jobs_db.reclaim_expired(conn)
+    reclaimed = jobs_db.reclaim_expired(conn)
+    if reclaimed:
+        log.info("reclaimed expired lease(s) for job(s): %s", reclaimed)
     job = jobs_db.claim_next(conn, device=device)
     if job is None:
         return None

@@ -184,16 +184,20 @@ lease was noticed, and `claim_next()` picked it straight back up. The Job
 Queue screen (still open, no reload) showed the job flip from stalled
 `running` straight to a fresh `running` climb without any user action.
 
-**Finding:** the brief's expected behaviour says "the restarted worker logs
-a reclaim." As implemented, `reclaim_expired()`
-(`packages/stemcraft_lib/src/stemcraft_lib/jobs.py:236`) returns the list of
+**Resolved:** the brief's expected behaviour says "the restarted worker logs
+a reclaim." At the time this verification was first run, `reclaim_expired()`
+(`packages/stemcraft_lib/src/stemcraft_lib/jobs.py:236`) returned the list of
 reclaimed job ids but neither it nor its caller in
-`packages/stemcraft_worker/src/stemcraft_worker/main.py::run_one` logs
-anything when that list is non-empty. The *mechanism* is fully correct and
-verified above (job requeued, progress reset, re-run from the start, visible
-live in the UI) — there's just no explicit "reclaimed job 4" log line to grep
-for operationally. Worth a follow-up: log `reclaim_expired()`'s return value
-in `run_one` when it's non-empty.
+`packages/stemcraft_worker/src/stemcraft_worker/main.py::run_one` logged
+anything when that list was non-empty — the mechanism was correct (job
+requeued, progress reset, re-run from the start, visible live in the UI, all
+verified above) but there was no explicit "reclaimed job 4" log line to grep
+for operationally. `run_one` now logs
+`"reclaimed expired lease(s) for job(s): %s"` at INFO on `stemcraft.worker`
+whenever `reclaim_expired()` returns a non-empty list, covered by
+`test_reclaimed_lease_is_logged_at_restart` and
+`test_no_reclaim_log_when_nothing_is_expired` in
+`packages/stemcraft_worker/tests/test_worker_loop.py`.
 
 The job was cancelled afterward to avoid waiting out its full 60s runtime:
 
