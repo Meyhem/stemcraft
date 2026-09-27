@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Inline the token/component CSS into each preview page and expand
 @wave / @fret macros into real SVG. Each card must render standalone."""
-import math, pathlib, random, re, shutil, sys
+import math
+import pathlib
+import random
+import re
+import shutil
+import sys
 
 ROOT = pathlib.Path(__file__).parent
 SRC, DIST = ROOT / "src", ROOT / "dist"
@@ -54,29 +59,51 @@ def fretboard(inst, root, scale, frets=12, w=880):
     for f in range(frets + 1):
         x = nut + fw * f
         col, wd = ("var(--ds-text-2)", 4) if f == 0 else ("var(--ds-border-strong)", 1.5)
-        o.append(f'<line x1="{x:.1f}" y1="{top-8}" x2="{x:.1f}" y2="{top+sh*(len(strings)-1)+8}" stroke="{col}" stroke-width="{wd}"/>')
+        y2 = top + sh * (len(strings) - 1) + 8
+        o.append(
+            f'<line x1="{x:.1f}" y1="{top-8}" x2="{x:.1f}" y2="{y2}" '
+            f'stroke="{col}" stroke-width="{wd}"/>'
+        )
     # inlays
     for f in (3, 5, 7, 9, 12):
-        if f > frets: continue
+        if f > frets:
+            continue
         x = nut + fw * (f - 0.5)
-        o.append(f'<text x="{x:.1f}" y="{h-10}" fill="var(--ds-text-3)" font-size="13" font-family="ui-monospace,monospace" text-anchor="middle">{f}</text>')
+        o.append(
+            f'<text x="{x:.1f}" y="{h-10}" fill="var(--ds-text-3)" font-size="13" '
+            f'font-family="ui-monospace,monospace" text-anchor="middle">{f}</text>'
+        )
     # strings + notes
     for si, base in enumerate(strings):
         y = top + sh * si
-        o.append(f'<line x1="{nut}" y1="{y}" x2="{w-right}" y2="{y}" stroke="var(--ds-border-strong)" stroke-width="{1+si*0.55:.1f}"/>')
-        o.append(f'<text x="{nut-14}" y="{y+5}" fill="var(--ds-text-3)" font-size="13" font-family="ui-monospace,monospace" text-anchor="middle">{NAMES[base%12]}</text>')
+        o.append(
+            f'<line x1="{nut}" y1="{y}" x2="{w-right}" y2="{y}" '
+            f'stroke="var(--ds-border-strong)" stroke-width="{1+si*0.55:.1f}"/>'
+        )
+        o.append(
+            f'<text x="{nut-14}" y="{y+5}" fill="var(--ds-text-3)" font-size="13" '
+            f'font-family="ui-monospace,monospace" text-anchor="middle">{NAMES[base%12]}</text>'
+        )
         for f in range(frets + 1):
             pc = (base + f) % 12
             deg = (pc - rootpc) % 12
-            if deg not in degs: continue
+            if deg not in degs:
+                continue
             x = nut + (fw * 0.5 if f == 0 else fw * (f - 0.5))
-            if f == 0: x = nut - 0 + fw * 0.5
+            if f == 0:
+                x = nut - 0 + fw * 0.5
             isroot = deg == 0
             fill = "var(--ds-bass)" if isroot else "var(--ds-raised)"
             stroke = "var(--ds-bass)"
             txt = "var(--ds-ground)" if isroot else "var(--ds-text)"
-            o.append(f'<circle cx="{x:.1f}" cy="{y}" r="14" fill="{fill}" stroke="{stroke}" stroke-width="2"/>')
-            o.append(f'<text x="{x:.1f}" y="{y+5}" fill="{txt}" font-size="13" font-weight="700" font-family="ui-sans-serif,sans-serif" text-anchor="middle">{NAMES[pc]}</text>')
+            o.append(
+                f'<circle cx="{x:.1f}" cy="{y}" r="14" fill="{fill}" '
+                f'stroke="{stroke}" stroke-width="2"/>'
+            )
+            o.append(
+                f'<text x="{x:.1f}" y="{y+5}" fill="{txt}" font-size="13" font-weight="700" '
+                f'font-family="ui-sans-serif,sans-serif" text-anchor="middle">{NAMES[pc]}</text>'
+            )
     o.append("</svg>")
     return "".join(o)
 
@@ -93,7 +120,8 @@ def expand(t):
 
 
 def main():
-    if DIST.exists(): shutil.rmtree(DIST)
+    if DIST.exists():
+        shutil.rmtree(DIST)
     DIST.mkdir(parents=True)
     n = 0
     for p in sorted((SRC / "pages").rglob("*.html")):

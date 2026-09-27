@@ -66,7 +66,8 @@ def get_song(song_id: str) -> dict:
 @router.delete("/api/songs/{song_id}", status_code=204)
 def delete_song(song_id: str, conn: Conn) -> Response:
     song_dir = _find_dir(song_id)
-    live = [j for j in jobs_db.list_jobs(conn, states=("queued", "running")) if j.song_id == song_id]
+    running = jobs_db.list_jobs(conn, states=("queued", "running"))
+    live = [j for j in running if j.song_id == song_id]
     if live:
         ids = ", ".join(str(j.id) for j in live)
         raise HTTPException(
