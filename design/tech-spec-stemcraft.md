@@ -490,6 +490,10 @@ Asserted here but **not** confirmed by the user.
   (C-06)
 - Parallel job execution (C-07)
 - Note-perfect transcription; tabs are a starting point, never a promise
+- Isolating one player from another *within* a stem — rhythm versus lead guitar, lead
+  versus harmony vocals. Separation is per source class, never per performer; no
+  available model changes this. Investigated and declined (domain spec, "What the four
+  stems can and cannot do"), which is also why `htdemucs_6s` is not adopted
 - High availability, clustering, replication, or any multi-machine concern
 - TLS, encryption at rest, audit logging, compliance regimes (§8)
 - Mobile-optimized UI or mobile performance work (A-02)

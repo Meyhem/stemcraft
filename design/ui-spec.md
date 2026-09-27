@@ -85,6 +85,17 @@ hit-target tiers rather than one.
   step reads cleanly.
   *Reversibility:* two-way.
 
+- **U-10 — A near-silent stem is marked, not left blank.**
+  *Because:* the four stems are fixed at training time, so a song with no vocals still
+  produces a `vocals.wav` of near-silence plus bleed (domain spec, "What the four stems
+  can and cannot do"). An unexplained flat lane reads as breakage, which is the silent
+  degradation N-08 exists to prevent. The threshold is derived by the worker from
+  `peaks.json`, which it already writes — no new analysis, no new file, and nothing
+  stored, consistent with deriving Song state from what exists on disk.
+  *Rejected:* hiding the lane (breaks the fixed four-lane order that U-01 depends on for
+  identity); showing it unmarked (the failure this decision exists to fix).
+  *Reversibility:* two-way.
+
 - **U-09 — Every failure surface shows the real message from the real tool.** ffmpeg
   stderr, yt-dlp stderr, the Python traceback, verbatim, in mono, copyable.
   *Because:* N-08. Also §9 — a retained `original.*` makes retry free, so an honest
@@ -123,7 +134,7 @@ other), a permanent text label, and a fixed lane position; hue is an accelerator
 | Key candidate chip | setup | always plural, always with confidence (R-05) |
 | Text field, drop zone, checkbox, segmented | setup | |
 | Slider | both | tempo/pitch are performance (14 px track, 32 px knob); gain is setup. **Every slider mirrors its value as a mono readout** — a knob position is unreadable at 1.5 m. Gain fill takes the stem hue; tempo fill takes the accent |
-| Stem strip | performance | the signature component. M/S are 56×44. A muted lane drops to 28 % opacity so the mute is visible across a room, not just as a toggle |
+| Stem strip | performance | the signature component. M/S are 56×44. A muted lane drops to 28 % opacity so the mute is visible across a room, not just as a toggle. A **near-silent** lane (U-10) dims its waveform to 16 %, carries an explanatory pill, and renders M/S inert |
 | Timeline | — | bar ruler, beat grid (faint) and downbeat grid (bright), A–B region with bar labels, playhead |
 | Transport bar | performance | bar number in display/48 mono; untouched tempo/pitch values render muted |
 | Banner | — | warn and error; carries the verbatim trace (U-09) |
@@ -136,6 +147,11 @@ interactive element must carry its own padded hit area meeting U-03; the track i
 decoration inside it.
 
 ## 6. Screens
+
+Stem count is **fixed at four** — `vocals`, `drums`, `bass`, `other` — and the palette,
+the fixed lane order and the `1`–`4` mute shortcuts all depend on that. This is a
+property of the separation model, not a configuration; see the domain spec before
+assuming it can vary.
 
 1. **Song library** — card grid sorted by last played. Each card shows a mix-waveform
    thumbnail, title, artist, key candidate, BPM, duration, and a one-line practice

@@ -2,7 +2,7 @@
 
 Sep 27, 2026 · @Michal
 
-A self-hosted, single-user web app that splits a song into stems so a guitar, bass or drum player can mute their instrument and play along. Python backend, React web UI, runs on one home machine with GPU acceleration and a CPU fallback.
+A self-hosted, single-user web app that splits a song into stems so a bass or drum player can mute their instrument and play along. Guitar is not served — see [What the four stems can and cannot do](#what-the-four-stems-can-and-cannot-do). Python backend, React web UI, runs on one home machine with GPU acceleration and a CPU fallback.
 
 ## Overview
 
@@ -150,6 +150,36 @@ Anything ffmpeg can decode is accepted — no format whitelist.
 - Default model HTDemucs v4; stems are written once and never modified
 - Runs on GPU when usable, otherwise CPU with a warning banner and an upfront time estimate
 - Checkpoints between stages so a cancel lands cleanly
+
+#### What the four stems can and cannot do
+
+The four stems are **fixed at training time**, not configured and not detected. HTDemucs
+v4 emits `vocals`, `drums`, `bass` and `other` unconditionally for any input; there is no
+step that identifies which instruments are present. Two consequences are permanent, and
+both were investigated and accepted rather than overlooked.
+
+**A stem can be empty.** A song with no vocals still produces `vocals.wav` — near-silence
+plus separation bleed. The UI marks such a lane rather than showing an unexplained flat
+waveform.
+
+**Guitar is not separable, and this is why the primary user is bass-first.** Guitar lands
+in `other` together with keys, synths, horns and strings, so muting `other` removes most
+of the arrangement. The apparent fix — `htdemucs_6s`, which adds `guitar` and `piano` —
+does not work either, for a reason that no model can solve: these are **source-class**
+separators, one channel per instrument class. Rhythm and lead guitar are the same class,
+so they land in the same channel. Muting it to play the lead also removes the rhythm part
+you wanted to play against.
+
+Rhythm-versus-lead is a *musical role*, not a timbre, so query- and text-conditioned
+separators cannot distinguish them either. The signals that do differ are production
+artefacts — panning of double-tracked rhythm parts, register, monophonic line versus
+chords — and exploiting them (mid/side decomposition, band-splitting,
+melody/accompaniment separation) is unreliable enough to be worse than not offering it.
+
+**Decision: stay at four stems.** Bass and drums are well served because each is
+reliably a single centred source. Guitar practice is out of scope (tech spec §16). A
+player wanting to work against a guitar part should lower the `other` gain rather than
+mute it.
 
 ### Analysis
 

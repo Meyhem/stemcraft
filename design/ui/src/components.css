@@ -232,3 +232,15 @@ body{
 .sec{display:flex;flex-direction:column;gap:var(--ds-3)}
 .note{font-size:var(--ds-t-sm);color:var(--ds-text-2);max-width:72ch}
 .note b{color:var(--ds-text);font-weight:600}
+
+/* ---------- near-silent stem (a stem can be empty; see domain spec) ---------- */
+.stem-row.silent .stem-ctl{opacity:.55}
+.stem-row.silent .ms button{pointer-events:none}
+.stem-lane.silent svg{opacity:.16}
+.silent-note{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.silent-note > span{
+  display:inline-flex;align-items:center;gap:var(--ds-2);
+  font:600 var(--ds-t-sm)/1 var(--ds-font);color:var(--ds-text-3);
+  background:var(--ds-ground);border:1px solid var(--ds-border);
+  border-radius:var(--ds-r-pill);padding:var(--ds-2) var(--ds-4);
+}

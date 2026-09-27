@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Stem strips" subtitle="The signature component: mute/solo/gain + lane, 4 fixed stems" viewport="1100x1845" -->
+<!-- @dsCard group="Components" name="Stem strips" subtitle="The signature component: mute/solo/gain + lane, 4 fixed stems" viewport="1100x2650" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Stem strips — Stemcraft</title><style>/* @inject */
 .stem-lane{height:78px}
 .mixer{border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden;background:var(--ds-surface)}
@@ -114,6 +114,57 @@
       <div class="stem-lane muted"><!--@wave other 1200 78 44--></div>
     </div>
   </div>
+</div>
+
+<div class="sec">
+  <h2>Near-silent stem — a stem can be empty</h2>
+  <p class="note">The four stems are fixed at training time, so a song with no vocals still produces a
+  <span class="num">vocals.wav</span> — near-silence plus separation bleed. Without a marker this renders as an
+  unexplained flat lane, and the natural reading is &ldquo;something broke&rdquo;. The lane says what it is instead, and its
+  M/S become inert: there is nothing to mute.</p>
+  <div class="mixer">
+    <div class="stem-row stem stem-v silent">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>vocals</div>
+        <div class="ms"><button data-k="m" aria-disabled="true">M</button><button data-k="s" aria-disabled="true">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane silent">
+        <!--@wave vocals 1200 78 11 0.03-->
+        <span class="silent-note"><span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>
+          near-silent &mdash; this mix has no vocals
+        </span></span>
+      </div>
+    </div>
+    <div class="stem-row stem stem-d">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>drums</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane"><!--@wave drums 1200 78 22--></div>
+    </div>
+    <div class="stem-row stem stem-b">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>bass</div>
+        <div class="ms"><button data-k="m" aria-pressed="true">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane muted"><!--@wave bass 1200 78 33--></div>
+    </div>
+    <div class="stem-row stem stem-o">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>other</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane"><!--@wave other 1200 78 44--></div>
+    </div>
+  </div>
+  <p class="note">The threshold is computed by the worker from <span class="num">peaks.json</span>, which it already
+  writes &mdash; no new analysis and no new file. &ldquo;Near-silent&rdquo; is a property of the peaks, so it is
+  <b>derived, not stored</b>, consistent with how every other Song state works.</p>
 </div>
 
 </div></body></html>
