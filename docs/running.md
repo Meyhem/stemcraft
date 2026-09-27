@@ -323,6 +323,105 @@ Verifications 1, 2 and 3 could exercise a genuinely healthy boot. Anyone
 reproducing this on a fresh machine needs to do the same before the API or
 worker will start at all.
 
+## Verification 5 — Phase 2 import, real ffmpeg and yt-dlp (2026-09-27)
+
+Run against the real worker and API (not mocks) with `ffmpeg` 6.1.1 and
+`yt-dlp` 2026.08.19 actually installed and exercised, to check the
+roadmap's Phase 2 exit criteria against real processes the way Verification
+1–4 did for Phase 1. Both booted clean against a fresh `STEMCRAFT_DATA_DIR`
+/ `STEMCRAFT_SONGS_DIR`:
+
+```
+2026-09-27 16:25:49 INFO stemcraft.worker dependency ok: ffmpeg (/usr/bin/ffmpeg)
+2026-09-27 16:25:49 INFO stemcraft.worker dependency ok: yt-dlp (/usr/local/bin/yt-dlp (2026.08.19))
+2026-09-27 16:25:49 INFO stemcraft.worker worker ready on device=cpu, ...
+INFO:stemcraft.api:dependency ok: ffmpeg (/usr/bin/ffmpeg)
+INFO:stemcraft.api:dependency ok: yt-dlp (/usr/local/bin/yt-dlp (2026.08.19))
+INFO:     Application startup complete.
+```
+
+**File import**, a tagged MP3 (`title=Sample Track`, `artist=Sample Artist`,
+3 s):
+
+```
+curl -s -X POST localhost:8000/api/songs/upload -F "file=@fixture.mp3;type=audio/mpeg"
+# -> {"song": {"id": "01M3HV015PHKG404GYX4R94N49", "title": "Sample Track",
+#              "artist": "Sample Artist", "source": {"kind":"upload","value":"original.mp3"}, ...},
+#     "job_id": 1}
+```
+
+Both fields were left blank on the request and prefilled from the file's own
+tags (domain spec, "Import"), never asked for. The `import` job finished in
+under a second:
+
+```
+{"id": 1, "kind": "import", "state": "done", "progress": 1.0,
+ "result": {"duration_seconds": 3.0}}
+```
+
+```
+$ python3 -c "import wave; w=wave.open('.../audio.wav'); print(w.getframerate(), w.getnchannels(), w.getnframes())"
+48000 2 144000
+$ python3 -c "import json; d=json.load(open('.../peaks.json')); print({k:v for k,v in d.items() if k!='peaks'}, len(d['peaks'][0]))"
+{'version': 1, 'sample_rate': 48000, 'length': 144000, 'channels': 2, 'buckets_per_second': 100} 600
+```
+
+48 kHz stereo, exactly — the roadmap's own exit criterion, asserted here
+against a real process and not just in `test_ffmpeg.py`.
+
+**URL import**, against a loopback HTTP server (not the live internet, but
+the same yt-dlp generic-extractor code path a real URL exercises):
+
+```
+python3 -m http.server 8971 --directory /tmp/stemcraft_e2e &
+curl -s -X POST localhost:8000/api/songs/from-url -d '{
+  "url":"http://127.0.0.1:8971/fixture.mp3","title":"URL Import Song","artist":"Someone Else"}'
+# -> {"song": {"source": {"kind":"url","value":"http://127.0.0.1:8971/fixture.mp3"}}, "job_id": 2}
+```
+
+The song directory had no `original.*` at creation time (nothing to save
+before the download runs); the `import` job downloaded it via yt-dlp, then
+decoded and computed peaks identically to the upload path — job 2 finished
+`done` in ~1 s with `audio.wav` at 48 kHz stereo.
+
+**Corrupt file** (roadmap's third exit criterion):
+
+```
+echo "not actually audio, just garbage bytes" > garbage.mp3
+curl -s -X POST localhost:8000/api/songs/upload -F "file=@garbage.mp3;type=audio/mpeg" -F "title=Garbage"
+```
+
+The `import` job failed with ffmpeg's own message, verbatim, in the job's
+`error` column:
+
+```
+"error": "Traceback (most recent call last):\n  ...\nstemcraft_lib.ffmpeg.FfmpegError: decode of .../original.mp3 failed: [mp3 @ 0x...] Format mp3 detected only with low score of 1, misdetection possible!\n[mp3 @ 0x...] Failed to read frame size: Could not seek to 1062.\n..."
+```
+
+`original.mp3` still held the same 39 bytes afterward (never modified or
+deleted, retry costs nothing) and no `audio.wav` was left behind partial —
+`atomic_output`'s failure path removes the temp file before ffmpeg ever gets
+to rename anything into place.
+
+```
+$ curl -s localhost:8000/api/songs | python3 -c "..."
+3 songs
+01M3HV015PHKG404GYX4R94N49-fixture           Sample Track
+01M3HV0R3F0QP3RHJKQKD0Z2P2-url-import-song   URL Import Song
+01M3HV156VC60XTJ744MCWAZXY-garbage           Garbage
+```
+
+The built SPA (`npm run build` + `STEMCRAFT_DIST_DIR`) served `/` and
+`/import` at `200 text/html` throughout, i.e. D-15's prod path still holds
+with the new routes added. This run verified the API/worker/ffmpeg/yt-dlp
+integration by curl rather than by driving the Library and Import screens
+in an actual browser (no interactive browser was available in this
+session); the DOM-level behavior of those two screens — form submission,
+error rendering, delete-with-confirm — is covered instead by
+`Library.test.tsx` and `Import.test.tsx` (vitest + Testing Library), which
+mock `fetch` rather than a real backend. Both layers were exercised; neither
+alone would have caught everything the other does.
+
 ## Summary
 
 | What | Port | Dev | Prod |
