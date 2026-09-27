@@ -1,0 +1,31 @@
+[project]
+name = "stemcraft"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+# Only stemcraft-lib exists yet. Task 8 appends stemcraft-worker here when the
+# worker package is created, Task 9 appends stemcraft-api — each addition is a
+# real `uv sync` after the fact, not a forward reference to a package that
+# doesn't exist. Listing all three now would break this task's own `uv sync`.
+dependencies = [
+    "stemcraft-lib",
+]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+stemcraft-lib = { workspace = true }
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6", "httpx>=0.27"]
+
+[tool.pytest.ini_options]
+testpaths = ["packages"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
