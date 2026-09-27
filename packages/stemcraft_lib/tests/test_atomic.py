@@ -1,0 +1,38 @@
+import json
+
+import pytest
+from stemcraft_lib.atomic import atomic_write_bytes, atomic_write_json
+
+
+def test_writes_content_and_creates_parents(tmp_path):
+    target = tmp_path / "nested" / "f.bin"
+    atomic_write_bytes(target, b"hello")
+    assert target.read_bytes() == b"hello"
+
+
+def test_leaves_no_temp_files_behind(tmp_path):
+    atomic_write_bytes(tmp_path / "f.bin", b"x")
+    assert [p.name for p in tmp_path.iterdir()] == ["f.bin"]
+
+
+def test_failed_write_leaves_previous_file_intact(tmp_path, monkeypatch):
+    target = tmp_path / "f.json"
+    atomic_write_json(target, {"v": 1})
+
+    def boom(*_args, **_kwargs):
+        raise OSError("No space left on device")
+
+    monkeypatch.setattr("os.replace", boom)
+    with pytest.raises(OSError):
+        atomic_write_json(target, {"v": 2})
+
+    # §9 disk full: a failed write leaves the previous good file intact.
+    assert json.loads(target.read_text()) == {"v": 1}
+    assert [p.name for p in tmp_path.iterdir()] == ["f.json"]
+
+
+def test_json_is_readable_and_stable(tmp_path):
+    target = tmp_path / "f.json"
+    atomic_write_json(target, {"b": 2, "a": 1})
+    assert target.read_text().endswith("\n")
+    assert json.loads(target.read_text()) == {"a": 1, "b": 2}
