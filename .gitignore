@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.vite/
+
+# Stemcraft runtime data — never commit audio or job state
+data/
+songs/
+models/
+*.wav
+*.mp3
+*.opus
+*.flac
+
+# Env / editor / OS
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.swp
+.DS_Store
