@@ -29,7 +29,7 @@ The browser talks only to the API. The API and worker never call each other; the
 
 | Layer | Choice |
 | --- | --- |
-| Frontend | React, wavesurfer.js v7 (multitrack + regions), Web Audio; live tempo/pitch via a WASM time-stretch AudioWorklet (Rubber Band or SoundTouch port) |
+| Frontend | React + TypeScript on Vite (npm), React Router, TanStack Query over REST, CSS modules over the design tokens; wavesurfer.js v7 for waveforms and regions only, Web Audio for playback; live tempo/pitch via a WASM time-stretch AudioWorklet (SoundTouch port, Rubber Band open) |
 | API | FastAPI + Uvicorn, WebSocket for job progress |
 | Worker | Plain Python process polling jobs.sqlite; models loaded once at boot |
 | Audio I/O | ffmpeg (assumed installed), soundfile, pyrubberband |

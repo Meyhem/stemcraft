@@ -8,9 +8,10 @@ bundle is `design/ui/`; `python3 design/ui/build.py` regenerates `design/ui/dist
 ## 1. What this covers
 
 The visual and interaction system for the SPA: tokens, components, and the seven
-screens. It does not choose a React component library or a styling runtime — it
-defines what those must produce. Tokens are CSS custom properties precisely so that
-decision stays open (U-02).
+screens. It does not choose a React component library — it defines what one must
+produce. Tokens are CSS custom properties precisely so that decision stays open (U-02);
+the styling runtime that consumes them is now settled as CSS modules (D-16), and the
+component library remains open (Q-05).
 
 ## 2. The constraint that shapes everything
 
@@ -43,6 +44,9 @@ hit-target tiers rather than one.
   *Rejected:* a Tailwind config as source of truth (couples the design system to one
   styling runtime before it is chosen).
   *Reversibility:* two-way.
+  *Since settled:* the styling runtime is CSS modules (D-16), chosen *over* these
+  tokens rather than in place of them — `tokens.css` remains the authority, which is the
+  point of U-02 and why D-16 was cheap to make.
 
 - **U-03 — Two hit-target tiers: performance 56 px, setup 40 px, floor 32 px.**
   *Because:* U-C1. A single density either makes the transport too small to hit with a

@@ -284,7 +284,8 @@ audit requirement exists.
   No container, no GPU passthrough layer.
 - **Process management:** two systemd user units, API and worker, with restart-on-
   failure. Restart is the primary recovery mechanism for everything in §9.
-- **Deploy:** `git pull`, `uv sync`, build the SPA, restart both units. Rollback is a
+- **Deploy:** `git pull`, `uv sync`, `npm ci && npm run build` for the SPA (D-12),
+  restart both units. Rollback is a
   checkout of the previous commit. Model weights live outside the repo and survive.
 - **Observability sized to one user:** structured logs to the journal, and the Job
   Queue screen as the real operational dashboard — per-job state, duration, device,
@@ -403,6 +404,77 @@ audit requirement exists.
   *Reversibility:* two-way and cheap — bind address is config, auth is middleware.
   *Cost:* R-03.
 
+- **D-12 — TypeScript throughout the SPA, built with Vite, dependencies via npm.**
+  *Because:* the engine's correctness rests on integer sample indices at 48 kHz (D-03)
+  and on never confusing a sample index with a float second — exactly the class of
+  mistake a branded type catches for free, in the one component that cannot be
+  assembled from libraries. Vite gives one config for both the dev server and the
+  production bundle (D-15), and npm needs no tool beyond Node on a host that already
+  tracks `uv` and `yt-dlp` currency.
+  *Rejected:* plain JS (discards the only cheap guard on the sample-index invariant);
+  Next.js or any SSR framework (there is nothing to server-render — one client, a Web
+  Audio engine, and C-01 makes SEO and cold start meaningless); pnpm (marginal on one
+  machine, one more tool to keep current).
+  *Reversibility:* two-way.
+  *Cost:* the time-stretch AudioWorklet and its WASM must be emitted as their own
+  entry rather than bundled into the main graph. Known Vite friction, not a blocker.
+
+- **D-13 — REST plus TanStack Query for server state; no global store for anything the
+  server owns.**
+  *Because:* all server state here is derived from which files exist (D-01), so the
+  client has no domain model to maintain — only a cache of what the API last said, which
+  is what Query is. That makes the WebSocket a pure invalidation signal: a job event
+  invalidates the song's key and the refetch does the rest, which is what makes §6's
+  "dropping the socket loses liveness, never data" true on the client as well. Song
+  mutations are whole-document writes under last-write-wins (§5), so a mutation is a PUT
+  plus an invalidate, with no local reducer to reconcile.
+  *Rejected:* Redux or Zustand as the primary store (copies the server's derived state
+  into a second source of truth and invites the status field §5 forbids); fetch +
+  `useEffect` by hand (re-implements caching, dedup and refetch, worse); GraphQL or tRPC
+  (a schema layer for one unversioned internal consumer).
+  *Scope:* server state only. Transport and engine state — play position, gains, loop
+  bounds, stretch ratio — live in the engine and in refs, never in Query and never in
+  React state at audio rate (U-05).
+  *Reversibility:* two-way.
+
+- **D-14 — React Router, one route per screen, song id in the path.**
+  *Because:* the seven screens in `design/ui/` are already separate destinations, and a
+  practice session wants a link a phone on the LAN can bookmark (C-05). The song id is
+  the only parameter the app needs.
+  *Rejected:* conditional rendering with no router (loses back button and deep links);
+  TanStack Router or file-based routing (machinery for seven mostly-static routes).
+  *Reversibility:* two-way.
+
+- **D-15 — Vite dev server in development; FastAPI serves the built bundle in
+  production.**
+  *Because:* production is genuinely one origin, and Vite's proxy for `/api` and the
+  WebSocket makes development one origin too — so no CORS middleware exists in the API
+  at all, and dev cannot diverge from prod at the layer where origin bugs hide. Serving
+  the built bundle from a static mount keeps §6's "the SPA and API deploy together from
+  one repo" literally true: one unit serves both, and a stale bundle is impossible.
+  *Rejected:* CORS-enabled API with the browser calling `:8000` directly (adds
+  middleware production never needs, and makes dev the only place origins differ);
+  nginx or Caddy in front (a third process to operate for one static directory);
+  rebuilding on change instead of a dev server (loses HMR, which is most of Vite's value
+  while the engine is being tuned).
+  *Reversibility:* two-way.
+  *Cost:* in dev the proxy sits in the path of multi-megabyte `.opus` fetches, and must
+  be configured to proxy WebSockets or job progress fails in development only. Vite must
+  bind `0.0.0.0` for C-05.
+
+- **D-16 — CSS modules over `tokens.css`. *(Closes the UI spec's U-02 deferral.)***
+  *Because:* `tokens.css` is already the source of truth and
+  `design/ui/src/components.css` is already hand-written CSS against those tokens, so
+  the React port is a move of that file rather than a translation of it. Per-component
+  scoping, no runtime, nothing added to the Vite config.
+  *Rejected:* Tailwind (either duplicates the tokens in a theme config, which U-02
+  rejected, or degenerates into arbitrary-value classes wrapping `var()`);
+  vanilla-extract (typed styles are real value, but bridging the tokens through
+  `createGlobalTheme` makes `tokens.css` a generated artifact instead of the authority);
+  CSS-in-JS with a runtime (per-frame style work beside an audio engine that must not
+  jank, and U-05 forbids CSS-driven motion for anything the engine clocks).
+  *Reversibility:* two-way, per component.
+
 ## 12. Deferred decisions
 
 - **Tabs / transcription pipeline** (bass → torchcrepe → MIDI → fretboard → alphaTab,
@@ -461,6 +533,10 @@ audit requirement exists.
 - **Q-04** — Should album-splitter output land directly in the library as Songs
   (backlog) rather than only as a zip? Changes whether the splitter shares the Song
   write path or stays a standalone tool.
+- **Q-05** — Is any headless primitive library (Radix, Ark) needed for dialogs, menus
+  and selects? The transport, mixer and sliders are bespoke by U-03/U-05 regardless, so
+  this reduces to a handful of overlays. Decide when the first modal is built; nothing
+  in D-16 depends on it.
 
 ## 15. Assumptions
 
