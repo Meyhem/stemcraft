@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { useHealth } from '../api/queries';
+import { useJobStream } from '../api/useJobStream';
 import styles from './AppShell.module.css';
 
 const NAV = [
@@ -11,6 +12,7 @@ const NAV = [
 ];
 
 export function AppShell() {
+  useJobStream();
   const health = useHealth();
   const broken = health.data?.deps.filter((d) => !d.ok) ?? [];
 
