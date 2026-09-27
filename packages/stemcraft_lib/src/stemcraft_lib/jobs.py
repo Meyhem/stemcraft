@@ -12,11 +12,6 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-# Change tracking for detecting writes on same connection.
-# SQLite's PRAGMA data_version only changes on inter-connection writes,
-# but we need to detect intra-connection changes too for the WebSocket poller.
-_data_version_counter = 0
-
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
   id               INTEGER PRIMARY KEY,
@@ -88,9 +83,12 @@ def connect(path: Path) -> sqlite3.Connection:
 
 
 def data_version(conn: sqlite3.Connection) -> int:
-    """Cheap change detector: bumps when data changes. Lets the
-    WebSocket poll skip the query entirely when nothing has happened."""
-    return _data_version_counter
+    """Cheap change detector: bumps when a DIFFERENT connection writes to
+    this database file. Lets the WebSocket handler's read-only connection
+    poll for changes made by the REST API's or worker's connections without
+    re-querying the jobs table on every tick. By design this does not
+    change when this same connection writes (see PRAGMA data_version)."""
+    return conn.execute("PRAGMA data_version").fetchone()[0]
 
 
 def enqueue(
@@ -100,13 +98,11 @@ def enqueue(
     song_id: str | None = None,
     payload: dict | None = None,
 ) -> int:
-    global _data_version_counter
     cur = conn.execute(
         "INSERT INTO jobs (song_id, kind, payload, state, progress, created_at) "
         "VALUES (?, ?, ?, 'queued', 0, ?)",
         (song_id, kind, json.dumps(payload or {}), time.time()),
     )
-    _data_version_counter += 1
     return int(cur.lastrowid)
 
 

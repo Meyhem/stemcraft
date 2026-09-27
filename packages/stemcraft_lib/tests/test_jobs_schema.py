@@ -42,8 +42,15 @@ def test_list_is_newest_first_and_filterable(tmp_path):
     assert list_jobs(conn, states=("done",)) == []
 
 
-def test_data_version_changes_on_write(tmp_path):
-    conn = connect(tmp_path / "jobs.sqlite")
-    before = data_version(conn)
-    enqueue(conn, kind="probe")
-    assert data_version(conn) != before
+def test_data_version_changes_when_a_different_connection_writes(tmp_path):
+    # data_version() exists for the WebSocket handler's read-only connection to
+    # detect writes made by OTHER connections (REST API requests, the worker).
+    # PRAGMA data_version does not reflect the querying connection's own
+    # writes, by design, so this must be tested across two connections.
+    path = tmp_path / "jobs.sqlite"
+    writer = connect(path)
+    reader = connect(path)
+    before = data_version(reader)
+    enqueue(writer, kind="probe")
+    after = data_version(reader)
+    assert after != before
