@@ -13,10 +13,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
+async function upload<T>(path: string, form: FormData): Promise<T> {
+  // No content-type header here: the browser sets multipart/form-data with
+  // its own boundary, which is why this can't go through request() above.
+  const response = await fetch(path, { method: 'POST', body: form });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`POST ${path} → ${response.status}: ${detail}`);
+  }
+  return (await response.json()) as T;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}) }),
+  upload: <T>(path: string, form: FormData) => upload<T>(path, form),
   del: (path: string) => request<void>(path, { method: 'DELETE' }),
 };
 
@@ -102,4 +114,11 @@ export interface SongEntry {
     has_stems: boolean;
     has_analysis: boolean;
   } | null;
+}
+
+// Mirrors POST /api/songs/upload and /api/songs/from-url (stemcraft_api
+// routes/songs.py): both create the Song and enqueue its import job.
+export interface CreatedSong {
+  song: Song;
+  job_id: number;
 }

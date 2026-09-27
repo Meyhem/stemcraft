@@ -5,7 +5,9 @@ from stemcraft_lib.song import (
     SCHEMA_VERSION,
     STEM_NAMES,
     SongUnreadable,
+    create_song_dir,
     derive_files,
+    find_song_dir,
     new_song,
     read_song,
     write_song,
@@ -90,3 +92,24 @@ def test_partial_stems_do_not_count_as_separated(tmp_path):
     (tmp_path / "stems").mkdir()
     (tmp_path / "stems" / "bass.wav").write_bytes(b"")
     assert derive_files(tmp_path).has_stems is False
+
+
+def test_create_song_dir_matches_song_dirname_and_is_findable(tmp_path):
+    song = new_song(title="Army of Me", artist="Björk", source_kind="upload", source_value="o.mp3")
+    song_dir = create_song_dir(tmp_path, song)
+
+    assert song_dir.name == f"{song.id}-army-of-me"
+    assert song_dir.parent == tmp_path
+    assert read_song(song_dir).id == song.id
+    assert find_song_dir(tmp_path, song.id) == song_dir
+
+
+def test_find_song_dir_returns_none_for_unknown_id(tmp_path):
+    assert find_song_dir(tmp_path, "no-such-id") is None
+    # Must not raise even when songs_dir doesn't exist yet.
+    assert find_song_dir(tmp_path / "missing", "no-such-id") is None
+
+
+def test_find_song_dir_ignores_a_directory_with_no_song_json(tmp_path):
+    (tmp_path / "01J9-stray").mkdir()
+    assert find_song_dir(tmp_path, "01J9") is None

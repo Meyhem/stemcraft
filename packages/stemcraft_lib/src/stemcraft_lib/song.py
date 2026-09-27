@@ -15,7 +15,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, ValidationError
 
 from .atomic import atomic_write_json
-from .ids import new_song_id
+from .ids import new_song_id, song_dirname
 
 SCHEMA_VERSION = 1
 
@@ -125,6 +125,31 @@ class SongFiles:
         if self.has_stems:
             return "separated"
         return "imported"
+
+
+def create_song_dir(songs_dir: Path, song: Song) -> Path:
+    """Allocate a Song's folder and write its song.json. The only place a new
+    Song's directory is created, so the API's upload/url-import routes and
+    any future creation path share one naming rule with find_song_dir below.
+    """
+    song_dir = songs_dir / song_dirname(song.id, song.title)
+    song_dir.mkdir(parents=True)
+    write_song(song_dir, song)
+    return song_dir
+
+
+def find_song_dir(songs_dir: Path, song_id: str) -> Path | None:
+    """D-01: the id, not the slug, is authoritative -- the slug in a folder
+    name is decoration and is never parsed back except for this prefix
+    match. Returns None rather than raising so each caller (API 404 vs.
+    worker job failure) picks its own error.
+    """
+    if not songs_dir.is_dir():
+        return None
+    for candidate in songs_dir.iterdir():
+        if candidate.name.split("-", 1)[0] == song_id and (candidate / "song.json").is_file():
+            return candidate
+    return None
 
 
 def derive_files(song_dir: Path) -> SongFiles:

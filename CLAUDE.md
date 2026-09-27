@@ -3,12 +3,15 @@
 Self-hosted, single-user web app that splits songs into stems so a player can mute
 their own instrument and play along. Python backend, React frontend, one home machine.
 
-**There is no application code yet.** The repo currently holds design documents only.
-Read both before proposing implementation:
+Implementation follows the phased roadmap in
+[docs/superpowers/plans/2026-09-27-stemcraft-roadmap.md](docs/superpowers/plans/2026-09-27-stemcraft-roadmap.md);
+each phase gets its own task-fidelity plan doc in that same directory, written when the
+phase starts. Read the design docs before proposing anything that isn't already covered
+by an existing phase plan:
 
 - [design/domain-spec.md](design/domain-spec.md) — what the product is, features, data model
 - [design/tech-spec-stemcraft.md](design/tech-spec-stemcraft.md) — architecture, decisions
-  (D-01…D-11), constraints (C-01…C-08), risks, open questions
+  (D-01…D-16), constraints (C-01…C-08), risks, open questions
 
 Cite decision IDs rather than re-litigating them. If a decision needs to change, say
 which D-number and why — several are marked one-way.

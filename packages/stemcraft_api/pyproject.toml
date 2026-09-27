@@ -3,7 +3,12 @@ name = "stemcraft-api"
 version = "0.1.0"
 requires-python = ">=3.12,<3.13"
 # NOTE: torch must never appear here, directly or transitively (§4).
-dependencies = ["stemcraft-lib", "fastapi>=0.115", "uvicorn[standard]>=0.30"]
+dependencies = [
+    "stemcraft-lib",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "python-multipart>=0.0.9",
+]
 
 [project.scripts]
 stemcraft-api = "stemcraft_api.app:run"
