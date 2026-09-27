@@ -133,10 +133,12 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'stemcraft_lib'`
 name = "stemcraft"
 version = "0.1.0"
 requires-python = ">=3.12,<3.13"
+# Only stemcraft-lib exists yet. Task 8 appends stemcraft-worker here when the
+# worker package is created, Task 9 appends stemcraft-api — each addition is a
+# real `uv sync` after the fact, not a forward reference to a package that
+# doesn't exist. Listing all three now would break this task's own `uv sync`.
 dependencies = [
     "stemcraft-lib",
-    "stemcraft-api",
-    "stemcraft-worker",
 ]
 
 [tool.uv.workspace]
@@ -144,8 +146,6 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 stemcraft-lib = { workspace = true }
-stemcraft-api = { workspace = true }
-stemcraft-worker = { workspace = true }
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6", "httpx>=0.27"]
@@ -1512,6 +1512,24 @@ packages = ["src/stemcraft_worker"]
 stemcraft-lib = { workspace = true }
 ```
 
+Now that the package exists, register it with the root workspace so `uv sync`
+at the repo root installs it too. Edit the root `pyproject.toml` (Task 1):
+
+```toml
+# pyproject.toml — add to [project] dependencies
+dependencies = [
+    "stemcraft-lib",
+    "stemcraft-worker",
+]
+```
+
+```toml
+# pyproject.toml — add to [tool.uv.sources]
+[tool.uv.sources]
+stemcraft-lib = { workspace = true }
+stemcraft-worker = { workspace = true }
+```
+
 - [ ] **Step 4: Write the registry**
 
 ```python
@@ -1863,6 +1881,26 @@ packages = ["src/stemcraft_api"]
 
 [tool.uv.sources]
 stemcraft-lib = { workspace = true }
+```
+
+Register it with the root workspace, same as Task 8 did for the worker. Edit
+the root `pyproject.toml`:
+
+```toml
+# pyproject.toml — [project] dependencies, now all three
+dependencies = [
+    "stemcraft-lib",
+    "stemcraft-worker",
+    "stemcraft-api",
+]
+```
+
+```toml
+# pyproject.toml — [tool.uv.sources], now all three
+[tool.uv.sources]
+stemcraft-lib = { workspace = true }
+stemcraft-worker = { workspace = true }
+stemcraft-api = { workspace = true }
 ```
 
 - [ ] **Step 4: Write the request dependency**
