@@ -1,0 +1,43 @@
+.forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--ds-5);
+  margin-top: var(--ds-4);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-3);
+  padding: var(--ds-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+}
+
+.field input {
+  min-height: var(--ds-hit-setup);
+  padding: 0 var(--ds-2);
+  background: var(--ds-ground);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-input);
+  color: var(--ds-text);
+}
+
+.submit {
+  min-height: var(--ds-hit-setup);
+  align-self: flex-start;
+}
+
+.error {
+  margin: 0;
+  white-space: pre-wrap;
+  font: 400 var(--ds-t-xs) / 1.4 var(--ds-mono);
+  color: var(--ds-error);
+}
