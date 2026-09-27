@@ -1,4 +1,7 @@
+import time
+
 import pytest
+from stemcraft_lib import jobs as jobs_db
 from stemcraft_lib.jobs import connect, enqueue, get_job, request_cancel
 from stemcraft_worker.main import run_one
 from stemcraft_worker.registry import JobCancelled, JobContext, register
@@ -71,6 +74,34 @@ def test_unknown_kind_fails_loudly_instead_of_being_skipped(conn):
     failed = get_job(conn, job_id)
     assert failed.state == "failed"
     assert "t_does_not_exist" in failed.error
+
+
+def test_renewal_thread_actually_renews_the_conns_own_database(conn, monkeypatch):
+    # _renew_until's loop reads jobs_db.LEASE_SECONDS by attribute each
+    # iteration (`stop.wait(jobs_db.LEASE_SECONDS / 3)`), so patching the
+    # module attribute shrinks the renewal interval to ~0.1s without waiting
+    # on the real ~10s default. The job body sleeps 0.5s, giving ~4-5 real
+    # renewal ticks a chance to fire before it finishes.
+    monkeypatch.setattr(jobs_db, "LEASE_SECONDS", 0.3)
+    seen: dict[str, float | None] = {}
+
+    def kind(ctx: JobContext) -> None:
+        # Read through ctx.conn -- the SAME connection/file run_one was given.
+        # If the renewal thread wrote to a different database (the bug this
+        # test guards against), lease_until would never move here.
+        seen["before"] = get_job(ctx.conn, ctx.job_id).lease_until
+        time.sleep(0.5)
+        seen["after"] = get_job(ctx.conn, ctx.job_id).lease_until
+
+    register("t_renew", kind)
+    job_id = enqueue(conn, kind="t_renew")
+    run_one(conn, device="cpu")
+
+    done = get_job(conn, job_id)
+    assert done.state == "done"
+    assert seen["before"] is not None
+    assert seen["after"] is not None
+    assert seen["after"] > seen["before"]
 
 
 def test_probe_kind_completes_and_reports_its_steps(conn):

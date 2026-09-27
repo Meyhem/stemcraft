@@ -40,8 +40,9 @@ def run_one(conn: sqlite3.Connection, *, device: str) -> int | None:
         return None
 
     stop = threading.Event()
+    db_path = conn.execute("PRAGMA database_list").fetchone()[2]
     renewer = threading.Thread(
-        target=_renew_until, args=(stop, settings().jobs_db, job.id), daemon=True
+        target=_renew_until, args=(stop, db_path, job.id), daemon=True
     )
     renewer.start()
     try:
@@ -52,7 +53,7 @@ def run_one(conn: sqlite3.Connection, *, device: str) -> int | None:
     except JobCancelled:
         jobs_db.cancelled(conn, job.id)
         log.info("job %s (%s) cancelled at a checkpoint", job.id, job.kind)
-    except BaseException:
+    except Exception:
         # N-08: the real traceback, verbatim, into the row the UI renders.
         jobs_db.fail(conn, job.id, traceback.format_exc())
         log.exception("job %s (%s) failed", job.id, job.kind)
