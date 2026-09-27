@@ -179,7 +179,7 @@ def set_progress(conn: sqlite3.Connection, job_id: int, progress: float) -> None
 def finish(conn: sqlite3.Connection, job_id: int, result: dict | None = None) -> None:
     conn.execute(
         "UPDATE jobs SET state = 'done', progress = 1.0, finished_at = ?, lease_until = NULL, "
-        "result = ? WHERE id = ?",
+        "result = ? WHERE id = ? AND state = 'running'",
         (time.time(), json.dumps(result) if result is not None else None, job_id),
     )
 
@@ -188,7 +188,7 @@ def fail(conn: sqlite3.Connection, job_id: int, error: str) -> None:
     # N-08: the real message and traceback, kept verbatim for the Job Queue view.
     conn.execute(
         "UPDATE jobs SET state = 'failed', finished_at = ?, lease_until = NULL, error = ? "
-        "WHERE id = ?",
+        "WHERE id = ? AND state = 'running'",
         (time.time(), error, job_id),
     )
 
@@ -214,7 +214,8 @@ def request_cancel(conn: sqlite3.Connection, job_id: int) -> str:
             conn.execute("UPDATE jobs SET cancel_requested = 1 WHERE id = ?", (job_id,))
         conn.execute("COMMIT")
     except BaseException:
-        conn.execute("ROLLBACK")
+        if conn.in_transaction:
+            conn.execute("ROLLBACK")
         raise
     return state
 
@@ -226,7 +227,8 @@ def is_cancel_requested(conn: sqlite3.Connection, job_id: int) -> bool:
 
 def cancelled(conn: sqlite3.Connection, job_id: int) -> None:
     conn.execute(
-        "UPDATE jobs SET state = 'cancelled', finished_at = ?, lease_until = NULL WHERE id = ?",
+        "UPDATE jobs SET state = 'cancelled', finished_at = ?, lease_until = NULL "
+        "WHERE id = ? AND state = 'running'",
         (time.time(), job_id),
     )
 

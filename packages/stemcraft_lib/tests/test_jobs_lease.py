@@ -1,5 +1,6 @@
 import time
 
+import pytest
 from stemcraft_lib.jobs import (
     claim_next,
     connect,
@@ -111,3 +112,32 @@ def test_finish_and_fail_record_terminal_state(tmp_path):
     broken = get_job(conn, bad)
     assert broken.state == "failed"
     assert "RuntimeError: boom" in broken.error
+
+
+def test_cancel_on_missing_job_raises_key_error_and_leaves_connection_clean(tmp_path):
+    conn = connect(tmp_path / "j.sqlite")
+    with pytest.raises(KeyError):
+        request_cancel(conn, 9999)
+    # No transaction left open by the failed rollback-then-rollback bug.
+    assert not conn.in_transaction
+    # The connection is still fully usable afterward.
+    job_id = enqueue(conn, kind="probe")
+    assert claim_next(conn, device="cpu").id == job_id
+
+
+def test_stale_finish_after_reclaim_does_not_overwrite_the_row(tmp_path):
+    # A worker whose lease expired gets requeued by reclaim_expired (simulated
+    # here with a direct UPDATE). If that same worker is only slow rather than
+    # actually dead, it may still call finish() afterward — that write must be
+    # a silent no-op, not a stomp of whatever the row now says.
+    conn = connect(tmp_path / "j.sqlite")
+    job_id = enqueue(conn, kind="probe")
+    claim_next(conn, device="gpu-a")
+    conn.execute("UPDATE jobs SET state = 'queued' WHERE id = ?", (job_id,))
+
+    finish(conn, job_id, {"steps": 1})
+
+    unchanged = get_job(conn, job_id)
+    assert unchanged.state == "queued"
+    assert unchanged.result is None
+    assert unchanged.finished_at is None
