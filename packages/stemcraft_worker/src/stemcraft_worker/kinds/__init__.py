@@ -1,3 +1,3 @@
 """Importing this package registers every built-in job kind."""
 
-from . import probe  # noqa: F401
+from . import import_song, probe  # noqa: F401
