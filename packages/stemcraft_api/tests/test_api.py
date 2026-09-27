@@ -84,6 +84,37 @@ def test_delete_removes_the_song_folder(client, tmp_path):
     assert not song_dir.exists()
 
 
+def test_delete_is_blocked_while_a_job_for_the_song_is_live(client, tmp_path):
+    song = new_song(title="T", artist="A", source_kind="upload", source_value="o.mp3")
+    song_dir = tmp_path / "songs" / f"{song.id}-t"
+    write_song(song_dir, song)
+    (song_dir / "original.mp3").write_bytes(b"x")
+
+    job_id = client.post(
+        "/api/jobs", json={"kind": "probe", "song_id": song.id, "payload": {}}
+    ).json()["id"]
+
+    response = client.delete(f"/api/songs/{song.id}")
+    assert response.status_code == 409
+    assert str(job_id) in response.json()["detail"]
+    assert song_dir.exists()
+
+
+def test_delete_succeeds_when_only_finished_jobs_reference_the_song(client, tmp_path):
+    song = new_song(title="T", artist="A", source_kind="upload", source_value="o.mp3")
+    song_dir = tmp_path / "songs" / f"{song.id}-t"
+    write_song(song_dir, song)
+    (song_dir / "original.mp3").write_bytes(b"x")
+
+    job_id = client.post(
+        "/api/jobs", json={"kind": "probe", "song_id": song.id, "payload": {}}
+    ).json()["id"]
+    assert client.post(f"/api/jobs/{job_id}/cancel").json()["state"] == "cancelled"
+
+    assert client.delete(f"/api/songs/{song.id}").status_code == 204
+    assert not song_dir.exists()
+
+
 def test_boot_refuses_to_start_when_dependencies_are_unmet(tmp_path, monkeypatch):
     monkeypatch.setenv("STEMCRAFT_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("STEMCRAFT_SONGS_DIR", str(tmp_path / "songs"))

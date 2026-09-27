@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import shutil
+import sqlite3
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
+from stemcraft_lib import jobs as jobs_db
 from stemcraft_lib.config import settings
 from stemcraft_lib.song import SongUnreadable, derive_files, read_song
 
+from ..deps import get_conn
+
 router = APIRouter()
+Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
 
 
 def _entry(song_dir: Path) -> dict:
@@ -58,6 +64,19 @@ def get_song(song_id: str) -> dict:
 
 
 @router.delete("/api/songs/{song_id}", status_code=204)
-def delete_song(song_id: str) -> Response:
-    shutil.rmtree(_find_dir(song_id))
+def delete_song(song_id: str, conn: Conn) -> Response:
+    song_dir = _find_dir(song_id)
+    live = [j for j in jobs_db.list_jobs(conn, states=("queued", "running")) if j.song_id == song_id]
+    if live:
+        ids = ", ".join(str(j.id) for j in live)
+        raise HTTPException(
+            status_code=409,
+            detail=f"cannot delete song {song_id}: blocked by job(s) {ids} (queued or running)",
+        )
+    # §2 (one writer per file): the worker owns stems/, analysis.json,
+    # peaks.json and exports/. This rmtree is the one sanctioned crossing of
+    # that rule -- a deliberate user-initiated delete removes the whole
+    # folder (domain-spec.md), gated above on there being no live job that
+    # could be writing into it right now.
+    shutil.rmtree(song_dir)
     return Response(status_code=204)
