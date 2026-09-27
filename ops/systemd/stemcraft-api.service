@@ -1,0 +1,14 @@
+[Unit]
+Description=Stemcraft API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/dev/stemcraft
+Environment=STEMCRAFT_DIST_DIR=%h/dev/stemcraft/frontend/dist
+ExecStart=/usr/bin/env uv run stemcraft-api
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

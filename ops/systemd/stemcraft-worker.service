@@ -1,0 +1,13 @@
+[Unit]
+Description=Stemcraft worker
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/dev/stemcraft
+ExecStart=/usr/bin/env uv run stemcraft-worker
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
