@@ -1,0 +1,142 @@
+<!-- @dsCard group="Screens" name="Song view — play along" subtitle="The hard screen: lanes, beat grid, A–B loop, transport" viewport="1440x1000" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Song view — Stemcraft</title><style>/* @inject */
+.body2{display:grid;grid-template-columns:1fr 320px;flex:1;min-height:0}
+.stage{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--ds-border)}
+.rail{background:var(--ds-surface);overflow:auto;padding:var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-5)}
+.lanes{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.stem-row{flex:1}
+.stem-lane{height:auto}
+.chords{display:flex;height:44px;border-top:1px solid var(--ds-border);background:var(--ds-surface);position:relative}
+.chords .c{position:absolute;top:0;bottom:0;display:flex;align-items:center;padding-left:var(--ds-2);border-left:1px solid var(--ds-border);font:600 var(--ds-t-md)/1 var(--ds-font)}
+.chords .c.now{background:rgba(79,163,255,.12);color:var(--ds-text)}
+.loopitem{display:flex;align-items:center;gap:var(--ds-3);min-height:var(--ds-hit-setup);padding:var(--ds-2) var(--ds-3);border-radius:var(--ds-r-btn);border:1px solid transparent;cursor:pointer}
+.loopitem:hover{background:var(--ds-raised)}
+.loopitem[aria-current=true]{background:rgba(79,163,255,.12);border-color:rgba(79,163,255,.5)}
+.keyrow{display:flex;flex-direction:column;gap:var(--ds-2)}
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <button class="iconbtn" aria-label="Back to library"><svg viewBox="0 0 24 24"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg></button>
+  <div class="col" style="gap:0;min-width:0">
+    <span class="t-md" style="font-weight:600;white-space:nowrap">Tightrope</span>
+    <span class="t-sm dim" style="white-space:nowrap">Walk the Moon</span>
+  </div>
+  <div class="grow"></div>
+  <span class="chip chip-ok">cuda · RTX 5080</span>
+  <button class="btn">Re-analyze</button>
+  <button class="btn btn-primary">Export</button>
+</div>
+
+<div class="body2">
+
+  <div class="stage">
+    <div class="ruler" style="flex:none">
+      <span style="left:200px">1</span><span style="left:340px">5</span><span style="left:480px">9</span>
+      <span style="left:620px">13</span><span style="left:760px">17</span><span style="left:900px">21</span>
+      <span style="left:1040px">25</span><span style="left:1180px">29</span>
+    </div>
+
+    <div class="lanes">
+      <div class="stem-row stem stem-v">
+        <div class="stem-ctl">
+          <div class="stem-name"><i class="sw"></i>vocals</div>
+          <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+          <div class="gainbar"><i style="width:50%"></i></div>
+        </div>
+        <div class="stem-lane"><!--@wave vocals 1200 120 11--></div>
+      </div>
+      <div class="stem-row stem stem-d">
+        <div class="stem-ctl">
+          <div class="stem-name"><i class="sw"></i>drums</div>
+          <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+          <div class="gainbar"><i style="width:50%"></i></div>
+        </div>
+        <div class="stem-lane"><!--@wave drums 1200 120 22--></div>
+      </div>
+      <div class="stem-row stem stem-b">
+        <div class="stem-ctl">
+          <div class="stem-name"><i class="sw"></i>bass</div>
+          <div class="ms"><button data-k="m" aria-pressed="true">M</button><button data-k="s">S</button></div>
+          <div class="gainbar"><i style="width:50%"></i></div>
+        </div>
+        <div class="stem-lane muted"><!--@wave bass 1200 120 33--></div>
+      </div>
+      <div class="stem-row stem stem-o">
+        <div class="stem-ctl">
+          <div class="stem-name"><i class="sw"></i>other</div>
+          <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+          <div class="gainbar"><i style="width:50%"></i></div>
+        </div>
+        <div class="stem-lane"><!--@wave other 1200 120 44--></div>
+      </div>
+
+      <div class="grid-beats" style="left:200px"></div>
+      <div class="grid-bars" style="left:200px"></div>
+      <div class="loopregion" data-a="17" data-b="25" style="left:760px;width:280px"></div>
+      <div class="playhead" style="left:838px"></div>
+    </div>
+
+    <div class="chords">
+      <div class="c" style="left:200px;width:140px;color:var(--ds-text-2)">Gm</div>
+      <div class="c" style="left:340px;width:140px;color:var(--ds-text-2)">B&#9837;</div>
+      <div class="c" style="left:480px;width:140px;color:var(--ds-text-2)">E&#9837;</div>
+      <div class="c" style="left:620px;width:140px;color:var(--ds-text-2)">F</div>
+      <div class="c now" style="left:760px;width:140px">Gm</div>
+      <div class="c" style="left:900px;width:140px;color:var(--ds-text-2)">Dm</div>
+      <div class="c" style="left:1040px;width:140px;color:var(--ds-text-2)">E&#9837;</div>
+      <div class="c" style="left:1180px;width:140px;color:var(--ds-text-2)">F</div>
+    </div>
+
+    <div class="transport">
+      <button class="iconbtn iconbtn-perform" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>
+      <button class="iconbtn iconbtn-perform" aria-label="Loop" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+      <button class="iconbtn iconbtn-perform" aria-label="Metronome" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M12 2l5 18H7L12 2zm-1 6l-3 11h8L13 8h-2z"/></svg></button>
+      <div style="width:1px;align-self:stretch;background:var(--ds-border)"></div>
+      <div class="readout"><span class="cap" style="align-self:center;margin-right:var(--ds-2)">bar</span><span class="big">17</span><span class="num dim" style="font-size:var(--ds-t-lg)">.3</span></div>
+      <div style="width:1px;align-self:stretch;background:var(--ds-border)"></div>
+      <div class="col" style="gap:2px"><span class="cap">position</span><span class="num t-lg">1:42 / 3:58</span></div>
+      <div class="grow"></div>
+      <div class="slider slider-perform" style="max-width:200px"><div class="shead"><span class="slabel">Tempo</span><span class="sval num">82%</span></div><div class="track"><i class="fill" style="width:64%"></i><i class="knob" style="left:64%"></i></div></div>
+      <div class="slider slider-perform" style="max-width:180px"><div class="shead"><span class="slabel">Pitch</span><span class="sval num">&minus;2 st</span></div><div class="track"><i class="center-tick"></i><i class="knob" style="left:33%"></i></div></div>
+      <div style="width:1px;align-self:stretch;background:var(--ds-border)"></div>
+      <div class="col" style="gap:2px"><span class="cap">tempo</span><span class="num t-lg">105.0 BPM</span></div>
+    </div>
+  </div>
+
+  <div class="rail">
+    <div class="keyrow">
+      <span class="cap">key</span>
+      <span class="chip chip-lg" style="color:var(--ds-text);justify-content:space-between">G minor <b class="num dim">72%</b></span>
+      <span class="chip chip-lg" style="justify-content:space-between">B&#9837; major <b class="num dim3">18%</b></span>
+      <span class="chip chip-lg" style="justify-content:space-between">D minor <b class="num dim3">7%</b></span>
+      <button class="btn" style="margin-top:var(--ds-1)">Open fretboard</button>
+    </div>
+
+    <div class="col" style="gap:var(--ds-2)">
+      <div class="row"><span class="cap">loops</span><div class="grow"></div><button class="btn btn-ghost" style="min-height:32px;padding:0 var(--ds-2)">+ Add</button></div>
+      <div class="loopitem" aria-current="true"><span class="grow t-md" style="font-weight:600">Chorus</span><span class="num t-sm dim">17–25</span></div>
+      <div class="loopitem"><span class="grow t-md">Bridge</span><span class="num t-sm dim">41–49</span></div>
+      <div class="loopitem"><span class="grow t-md">Intro riff</span><span class="num t-sm dim">1–5</span></div>
+    </div>
+
+    <div class="col" style="gap:var(--ds-3)">
+      <span class="cap">tempo ramp</span>
+      <label class="check" data-on="true"><span class="box"></span><span class="t-sm">+5% every 2 repetitions</span></label>
+      <div class="row" style="gap:var(--ds-2)">
+        <i style="width:100%;height:8px;border-radius:99px;background:linear-gradient(90deg,var(--ds-accent) 57%,var(--ds-border-strong) 57%)"></i>
+      </div>
+      <span class="t-sm dim num">70% → <b style="color:var(--ds-text)">82%</b> → 100% · rep 12</span>
+    </div>
+
+    <div class="col" style="gap:var(--ds-3)">
+      <span class="cap">count-in</span>
+      <div class="seg"><button>off</button><button aria-selected="true">1 bar</button><button>2 bars</button></div>
+    </div>
+
+    <hr class="divider">
+    <p class="t-sm dim3" style="margin:0">Mix, tempo, pitch and loops are a recipe in <span class="num">song.json</span>, applied at
+    playback. Stems are never re-separated to reflect a setting, so undo is free.</p>
+  </div>
+
+</div>
+</div></body></html>

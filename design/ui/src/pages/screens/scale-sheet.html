@@ -1,0 +1,68 @@
+<!-- @dsCard group="Screens" name="Scale & fretboard" subtitle="Pure lookup — the one surface with no failure mode (R-05)" viewport="1200x1250" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Scale — Stemcraft</title><style>/* @inject */
+.fb{background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);padding:var(--ds-4) var(--ds-3) var(--ds-2)}
+.fb svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:var(--ds-5);flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;width:18px;height:18px;border-radius:50%;vertical-align:-4px;margin-right:var(--ds-2)}
+.notes{display:flex;gap:var(--ds-2);flex-wrap:wrap}
+.notes b{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:var(--ds-hit-setup);padding:0 var(--ds-3);border-radius:var(--ds-r-btn);background:var(--ds-raised);border:1px solid var(--ds-border-strong);font:600 var(--ds-t-md)/1 var(--ds-font)}
+.notes b.root{background:var(--ds-bass);border-color:var(--ds-bass);color:var(--ds-ground)}
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <button class="iconbtn" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg></button>
+  <div class="col" style="gap:0"><span class="t-md" style="font-weight:600">Tightrope</span><span class="t-sm dim">Scale &amp; fretboard</span></div>
+  <div class="grow"></div>
+  <div class="seg"><button aria-selected="true">Bass · 4 string</button><button>Guitar · 6 string</button></div>
+</div>
+
+<div class="main col" style="gap:var(--ds-5)">
+
+  <div class="row wrap" style="gap:var(--ds-3)">
+    <span class="cap" style="align-self:center">key candidates</span>
+    <button class="chip chip-lg" style="color:var(--ds-ground);background:var(--ds-bass);border-color:var(--ds-bass)">G minor <b class="num" style="margin-left:6px;opacity:.75">72%</b></button>
+    <button class="chip chip-lg">B&#9837; major <b class="num dim3" style="margin-left:6px">18%</b></button>
+    <button class="chip chip-lg">D minor <b class="num dim3" style="margin-left:6px">7%</b></button>
+    <div class="grow"></div>
+    <div class="seg"><button aria-selected="true">Full scale</button><button>Pentatonic</button></div>
+  </div>
+
+  <div class="panel panel-pad col" style="gap:var(--ds-4)">
+    <div class="row">
+      <h1 class="t-xl" style="margin:0">G minor</h1>
+      <span class="t-md dim">natural minor · 7 notes</span>
+      <div class="grow"></div>
+      <span class="t-sm dim3">detected on the bass and other stems, not the full mix</span>
+    </div>
+
+    <div class="notes">
+      <b class="root">G</b><b>A</b><b>A&#9837;</b><b>C</b><b>D</b><b>D&#9837;</b><b>F</b>
+    </div>
+
+    <div class="fb"><!--@fret bass G minor 12--></div>
+
+    <div class="legend t-sm dim">
+      <span><i style="background:var(--ds-bass)"></i>root — G</span>
+      <span><i style="background:var(--ds-raised);border:2px solid var(--ds-bass)"></i>scale note</span>
+      <span class="num">strings low→high: E A D G · standard tuning</span>
+    </div>
+  </div>
+
+  <div class="banner" style="border-color:var(--ds-border);color:var(--ds-text-2)">
+    <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg></span>
+    <div class="banner-body">
+      <p class="banner-title">This board is a lookup, not a prediction</p>
+      <p class="t-sm dim" style="margin:0">Key detection is probabilistic and will be wrong on dense material (R-05), which is why
+      three candidates are shown with confidence rather than one answer. But the map from a key to its notes and their
+      fretboard positions is arithmetic — it has no model and no failure mode. Pick a different candidate above and this
+      board is still exactly right for it.</p>
+    </div>
+  </div>
+
+  <div class="panel panel-pad col" style="gap:var(--ds-3)">
+    <span class="cap">guitar · same key</span>
+    <div class="fb"><!--@fret guitar G minor 12--></div>
+  </div>
+
+</div>
+</div></body></html>

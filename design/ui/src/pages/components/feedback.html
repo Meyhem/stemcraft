@@ -1,0 +1,93 @@
+<!-- @dsCard group="Components" name="Feedback & failure" subtitle="N-08 fail loudly: banners, real errors, progress, empty states" viewport="1000x2070" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Feedback — Stemcraft</title><style>/* @inject */</style></head><body><div class="doc">
+
+<div class="sec">
+  <h1>Feedback &amp; failure</h1>
+  <p class="note">N-08 is a design requirement, not a logging preference: <b>prefer failing loudly and visibly over
+  degrading silently.</b> Every failure surface here shows the <b>real message from the real tool</b> — ffmpeg's stderr,
+  yt-dlp's stderr, the Python traceback. No surface in this app paraphrases an error, and none of them offers a
+  cheerful fallback.</p>
+</div>
+
+<div class="sec">
+  <h2>CPU fallback banner — app level, persistent</h2>
+  <div class="banner banner-warn">
+    <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2l10 18H2L12 2zm0 5l-6 11h12L12 7zm-1 3h2v4h-2zm0 5h2v2h-2z"/></svg></span>
+    <div class="banner-body grow">
+      <p class="banner-title" style="color:var(--ds-warn)">Running on CPU — separation will take 2–4 minutes instead of 10–30 seconds</p>
+      <p class="t-sm dim" style="margin:0">CUDA initialisation failed at worker boot. The proof-of-work op did not run.</p>
+      <div class="trace">torch.cuda.is_available() == True, but test conv2d raised:
+CUDA error: no kernel image is available for execution on the device
+  device: NVIDIA GeForce RTX 5080 (sm_120)
+  torch 2.6.0+cu124 — wheel has no sm_120 kernels; cu128 required</div>
+    </div>
+    <button class="btn btn-ghost">Dismiss for session</button>
+  </div>
+  <p class="note">This banner never auto-hides and cannot be permanently dismissed. A wrong device is the single most
+  expensive silent failure in the system, and C-02 makes it likely enough to design for.</p>
+</div>
+
+<div class="sec">
+  <h2>Failed job — with the actual traceback</h2>
+  <div class="banner banner-error">
+    <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 5h2v7h-2zm0 9h2v2h-2z"/></svg></span>
+    <div class="banner-body grow">
+      <p class="banner-title" style="color:var(--ds-error)">import failed — yt-dlp</p>
+      <p class="t-sm dim" style="margin:0">The original file was kept, so retrying costs nothing and re-downloads nothing.</p>
+      <div class="trace">ERROR: [youtube] dQw4w9WgXcQ: Sign in to confirm you're not a bot.
+  Use --cookies-from-browser or --cookies for the authentication.
+yt-dlp version 2026.09.11 — sites change often; update before retrying</div>
+      <div class="row" style="margin-top:var(--ds-3)">
+        <button class="btn">Retry</button>
+        <button class="btn btn-ghost">Copy traceback</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Unreadable song.json — one bad file never breaks the library</h2>
+  <div class="card panel-pad row" style="gap:var(--ds-4);border-color:rgba(255,59,48,.4)">
+    <span style="color:var(--ds-error)"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 5h2v7h-2zm0 9h2v2h-2z"/></svg></span>
+    <div class="col grow" style="gap:2px">
+      <span class="t-md" style="font-weight:600">01J9Z3K8Q4-tightrope</span>
+      <span class="t-sm num dim">song.json: schema_version 4 is newer than this build understands (max 1)</span>
+    </div>
+    <button class="btn btn-ghost">Reveal folder</button>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Progress</h2>
+  <div class="panel panel-pad col" style="gap:var(--ds-4)">
+    <div class="col" style="gap:var(--ds-2)">
+      <div class="row"><span class="t-sm" style="font-weight:600">separate</span><span class="chip chip-run"><i class="dot"></i>running</span><span class="chip chip-ok">cuda</span><span class="grow"></span><span class="num t-sm dim">62% · ~11 s left</span></div>
+      <div class="bar"><i style="width:62%"></i></div>
+    </div>
+    <div class="col" style="gap:var(--ds-2)">
+      <div class="row"><span class="t-sm" style="font-weight:600">separate</span><span class="chip chip-run"><i class="dot"></i>running</span><span class="chip chip-warn">cpu</span><span class="grow"></span><span class="num t-sm dim">18% · ~3 min left</span></div>
+      <div class="bar"><i style="width:18%"></i></div>
+    </div>
+    <div class="col" style="gap:var(--ds-2)">
+      <div class="row"><span class="t-sm" style="font-weight:600">export</span><span class="chip chip-ok"><i class="dot"></i>done</span><span class="grow"></span><span class="num t-sm dim">4.2 s</span></div>
+      <div class="bar bar-ok"><i style="width:100%"></i></div>
+    </div>
+  </div>
+  <p class="note">The estimate comes from the job's recorded <b>device</b> and N-01, so a CPU job says minutes up front
+  rather than looking stalled. Cancelling a running separation lands at the <b>next inference segment</b> (D-09), so the
+  cancel button reads <i>Stopping…</i> for a few seconds instead of pretending to be instant.</p>
+</div>
+
+<div class="sec">
+  <h2>Empty state</h2>
+  <div class="card">
+    <div class="empty">
+      <div class="glyph"><svg viewBox="0 0 24 24" width="64" height="64" fill="var(--ds-text-2)"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg></div>
+      <div class="t-lg" style="color:var(--ds-text)">No songs yet</div>
+      <div class="t-md">Drop a file, or paste a URL. Anything ffmpeg can decode works.</div>
+      <button class="btn btn-primary btn-perform" style="margin-top:var(--ds-2)">Add song</button>
+    </div>
+  </div>
+</div>
+
+</div></body></html>

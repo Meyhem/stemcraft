@@ -1,0 +1,68 @@
+<!-- @dsCard group="Foundations" name="Color" subtitle="Saturation carries meaning: muted = stem, vivid = system" viewport="1000x1560" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Color — Stemcraft</title><style>/* @inject */
+.sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--ds-3)}
+.sw-card{border:1px solid var(--ds-border);border-radius:var(--ds-r-btn);overflow:hidden;background:var(--ds-surface)}
+.sw-chip{height:72px}
+.sw-meta{padding:var(--ds-2) var(--ds-3);display:flex;flex-direction:column;gap:2px}
+.sw-name{font-size:var(--ds-t-sm);font-weight:600}
+.sw-hex{font:400 var(--ds-t-xs)/1.4 var(--ds-mono);color:var(--ds-text-3)}
+.contrast{display:flex;gap:var(--ds-4);flex-wrap:wrap}
+.contrast > div{padding:var(--ds-3) var(--ds-4);border:1px solid var(--ds-border);border-radius:var(--ds-r-btn);background:var(--ds-ground)}
+</style></head><body><div class="doc">
+
+<div class="sec">
+  <h1>Color</h1>
+  <p class="note">One rule holds the system together: <b>saturation carries meaning.</b> Muted hues identify a
+  <b>stem</b> and appear only where a stem is named. Vivid hues are <b>system signals</b> and appear only in chrome —
+  banners, job rows, device badges. The two sets never share a context, so a vivid red on screen always means
+  <i>something failed</i>, never <i>drums</i>.</p>
+</div>
+
+<div class="sec">
+  <h2>Stem identity — muted</h2>
+  <div class="sw-grid">
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-vocals)"></div><div class="sw-meta"><span class="sw-name">vocals</span><span class="sw-hex">--ds-vocals · #E0A458</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-drums)"></div><div class="sw-meta"><span class="sw-name">drums</span><span class="sw-hex">--ds-drums · #D9605F</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-bass)"></div><div class="sw-meta"><span class="sw-name">bass</span><span class="sw-hex">--ds-bass · #4FC3B0</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-other)"></div><div class="sw-meta"><span class="sw-name">other</span><span class="sw-hex">--ds-other · #8E85E0</span></div></div>
+  </div>
+  <p class="note">Amber and coral are <b>not</b> safely separable under deuteranopia. Stem identity therefore never rests on
+  hue alone: fixed order (vocals, drums, bass, other), always labelled, always the same lane position. Hue is an
+  accelerator, not the carrier.</p>
+</div>
+
+<div class="sec">
+  <h2>System signals — vivid</h2>
+  <div class="sw-grid">
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-ok)"></div><div class="sw-meta"><span class="sw-name">done</span><span class="sw-hex">--ds-ok · #30D158</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-warn)"></div><div class="sw-meta"><span class="sw-name">warn / CPU fallback</span><span class="sw-hex">--ds-warn · #FFB020</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-error)"></div><div class="sw-meta"><span class="sw-name">failed</span><span class="sw-hex">--ds-error · #FF3B30</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-accent)"></div><div class="sw-meta"><span class="sw-name">accent / running</span><span class="sw-hex">--ds-accent · #4FA3FF</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-queued)"></div><div class="sw-meta"><span class="sw-name">queued</span><span class="sw-hex">--ds-queued · #626A76</span></div></div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Ground, surfaces, borders</h2>
+  <div class="sw-grid">
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-ground)"></div><div class="sw-meta"><span class="sw-name">ground</span><span class="sw-hex">#0B0C0E</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-surface)"></div><div class="sw-meta"><span class="sw-name">surface</span><span class="sw-hex">#131519</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-raised)"></div><div class="sw-meta"><span class="sw-name">raised</span><span class="sw-hex">#1A1D22</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-overlay)"></div><div class="sw-meta"><span class="sw-name">overlay</span><span class="sw-hex">#22262D</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-border)"></div><div class="sw-meta"><span class="sw-name">border</span><span class="sw-hex">#2A2F37</span></div></div>
+    <div class="sw-card"><div class="sw-chip" style="background:var(--ds-border-strong)"></div><div class="sw-meta"><span class="sw-name">border strong</span><span class="sw-hex">#3A414B</span></div></div>
+  </div>
+  <p class="note">Depth comes from <b>surface steps plus 1px borders</b>, never drop shadows. The one exception is the
+  modal overlay, which gets a single large shadow to lift it off the scrim.</p>
+</div>
+
+<div class="sec">
+  <h2>Text on ground</h2>
+  <div class="contrast">
+    <div><span style="color:var(--ds-text)">Primary #EDEFF2 — 17.8:1</span></div>
+    <div><span style="color:var(--ds-text-2)">Secondary #9BA3AE — 7.4:1</span></div>
+    <div><span style="color:var(--ds-text-3)">Muted #626A76 — 3.3:1, non-text use and 15px+ only</span></div>
+  </div>
+</div>
+
+</div></body></html>

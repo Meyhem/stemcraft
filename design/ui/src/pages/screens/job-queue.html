@@ -1,0 +1,95 @@
+<!-- @dsCard group="Screens" name="Job queue" subtitle="The real operational dashboard (§10): live, history, stats" viewport="1440x1350" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Jobs — Stemcraft</title><style>/* @inject */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--ds-4)}
+.stat{padding:var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-1)}
+.stat .v{font:600 var(--ds-t-xl)/1 var(--ds-mono);font-variant-numeric:tabular-nums}
+.jobrow{display:grid;grid-template-columns:120px 1fr 200px;gap:var(--ds-4);align-items:center;padding:var(--ds-4);border-bottom:1px solid var(--ds-border)}
+.jobrow:last-child{border-bottom:0}
+.tbl td.num,.tbl th.num{font-family:var(--ds-mono);font-variant-numeric:tabular-nums}
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <div class="brand"><span class="mark"><i style="height:10px;background:var(--ds-vocals)"></i><i style="height:16px;background:var(--ds-drums)"></i><i style="height:20px;background:var(--ds-bass)"></i><i style="height:13px;background:var(--ds-other)"></i></span>Stemcraft</div>
+  <div class="seg" style="margin-left:var(--ds-5)"><button>Library</button><button aria-selected="true">Jobs</button><button>Album splitter</button></div>
+  <div class="grow"></div>
+  <span class="chip chip-ok">cuda · RTX 5080</span>
+  <span class="chip">worker up 4d 02h</span>
+</div>
+
+<div class="main col" style="gap:var(--ds-5)">
+
+  <div class="row">
+    <h1 class="t-lg" style="margin:0">Jobs</h1>
+    <span class="chip chip-run"><i class="dot"></i>1 running</span>
+    <span class="chip">2 queued</span>
+    <div class="grow"></div>
+    <span class="t-sm dim3">Strictly serial — one worker, one job at a time (C-07)</span>
+  </div>
+
+  <div class="card">
+    <div class="jobrow" style="background:rgba(79,163,255,.06)">
+      <span class="chip chip-run"><i class="dot"></i>running</span>
+      <div class="col" style="gap:var(--ds-2);min-width:0">
+        <div class="row"><span class="t-md" style="font-weight:600">separate</span><span class="t-md dim">Teen Town — Weather Report</span><span class="chip chip-warn">cpu</span></div>
+        <div class="bar"><i style="width:18%"></i></div>
+        <span class="t-sm dim num">18% · segment 3 of 17 · started 0:41 ago · ~3 min left</span>
+      </div>
+      <div class="row" style="justify-content:flex-end"><button class="btn">Cancel</button></div>
+    </div>
+    <div class="jobrow">
+      <span class="chip"><i class="dot"></i>queued</span>
+      <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">separate</span><span class="t-md dim">Longview — Green Day</span></div><span class="t-sm dim3">1 job ahead</span></div>
+      <div class="row" style="justify-content:flex-end"><button class="btn btn-ghost">Cancel</button></div>
+    </div>
+    <div class="jobrow">
+      <span class="chip"><i class="dot"></i>queued</span>
+      <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">export</span><span class="t-md dim">Tightrope · no bass, 82%</span></div><span class="t-sm dim3">2 jobs ahead</span></div>
+      <div class="row" style="justify-content:flex-end"><button class="btn btn-ghost">Cancel</button></div>
+    </div>
+  </div>
+
+  <div class="banner banner-error">
+    <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 5h2v7h-2zm0 9h2v2h-2z"/></svg></span>
+    <div class="banner-body grow">
+      <p class="banner-title" style="color:var(--ds-error)">analyze failed — Come Together</p>
+      <div class="trace">Traceback (most recent call last):
+  File "worker/jobs/analyze.py", line 64, in run
+    key = essentia.standard.KeyExtractor()(audio)
+RuntimeError: KeyExtractor: input audio is shorter than the analysis frame (2048)
+  stem: other.wav — 0.4 s of non-silence after separation</div>
+      <div class="row" style="margin-top:var(--ds-3)"><button class="btn">Re-run</button><button class="btn btn-ghost">Copy traceback</button><button class="btn btn-ghost">Open song</button></div>
+    </div>
+  </div>
+
+  <div class="col" style="gap:var(--ds-3)">
+    <span class="cap">stats — all time</span>
+    <div class="stats">
+      <div class="card stat"><span class="v" style="color:var(--ds-ok)">312</span><span class="t-sm dim">passed</span></div>
+      <div class="card stat"><span class="v" style="color:var(--ds-error)">9</span><span class="t-sm dim">failed</span></div>
+      <div class="card stat"><span class="v">21.4 s</span><span class="t-sm dim">avg separate · cuda</span></div>
+      <div class="card stat"><span class="v" style="color:var(--ds-warn)">3 m 12 s</span><span class="t-sm dim">avg separate · cpu</span></div>
+      <div class="card stat"><span class="v">2.8 s</span><span class="t-sm dim">avg analyze · cpu</span></div>
+    </div>
+  </div>
+
+  <div class="col" style="gap:var(--ds-3)">
+    <div class="row"><span class="cap">history</span><div class="grow"></div><div class="seg"><button aria-selected="true">All</button><button>Failed</button><button>separate</button><button>analyze</button><button>export</button></div></div>
+    <div class="card" style="padding:0 var(--ds-3)">
+      <table class="tbl">
+        <thead><tr><th>state</th><th>kind</th><th>song</th><th>device</th><th class="num">duration</th><th class="num">finished</th><th>error</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip chip-ok"><i class="dot"></i>done</span></td><td>analyze</td><td>Hysteria</td><td><span class="chip">cuda</span></td><td class="num">2.9 s</td><td class="num">14:02:19</td><td class="dim3">—</td></tr>
+          <tr><td><span class="chip chip-ok"><i class="dot"></i>done</span></td><td>separate</td><td>Hysteria</td><td><span class="chip">cuda</span></td><td class="num">19.4 s</td><td class="num">14:01:58</td><td class="dim3">—</td></tr>
+          <tr><td><span class="chip chip-error"><i class="dot"></i>failed</span></td><td>analyze</td><td>Come Together</td><td><span class="chip">cpu</span></td><td class="num">0.6 s</td><td class="num">13:44:07</td><td class="num" style="color:var(--ds-error)">KeyExtractor: input shorter than frame</td></tr>
+          <tr><td><span class="chip"><i class="dot"></i>cancelled</span></td><td>separate</td><td class="dim3">01J9ZB2M7C <span class="t-xs">(deleted)</span></td><td><span class="chip">cpu</span></td><td class="num">48.1 s</td><td class="num">13:20:55</td><td class="dim3">—</td></tr>
+          <tr><td><span class="chip chip-ok"><i class="dot"></i>done</span></td><td>export</td><td>Tightrope</td><td><span class="chip">cpu</span></td><td class="num">4.2 s</td><td class="num">12:58:31</td><td class="dim3">—</td></tr>
+          <tr><td><span class="chip chip-ok"><i class="dot"></i>done</span></td><td>import</td><td>Tightrope</td><td><span class="chip">cpu</span></td><td class="num">7.8 s</td><td class="num">12:57:02</td><td class="dim3">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="t-sm dim3" style="margin:0">History is kept indefinitely — it is the only observability this system has (§10). A row whose song was
+    deleted keeps its <span class="num">song_id</span> and renders without a link; that dangling reference is expected, not a defect.</p>
+  </div>
+
+</div>
+</div></body></html>

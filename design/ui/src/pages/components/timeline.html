@@ -1,0 +1,94 @@
+<!-- @dsCard group="Components" name="Timeline & loop" subtitle="Bar ruler, beat grid, A–B region, playhead, tempo ramp" viewport="1100x1420" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Timeline — Stemcraft</title><style>/* @inject */
+.tl{position:relative}
+.tl .lanes{position:relative}
+.tl .stem-lane{height:56px}
+.ramp-steps{display:flex;gap:var(--ds-2);align-items:center}
+.ramp-steps i{display:block;width:44px;height:8px;border-radius:var(--ds-r-pill);background:var(--ds-border-strong)}
+.ramp-steps i.on{background:var(--ds-accent)}
+</style></head><body><div class="doc">
+
+<div class="sec">
+  <h1>Timeline &amp; loop</h1>
+  <p class="note">Bars are the unit the player thinks in, so bars are the unit the UI shows. Underneath,
+  the beat grid in <code class="num">analysis.json</code> is <b>integer sample indices at 48&nbsp;kHz</b> (D-03) &mdash; never float
+  seconds. Loops are stored in <code class="num">song.json</code> as <b>bar numbers</b>, which survive a re-analysis, and are
+  resolved to sample offsets through the grid at load.</p>
+</div>
+
+<div class="sec">
+  <h2>Anatomy</h2>
+  <div class="wavewrap tl">
+    <div class="ruler">
+      <span style="left:0">1</span><span style="left:168px">5</span><span style="left:336px">9</span>
+      <span style="left:504px">13</span><span style="left:672px">17</span><span style="left:840px">21</span>
+      <span style="left:1008px">25</span>
+    </div>
+    <div class="lanes">
+      <div class="stem-row stem stem-v"><div class="stem-ctl" style="padding:var(--ds-2) var(--ds-3)"><div class="stem-name t-sm"><i class="sw"></i>vocals</div></div><div class="stem-lane"><!--@wave vocals 1200 56 11--></div></div>
+      <div class="stem-row stem stem-d"><div class="stem-ctl" style="padding:var(--ds-2) var(--ds-3)"><div class="stem-name t-sm"><i class="sw"></i>drums</div></div><div class="stem-lane"><!--@wave drums 1200 56 22--></div></div>
+      <div class="stem-row stem stem-b"><div class="stem-ctl" style="padding:var(--ds-2) var(--ds-3)"><div class="stem-name t-sm"><i class="sw"></i>bass</div></div><div class="stem-lane muted"><!--@wave bass 1200 56 33--></div></div>
+      <div class="stem-row stem stem-o"><div class="stem-ctl" style="padding:var(--ds-2) var(--ds-3)"><div class="stem-name t-sm"><i class="sw"></i>other</div></div><div class="stem-lane"><!--@wave other 1200 56 44--></div></div>
+      <div class="grid-beats" style="left:200px"></div>
+      <div class="grid-bars" style="left:200px"></div>
+      <div class="loopregion" data-a="17" data-b="25" style="left:872px;width:336px"></div>
+      <div class="playhead" style="left:960px"></div>
+    </div>
+  </div>
+  <div class="row wrap t-sm dim" style="margin-top:var(--ds-3)">
+    <span><b style="color:var(--ds-text)">Faint lines</b> beats</span>
+    <span><b style="color:var(--ds-text)">Bright lines</b> downbeats</span>
+    <span><b style="color:var(--ds-accent)">Blue field</b> A&ndash;B loop, snapped to bars</span>
+    <span><b style="color:var(--ds-text)">White line</b> playhead</span>
+  </div>
+  <p class="note">The playhead is positioned by <code class="num">requestAnimationFrame</code> from the engine's clock. wavesurfer
+  renders the waveform and hosts the region handles and <b>does not play audio</b> (D-07) &mdash; it has no playhead of its
+  own to disagree with.</p>
+</div>
+
+<div class="sec">
+  <h2>Loop controls</h2>
+  <div class="panel panel-pad row wrap" style="gap:var(--ds-5)">
+    <button class="iconbtn iconbtn-perform" aria-label="Loop" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+    <div class="col" style="gap:var(--ds-1)">
+      <span class="cap">loop</span>
+      <span class="t-lg num">bar 17 &rarr; 25</span>
+    </div>
+    <div class="col" style="gap:var(--ds-1)">
+      <span class="cap">name</span>
+      <span class="t-lg">Chorus</span>
+    </div>
+    <div class="col" style="gap:var(--ds-1)">
+      <span class="cap">repetitions</span>
+      <span class="t-lg num">12</span>
+    </div>
+    <button class="btn btn-perform">Set A</button>
+    <button class="btn btn-perform">Set B</button>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Tempo ramp</h2>
+  <p class="note">Optional: start slow, step up after each repetition. The ladder shows where you are and where you
+  are heading, which is the only reason to look at the screen mid-loop.</p>
+  <div class="panel panel-pad col" style="gap:var(--ds-3)">
+    <div class="row" style="justify-content:space-between">
+      <span class="cap">tempo ramp · +5% every 2 repetitions</span>
+      <span class="chip chip-run"><i class="dot"></i>ramping</span>
+    </div>
+    <div class="ramp-steps">
+      <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i>
+      <span class="num t-sm dim" style="margin-left:var(--ds-3)">70% &rarr; <b style="color:var(--ds-text)">85%</b> &rarr; 100%</span>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Why looping never seeks</h2>
+  <p class="note">D-06: the engine wraps its own read cursor <b>in the input domain</b> with a ~5&nbsp;ms crossfade, so the
+  shared stretcher never learns a loop happened. Seeking the stretcher would emit buffered loop-end audio after every
+  jump &mdash; a click on each repetition, which N-05 forbids. Nothing in this UI may expose a control that seeks during an
+  active loop; scrubbing the waveform while looping <b>disarms the loop first</b>, and the loop button visibly unlights.</p>
+</div>
+
+</div></body></html>

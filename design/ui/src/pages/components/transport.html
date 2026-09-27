@@ -1,0 +1,90 @@
+<!-- @dsCard group="Components" name="Transport bar" subtitle="Glanceable readout, performance-tier controls only" viewport="1100x960" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Transport — Stemcraft</title><style>/* @inject */
+.tbar{border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
+.tbar .transport{border-top:0}
+.vsep{width:1px;align-self:stretch;background:var(--ds-border)}
+</style></head><body><div class="doc">
+
+<div class="sec">
+  <h1>Transport bar</h1>
+  <p class="note">The only strip you look at while playing. Everything on it is <b>performance tier</b>; nothing
+  that needs precision lives here. The bar number is set in <b>display/48</b> mono because it is read
+  peripherally, without focusing.</p>
+</div>
+
+<div class="sec">
+  <h2>Playing, looping</h2>
+  <div class="tbar">
+    <div class="transport">
+      <button class="iconbtn iconbtn-perform" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>
+      <button class="iconbtn iconbtn-perform" aria-label="Loop" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+      <button class="iconbtn iconbtn-perform" aria-label="Metronome" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M12 2l5 18H7L12 2zm-1 6l-3 11h8L13 8h-2z"/></svg></button>
+      <button class="iconbtn iconbtn-perform" aria-label="Count in"><svg viewBox="0 0 24 24"><path d="M11 3h2v7h-2zM5.6 5.6l1.4-1.4 5 5-1.4 1.4zM3 11h7v2H3zm8 8h2v2h-2zm6.4-13.4l1.4 1.4-5 5-1.4-1.4zM14 11h7v2h-7z"/></svg></button>
+
+      <div class="vsep"></div>
+
+      <div class="readout">
+        <span class="cap" style="align-self:center;margin-right:var(--ds-2)">bar</span>
+        <span class="big">17</span>
+        <span class="num dim" style="font-size:var(--ds-t-lg)">.3</span>
+      </div>
+
+      <div class="vsep"></div>
+
+      <div class="col" style="gap:2px">
+        <span class="cap">position</span>
+        <span class="num t-lg">1:42 / 3:58</span>
+      </div>
+
+      <div class="grow"></div>
+
+      <div class="slider slider-perform" style="max-width:220px">
+        <div class="shead"><span class="slabel">Tempo</span><span class="sval num">82%</span></div>
+        <div class="track"><i class="fill" style="width:64%"></i><i class="knob" style="left:64%"></i></div>
+      </div>
+      <div class="slider slider-perform" style="max-width:200px">
+        <div class="shead"><span class="slabel">Pitch</span><span class="sval num">&minus;2 st</span></div>
+        <div class="track"><i class="center-tick"></i><i class="knob" style="left:33%"></i></div>
+      </div>
+
+      <div class="vsep"></div>
+      <div class="col" style="gap:2px">
+        <span class="cap">tempo</span>
+        <span class="num t-lg">105.0 BPM</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Stopped, no loop, original tempo</h2>
+  <div class="tbar">
+    <div class="transport">
+      <button class="iconbtn iconbtn-perform" aria-label="Play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+      <button class="iconbtn iconbtn-perform" aria-label="Loop"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+      <button class="iconbtn iconbtn-perform" aria-label="Metronome"><svg viewBox="0 0 24 24"><path d="M12 2l5 18H7L12 2zm-1 6l-3 11h8L13 8h-2z"/></svg></button>
+      <button class="iconbtn iconbtn-perform" aria-label="Count in"><svg viewBox="0 0 24 24"><path d="M11 3h2v7h-2zM5.6 5.6l1.4-1.4 5 5-1.4 1.4zM3 11h7v2H3zm8 8h2v2h-2zm6.4-13.4l1.4 1.4-5 5-1.4-1.4zM14 11h7v2h-7z"/></svg></button>
+      <div class="vsep"></div>
+      <div class="readout"><span class="cap" style="align-self:center;margin-right:var(--ds-2)">bar</span><span class="big">1</span><span class="num dim" style="font-size:var(--ds-t-lg)">.1</span></div>
+      <div class="vsep"></div>
+      <div class="col" style="gap:2px"><span class="cap">position</span><span class="num t-lg">0:00 / 3:58</span></div>
+      <div class="grow"></div>
+      <div class="slider slider-perform" style="max-width:220px"><div class="shead"><span class="slabel">Tempo</span><span class="sval num">100%</span></div><div class="track"><i class="fill" style="width:100%"></i><i class="knob" style="left:100%"></i></div></div>
+      <div class="slider slider-perform" style="max-width:200px"><div class="shead"><span class="slabel">Pitch</span><span class="sval num dim3">0 st</span></div><div class="track"><i class="center-tick"></i><i class="knob" style="left:50%"></i></div></div>
+      <div class="vsep"></div>
+      <div class="col" style="gap:2px"><span class="cap">tempo</span><span class="num t-lg">128.0 BPM</span></div>
+    </div>
+  </div>
+  <p class="note">At 100% and 0 semitones the values go muted &mdash; an untouched control should not compete for attention
+  with one you actually moved.</p>
+</div>
+
+<div class="sec">
+  <h2>Keyboard</h2>
+  <p class="note">Every performance control has a key, because reaching for a mouse mid-song is the thing this
+  layout is trying to avoid. <b class="num">Space</b> play/pause · <b class="num">L</b> arm loop · <b class="num">A</b>/<b class="num">B</b> set loop
+  points at the current bar · <b class="num">M</b> metronome · <b class="num">1&ndash;4</b> mute stem by lane position ·
+  <b class="num">&#8593;/&#8595;</b> tempo &plusmn;5% · <b class="num">&#8592;/&#8594;</b> jump one bar.</p>
+</div>
+
+</div></body></html>

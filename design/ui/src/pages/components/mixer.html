@@ -1,0 +1,119 @@
+<!-- @dsCard group="Components" name="Stem strips" subtitle="The signature component: mute/solo/gain + lane, 4 fixed stems" viewport="1100x1845" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Stem strips — Stemcraft</title><style>/* @inject */
+.stem-lane{height:78px}
+.mixer{border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden;background:var(--ds-surface)}
+</style></head><body><div class="doc">
+
+<div class="sec">
+  <h1>Stem strips</h1>
+  <p class="note">Four stems, always in this order, always labelled: <b>vocals, drums, bass, other</b>. The order is
+  part of the identity — position and text carry the meaning that hue only accelerates.
+  <b>M</b> and <b>S</b> are performance tier (56&times;44); gain is setup tier.</p>
+</div>
+
+<div class="sec">
+  <h2>Default — nothing muted</h2>
+  <div class="mixer">
+    <div class="stem-row stem stem-v">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>vocals</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane"><!--@wave vocals 1200 78 11--></div>
+    </div>
+    <div class="stem-row stem stem-d">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>drums</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane"><!--@wave drums 1200 78 22--></div>
+    </div>
+    <div class="stem-row stem stem-b">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>bass</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane"><!--@wave bass 1200 78 33--></div>
+    </div>
+    <div class="stem-row stem stem-o">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>other</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane"><!--@wave other 1200 78 44--></div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Playing along — bass muted, bass gain raised for reference elsewhere</h2>
+  <p class="note">The muted lane drops to 28% opacity and its <b>M</b> lights vivid red. This is the app's whole
+  reason to exist, so the state has to be unmistakable across a room: the lane visibly goes dark, not just a
+  small toggle somewhere.</p>
+  <div class="mixer">
+    <div class="stem-row stem stem-v">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>vocals</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane"><!--@wave vocals 1200 78 11--></div>
+    </div>
+    <div class="stem-row stem stem-d">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>drums</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:62%"></i></div>
+      </div>
+      <div class="stem-lane"><!--@wave drums 1200 78 22--></div>
+    </div>
+    <div class="stem-row stem stem-b">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>bass <span class="chip" style="height:22px;padding:0 8px;margin-left:auto">muted</span></div>
+        <div class="ms"><button data-k="m" aria-pressed="true">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane muted"><!--@wave bass 1200 78 33--></div>
+    </div>
+    <div class="stem-row stem stem-o">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>other</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane"><!--@wave other 1200 78 44--></div>
+    </div>
+  </div>
+  <p class="note">N-06: a mute takes audible effect in <b class="num">~50&ndash;100 ms</b>, not instantly &mdash; D-05 mixes to stereo
+  ahead of one shared stretcher, whose buffer still holds the previous mix. The visual flip is immediate, so the UI
+  is slightly ahead of the ear. That is the accepted cost, and it is documented here so nobody later &ldquo;fixes&rdquo; it
+  by delaying the paint.</p>
+</div>
+
+<div class="sec">
+  <h2>Soloed</h2>
+  <div class="mixer">
+    <div class="stem-row stem stem-b">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>bass</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s" aria-pressed="true">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane"><!--@wave bass 1200 78 33--></div>
+    </div>
+    <div class="stem-row stem stem-o">
+      <div class="stem-ctl">
+        <div class="stem-name"><i class="sw"></i>other</div>
+        <div class="ms"><button data-k="m">M</button><button data-k="s">S</button></div>
+        <div class="gainbar"><i style="width:50%"></i></div>
+      </div>
+      <div class="stem-lane muted"><!--@wave other 1200 78 44--></div>
+    </div>
+  </div>
+</div>
+
+</div></body></html>

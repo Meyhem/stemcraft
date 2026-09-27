@@ -1,0 +1,54 @@
+<!-- @dsCard group="Screens" name="Export" subtitle="Pick stems, apply the practice recipe or not (D-10)" viewport="1200x1020" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Export — Stemcraft</title><style>/* @inject */
+.stempick{display:flex;flex-direction:column;gap:var(--ds-2)}
+.stempick .check{border:1px solid var(--ds-border-strong);border-radius:var(--ds-r-btn);padding:0 var(--ds-4);background:var(--ds-ground);justify-content:flex-start}
+.stempick .sw{width:10px;height:10px;border-radius:2px;flex:none}
+</style></head><body><div class="scrim"><div class="modal">
+
+  <div class="modal-head">
+    <div class="col" style="gap:2px"><span class="t-lg">Export</span><span class="t-sm dim">Tightrope — Walk the Moon</span></div>
+    <button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button>
+  </div>
+
+  <div class="modal-body">
+    <div class="col" style="gap:var(--ds-3)">
+      <span class="cap">stems to include</span>
+      <div class="stempick">
+        <label class="check" data-on="true"><span class="box"></span><span class="sw" style="background:var(--ds-vocals)"></span><span class="grow">vocals</span><span class="num t-sm dim3">3:58</span></label>
+        <label class="check" data-on="true"><span class="box"></span><span class="sw" style="background:var(--ds-drums)"></span><span class="grow">drums</span><span class="num t-sm dim3">3:58</span></label>
+        <label class="check" data-on="false"><span class="box"></span><span class="sw" style="background:var(--ds-bass)"></span><span class="grow">bass</span><span class="num t-sm dim3">3:58</span></label>
+        <label class="check" data-on="true"><span class="box"></span><span class="sw" style="background:var(--ds-other)"></span><span class="grow">other</span><span class="num t-sm dim3">3:58</span></label>
+      </div>
+      <p class="t-sm dim3" style="margin:0">Matches your current mix — bass is muted, so it is off here too. One stem alone exports the same way.</p>
+    </div>
+
+    <hr class="divider">
+
+    <div class="col" style="gap:var(--ds-3)">
+      <span class="cap">tempo &amp; pitch</span>
+      <div class="seg" style="align-self:flex-start"><button aria-selected="true">As practiced — 82%, −2 st</button><button>Original — 100%, 0 st</button></div>
+      <div class="banner banner-warn" style="padding:var(--ds-3) var(--ds-4)">
+        <span class="bicon" style="width:20px;height:20px"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 5h2v7h-2zm0 9h2v2h-2z"/></svg></span>
+        <div class="banner-body">
+          <p class="t-sm" style="margin:0"><b style="color:var(--ds-text)">The export will not sound identical to the preview.</b>
+          D-10: playback runs on a real-time budget, the export does not. The file is rendered server-side from the
+          untouched WAV masters at higher quality — better than what you practiced to, never worse.</p>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="row" style="gap:var(--ds-4)">
+      <div class="field grow"><label for="n">File name</label><input class="input" id="n" value="tightrope-no-bass-82"></div>
+      <div class="field" style="width:160px"><label>Format</label><div class="seg"><button aria-selected="true">MP3 320</button></div></div>
+    </div>
+    <p class="t-sm dim3" style="margin:calc(-1 * var(--ds-3)) 0 0 0">Lands in <span class="num">exports/</span> and downloads when the job finishes.</p>
+  </div>
+
+  <div class="modal-foot">
+    <button class="btn btn-ghost">Cancel</button>
+    <button class="btn btn-primary">Queue export</button>
+  </div>
+
+</div></div></body></html>

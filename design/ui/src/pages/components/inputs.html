@@ -1,0 +1,81 @@
+<!-- @dsCard group="Components" name="Inputs & controls" subtitle="Fields, drop zone, segmented, sliders, stem picker" viewport="1000x1270" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Inputs — Stemcraft</title><style>/* @inject */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--ds-4)}
+.stempick{display:flex;gap:var(--ds-3);flex-wrap:wrap}
+.stempick .check{border:1px solid var(--ds-border-strong);border-radius:var(--ds-r-btn);padding:0 var(--ds-4);background:var(--ds-surface)}
+.stempick .sw{width:10px;height:10px;border-radius:2px;flex:none}
+</style></head><body><div class="doc">
+
+<div class="sec"><h1>Inputs &amp; controls</h1></div>
+
+<div class="sec">
+  <h2>Text fields</h2>
+  <div class="grid2">
+    <div class="field"><label for="t">Title</label><input class="input" id="t" value="Tightrope"></div>
+    <div class="field"><label for="a">Artist</label><input class="input" id="a" placeholder="Prefilled from file tags"></div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Drop zone &amp; URL</h2>
+  <div class="drop">
+    <div class="t-md" style="color:var(--ds-text)">Drop an audio or video file</div>
+    <div class="t-sm" style="margin-top:var(--ds-1)">No format whitelist — if ffmpeg decodes it, it is accepted</div>
+  </div>
+  <div class="field" style="margin-top:var(--ds-3)">
+    <label for="u">…or paste a URL</label>
+    <div class="row"><input class="input" id="u" placeholder="https://"><button class="btn btn-primary">Fetch</button></div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Segmented</h2>
+  <div class="row wrap">
+    <div class="seg"><button aria-selected="true">Upload</button><button>URL</button></div>
+    <div class="seg"><button aria-selected="true">Bass</button><button>Guitar</button></div>
+    <div class="seg"><button>All</button><button aria-selected="true">Running</button><button>Failed</button></div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Sliders</h2>
+  <p class="note">Tempo and pitch are <b>performance tier</b> — fat track, big knob — because they are adjusted between
+  repetitions with a bass in hand. Per-stem gain is setup tier. Every value is mirrored as a mono readout, because a
+  knob position is unreadable at 1.5 m and a number is not.</p>
+  <div class="grid2">
+    <div class="slider slider-perform">
+      <div class="shead"><span class="slabel">Tempo</span><span class="sval num">82%</span></div>
+      <div class="track"><i class="fill" style="width:64%"></i><i class="knob" style="left:64%"></i></div>
+      <div class="t-xs dim3 num">50% ————————— 100%</div>
+    </div>
+    <div class="slider slider-perform">
+      <div class="shead"><span class="slabel">Pitch</span><span class="sval num">&minus;2 st</span></div>
+      <div class="track"><i class="center-tick"></i><i class="fill" style="left:33%;width:17%;right:auto"></i><i class="knob" style="left:33%"></i></div>
+      <div class="t-xs dim3 num">&minus;6 ——————|—————— +6</div>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:var(--ds-4)">
+    <div class="slider">
+      <div class="shead"><span class="slabel">bass gain</span><span class="sval num">+3.0 dB</span></div>
+      <div class="track"><i class="center-tick"></i><i class="fill" style="width:62%;background:var(--ds-bass)"></i><i class="knob" style="left:62%"></i></div>
+    </div>
+    <div class="slider">
+      <div class="shead"><span class="slabel">drums gain</span><span class="sval num">0.0 dB</span></div>
+      <div class="track"><i class="center-tick"></i><i class="fill" style="width:50%;background:var(--ds-drums)"></i><i class="knob" style="left:50%"></i></div>
+    </div>
+  </div>
+  <p class="note">A gain fill takes the <b>stem</b> hue — it sits inside a named stem context. The tempo fill takes the
+  <b>accent</b> — it belongs to the whole mix.</p>
+</div>
+
+<div class="sec">
+  <h2>Stem picker — export</h2>
+  <div class="stempick">
+    <label class="check" data-on="false"><span class="box"></span><span class="sw" style="background:var(--ds-vocals)"></span>vocals</label>
+    <label class="check" data-on="true"><span class="box"></span><span class="sw" style="background:var(--ds-drums)"></span>drums</label>
+    <label class="check" data-on="true"><span class="box"></span><span class="sw" style="background:var(--ds-bass)"></span>bass</label>
+    <label class="check" data-on="true"><span class="box"></span><span class="sw" style="background:var(--ds-other)"></span>other</label>
+  </div>
+</div>
+
+</div></body></html>

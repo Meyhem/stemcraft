@@ -1,0 +1,63 @@
+/* Stemcraft design tokens — single source of truth.
+   Rule of the system: SATURATION carries meaning.
+   Muted hues (~65% sat) identify a STEM and appear only where a stem is named.
+   Vivid hues (~95% sat) are SYSTEM SIGNALS and appear only in chrome.
+   The two sets never share a context, so a vivid red always means "failed". */
+:root{
+  /* ground + surfaces — depth comes from surface steps + 1px borders, not shadows */
+  --ds-ground:#0B0C0E;
+  --ds-surface:#131519;
+  --ds-raised:#1A1D22;
+  --ds-overlay:#22262D;
+  --ds-border:#2A2F37;
+  --ds-border-strong:#3A414B;
+
+  /* text */
+  --ds-text:#EDEFF2;
+  --ds-text-2:#9BA3AE;   /* ~7:1 on ground */
+  --ds-text-3:#626A76;
+
+  /* stem identity — muted. Never the sole carrier: fixed order + always labelled. */
+  --ds-vocals:#E0A458;
+  --ds-drums:#D9605F;
+  --ds-bass:#4FC3B0;
+  --ds-other:#8E85E0;
+
+  /* system signals — vivid */
+  --ds-ok:#30D158;
+  --ds-warn:#FFB020;
+  --ds-error:#FF3B30;
+  --ds-queued:#626A76;
+  --ds-accent:#4FA3FF;   /* focus rings, selected chrome, links */
+
+  /* type — one step up from typical web for the 1.5 m music-stand constraint */
+  --ds-font:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif;
+  --ds-mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --ds-t-display:48px; --ds-lh-display:52px;
+  --ds-t-xl:32px;      --ds-lh-xl:38px;
+  --ds-t-lg:24px;      --ds-lh-lg:30px;
+  --ds-t-md:18px;      --ds-lh-md:26px;   /* body default */
+  --ds-t-sm:15px;      --ds-lh-sm:22px;
+  --ds-t-xs:13px;      --ds-lh-xs:18px;   /* floor — dense tables only */
+
+  /* space — 4px base */
+  --ds-1:4px; --ds-2:8px; --ds-3:12px; --ds-4:16px;
+  --ds-5:24px; --ds-6:32px; --ds-7:48px; --ds-8:64px; --ds-9:96px;
+
+  /* shape */
+  --ds-r-input:4px; --ds-r-btn:8px; --ds-r-panel:12px; --ds-r-pill:999px;
+
+  /* hit targets — two tiers, enforced */
+  --ds-hit-perform:56px;  /* touched while holding an instrument */
+  --ds-hit-setup:40px;    /* touched with both hands free */
+  --ds-hit-min:32px;      /* absolute floor */
+
+  /* motion — the playhead is NEVER animated by CSS (D-07: engine owns the clock) */
+  --ds-m-flip:120ms; --ds-m-panel:200ms; --ds-m-progress:400ms;
+  --ds-ease:cubic-bezier(.2,.7,.3,1);
+
+  --ds-shadow-overlay:0 24px 48px -12px rgba(0,0,0,.72);
+}
+@media (prefers-reduced-motion:reduce){
+  :root{ --ds-m-flip:0ms; --ds-m-panel:0ms; --ds-m-progress:0ms; }
+}

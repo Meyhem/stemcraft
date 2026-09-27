@@ -1,0 +1,78 @@
+<!-- @dsCard group="Components" name="Actions & status" subtitle="Buttons, icon buttons, state chips, device badge" viewport="1000x1140" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Actions — Stemcraft</title><style>/* @inject */</style></head><body><div class="doc">
+
+<div class="sec">
+  <h1>Actions &amp; status</h1>
+</div>
+
+<div class="sec">
+  <h2>Buttons — setup tier (40px)</h2>
+  <div class="row wrap">
+    <button class="btn btn-primary">Add song</button>
+    <button class="btn">Re-analyze</button>
+    <button class="btn btn-ghost">Cancel</button>
+    <button class="btn btn-danger">Delete song</button>
+    <button class="btn" aria-disabled="true">Export</button>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Buttons — performance tier (56px)</h2>
+  <p class="note">Anything reachable mid-song. Bigger type as well as a bigger box: the label has to survive a glance
+  from 1.5 m.</p>
+  <div class="row wrap">
+    <button class="btn btn-perform btn-primary">Count in</button>
+    <button class="btn btn-perform">Tap tempo</button>
+    <button class="btn btn-perform">Loop: Chorus</button>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Icon buttons</h2>
+  <div class="row wrap">
+    <button class="iconbtn iconbtn-perform" aria-label="Play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="iconbtn iconbtn-perform" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>
+    <button class="iconbtn iconbtn-perform" aria-label="Loop" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+    <button class="iconbtn" aria-label="Metronome"><svg viewBox="0 0 24 24"><path d="M12 2l5 18H7L12 2zm-1 6l-3 11h8L13 8h-2z"/></svg></button>
+    <button class="iconbtn" aria-label="More"><svg viewBox="0 0 24 24"><path d="M12 8a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z"/></svg></button>
+  </div>
+  <p class="note">Pressed state uses the <b>accent</b>, not a stem hue — a lit loop button is chrome, not a stem.</p>
+</div>
+
+<div class="sec">
+  <h2>Job state chips</h2>
+  <div class="row wrap">
+    <span class="chip"><i class="dot"></i>queued</span>
+    <span class="chip chip-run"><i class="dot"></i>running</span>
+    <span class="chip chip-ok"><i class="dot"></i>done</span>
+    <span class="chip chip-error"><i class="dot"></i>failed</span>
+    <span class="chip"><i class="dot"></i>cancelled</span>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Device &amp; song-state badges</h2>
+  <div class="row wrap">
+    <span class="chip chip-ok">cuda · RTX 5080</span>
+    <span class="chip chip-warn">cpu fallback</span>
+    <span class="chip">imported</span>
+    <span class="chip chip-run">separating</span>
+    <span class="chip chip-ok">analyzed</span>
+  </div>
+  <p class="note">Song state is <b>derived from which files exist</b>, never stored — the badge reads the filesystem's
+  answer, and there is no status field for it to disagree with.</p>
+</div>
+
+<div class="sec">
+  <h2>Key candidates — always plural, always with confidence</h2>
+  <div class="row wrap">
+    <span class="chip chip-lg" style="border-color:var(--ds-border-strong);color:var(--ds-text)">G minor <b class="num dim" style="margin-left:6px">72%</b></span>
+    <span class="chip chip-lg">B&#9837; major <b class="num dim3" style="margin-left:6px">18%</b></span>
+    <span class="chip chip-lg">D minor <b class="num dim3" style="margin-left:6px">7%</b></span>
+  </div>
+  <p class="note">R-05: detection is probabilistic and will be wrong on dense material. The UI never presents a single
+  key as fact. The fretboard behind these chips is pure lookup and has no failure mode, so it stays trustworthy even
+  when the detector is not.</p>
+</div>
+
+</div></body></html>

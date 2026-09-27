@@ -1,0 +1,120 @@
+<!-- @dsCard group="Screens" name="Song library" subtitle="Card grid, derived state, CPU banner, empty variant" viewport="1440x980" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Library — Stemcraft</title><style>/* @inject */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--ds-4)}
+.song{cursor:pointer;transition:border-color var(--ds-m-flip) var(--ds-ease)}
+.song:hover{border-color:var(--ds-border-strong)}
+.song .thumb{height:72px;background:var(--ds-ground);border-bottom:1px solid var(--ds-border);position:relative;overflow:hidden}
+.song .thumb svg{width:100%;height:100%;display:block}
+.song .body{padding:var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-2)}
+.song .title{font-size:var(--ds-t-md);font-weight:600;line-height:1.3}
+.song .meta{display:flex;align-items:center;gap:var(--ds-2);flex-wrap:wrap}
+.song.pend .thumb{opacity:.35}
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <div class="brand"><span class="mark"><i style="height:10px;background:var(--ds-vocals)"></i><i style="height:16px;background:var(--ds-drums)"></i><i style="height:20px;background:var(--ds-bass)"></i><i style="height:13px;background:var(--ds-other)"></i></span>Stemcraft</div>
+  <div class="seg" style="margin-left:var(--ds-5)"><button aria-selected="true">Library</button><button>Jobs</button><button>Album splitter</button></div>
+  <div class="grow"></div>
+  <span class="chip chip-warn">cpu fallback</span>
+  <span class="chip chip-run"><i class="dot"></i>1 running</span>
+  <button class="btn btn-primary">Add song</button>
+</div>
+
+<div class="main col" style="gap:var(--ds-5)">
+
+  <div class="banner banner-warn">
+    <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2l10 18H2L12 2zm-1 8h2v4h-2zm0 5h2v2h-2z"/></svg></span>
+    <div class="banner-body grow">
+      <p class="banner-title" style="color:var(--ds-warn)">Running on CPU — separation takes 2–4 min per song</p>
+      <p class="t-sm dim" style="margin:0 0 var(--ds-2)">CUDA proof-of-work op failed at worker boot: no kernel image available for sm_120 (RTX 5080). cu128 wheel required.</p>
+    </div>
+    <button class="btn btn-ghost">Details</button>
+  </div>
+
+  <div class="row">
+    <h1 class="t-lg" style="margin:0">Library</h1>
+    <span class="t-md dim num">18 songs</span>
+    <div class="grow"></div>
+    <div class="seg"><button aria-selected="true">Last played</button><button>Added</button><button>Title</button></div>
+    <input class="input" placeholder="Filter…" style="width:220px">
+  </div>
+
+  <div class="grid">
+
+    <div class="card song">
+      <div class="thumb"><!--@wave mix 700 72 101--></div>
+      <div class="body">
+        <div class="title">Tightrope</div>
+        <div class="t-sm dim">Walk the Moon</div>
+        <div class="meta">
+          <span class="chip" style="color:var(--ds-text)">G minor <b class="num dim" style="margin-left:4px">72%</b></span>
+          <span class="chip num">128.0 BPM</span>
+          <span class="chip num">3:58</span>
+        </div>
+        <div class="t-sm dim3">played 2 hours ago · bass muted · loop “Chorus”</div>
+      </div>
+    </div>
+
+    <div class="card song">
+      <div class="thumb"><!--@wave mix 700 72 202--></div>
+      <div class="body">
+        <div class="title">Hysteria</div>
+        <div class="t-sm dim">Muse</div>
+        <div class="meta">
+          <span class="chip" style="color:var(--ds-text)">B minor <b class="num dim" style="margin-left:4px">81%</b></span>
+          <span class="chip num">148.0 BPM</span>
+          <span class="chip num">3:47</span>
+        </div>
+        <div class="t-sm dim3">played yesterday · bass muted · 88%</div>
+      </div>
+    </div>
+
+    <div class="card song pend">
+      <div class="thumb"><!--@wave mix 700 72 303--></div>
+      <div class="body">
+        <div class="title">Teen Town</div>
+        <div class="t-sm dim">Weather Report</div>
+        <div class="meta"><span class="chip chip-run"><i class="dot"></i>separating</span><span class="chip chip-warn">cpu</span><span class="chip num">3:11</span></div>
+        <div class="bar" style="margin-top:var(--ds-1)"><i style="width:18%"></i></div>
+        <div class="t-sm dim3 num">18% · ~3 min left</div>
+      </div>
+    </div>
+
+    <div class="card song pend">
+      <div class="thumb"><!--@wave mix 700 72 404--></div>
+      <div class="body">
+        <div class="title">Longview</div>
+        <div class="t-sm dim">Green Day</div>
+        <div class="meta"><span class="chip"><i class="dot"></i>queued</span><span class="chip num">3:59</span></div>
+        <div class="t-sm dim3">waiting — 1 job ahead</div>
+      </div>
+    </div>
+
+    <div class="card song">
+      <div class="thumb"><!--@wave mix 700 72 505--></div>
+      <div class="body">
+        <div class="title">Come Together</div>
+        <div class="t-sm dim">The Beatles</div>
+        <div class="meta">
+          <span class="chip" style="color:var(--ds-text)">D minor <b class="num dim" style="margin-left:4px">64%</b></span>
+          <span class="chip num">82.0 BPM</span>
+          <span class="chip num">4:19</span>
+        </div>
+        <div class="t-sm dim3">played 3 days ago</div>
+      </div>
+    </div>
+
+    <div class="card song" style="border-color:rgba(255,59,48,.4)">
+      <div class="thumb" style="display:flex;align-items:center;justify-content:center;opacity:1">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="var(--ds-error)"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 5h2v7h-2zm0 9h2v2h-2z"/></svg>
+      </div>
+      <div class="body">
+        <div class="title">01J9ZB2M7C-unknown</div>
+        <div class="t-sm num" style="color:var(--ds-error)">song.json unreadable</div>
+        <div class="t-sm dim3 num">schema_version 4 &gt; max 1</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div></body></html>

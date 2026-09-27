@@ -1,0 +1,81 @@
+<!-- @dsCard group="Foundations" name="Space, shape & hit targets" subtitle="4px base; two hit-target tiers for hands-busy use" viewport="1000x1140" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Space — Stemcraft</title><style>/* @inject */
+.ramp{display:flex;align-items:flex-end;gap:var(--ds-4)}
+.ramp div{display:flex;flex-direction:column;align-items:center;gap:var(--ds-2)}
+.ramp i{display:block;background:var(--ds-accent);border-radius:2px;width:100%}
+.ramp span{font:400 var(--ds-t-xs)/1 var(--ds-mono);color:var(--ds-text-3)}
+.shapes{display:flex;gap:var(--ds-4);flex-wrap:wrap}
+.shapes div{width:120px;height:80px;background:var(--ds-raised);border:1px solid var(--ds-border-strong);display:flex;align-items:center;justify-content:center;font:400 var(--ds-t-xs)/1 var(--ds-mono);color:var(--ds-text-2)}
+.hits{display:flex;gap:var(--ds-5);align-items:flex-end;flex-wrap:wrap}
+.hits figure{margin:0;display:flex;flex-direction:column;gap:var(--ds-2);align-items:center}
+.hitbox{border:2px dashed var(--ds-border-strong);border-radius:var(--ds-r-btn);display:flex;align-items:center;justify-content:center;color:var(--ds-text-3);font:400 var(--ds-t-xs)/1 var(--ds-mono)}
+</style></head><body><div class="doc">
+
+<div class="sec">
+  <h1>Space, shape &amp; hit targets</h1>
+</div>
+
+<div class="sec">
+  <h2>Spacing ramp — 4px base</h2>
+  <div class="ramp">
+    <div style="width:4px"><i style="height:4px"></i><span>4</span></div>
+    <div style="width:8px"><i style="height:8px"></i><span>8</span></div>
+    <div style="width:12px"><i style="height:12px"></i><span>12</span></div>
+    <div style="width:16px"><i style="height:16px"></i><span>16</span></div>
+    <div style="width:24px"><i style="height:24px"></i><span>24</span></div>
+    <div style="width:32px"><i style="height:32px"></i><span>32</span></div>
+    <div style="width:48px"><i style="height:48px"></i><span>48</span></div>
+    <div style="width:64px"><i style="height:64px"></i><span>64</span></div>
+    <div style="width:96px"><i style="height:96px"></i><span>96</span></div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Radius</h2>
+  <div class="shapes">
+    <div style="border-radius:4px">4 · input</div>
+    <div style="border-radius:8px">8 · button, card</div>
+    <div style="border-radius:12px">12 · panel</div>
+    <div style="border-radius:999px">pill · chip</div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Hit targets — two tiers</h2>
+  <p class="note">This is where the music-stand constraint bites hardest. Controls split into
+  <b>performance</b> controls, hit imprecisely while holding an instrument, and <b>setup</b> controls, touched
+  with both hands free. A control's tier is a design decision recorded in the component, not a size picked by eye.</p>
+  <div class="hits">
+    <figure>
+      <div class="hitbox" style="width:56px;height:56px;border-color:var(--ds-accent);color:var(--ds-accent)">56</div>
+      <figcaption class="t-xs dim">performance<br>transport, mute/solo, loop arm</figcaption>
+    </figure>
+    <figure>
+      <div class="hitbox" style="width:40px;height:40px">40</div>
+      <figcaption class="t-xs dim">setup<br>fields, export picker, job rows</figcaption>
+    </figure>
+    <figure>
+      <div class="hitbox" style="width:32px;height:32px;border-color:var(--ds-error);color:var(--ds-error)">32</div>
+      <figcaption class="t-xs dim">absolute floor<br>never smaller, anywhere</figcaption>
+    </figure>
+  </div>
+  <div class="row" style="gap:var(--ds-4);margin-top:var(--ds-3);align-items:flex-end">
+    <button class="btn btn-perform btn-primary">Performance button</button>
+    <button class="btn">Setup button</button>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Motion</h2>
+  <p class="note">
+    <b class="num">120ms</b> state flips · <b class="num">200ms</b> panels and modals · <b class="num">400ms</b> progress bars.
+    Easing <code class="num">cubic-bezier(.2,.7,.3,1)</code>.
+    <br><br>
+    Hard rule: <b>the playhead and waveform cursor are driven by requestAnimationFrame off the audio engine's clock,
+    never by a CSS transition.</b> D-07 makes wavesurfer a slave to that clock; a CSS-animated playhead would be a
+    second clock telling a different, smoother lie. <code class="num">prefers-reduced-motion</code> zeroes every duration
+    above and changes nothing about the playhead.
+  </p>
+</div>
+
+</div></body></html>

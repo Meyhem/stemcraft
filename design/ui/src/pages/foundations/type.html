@@ -1,0 +1,60 @@
+<!-- @dsCard group="Foundations" name="Type & numerals" subtitle="One step up for 1.5 m; tabular mono for every number" viewport="1000x1150" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Type — Stemcraft</title><style>/* @inject */
+.spec{display:grid;grid-template-columns:auto 1fr;gap:var(--ds-3) var(--ds-5);align-items:baseline}
+.spec .k{font:400 var(--ds-t-xs)/1.4 var(--ds-mono);color:var(--ds-text-3);white-space:nowrap}
+.jitter{display:flex;gap:var(--ds-6);flex-wrap:wrap}
+.jitter > div{padding:var(--ds-4);border:1px solid var(--ds-border);border-radius:var(--ds-r-btn);background:var(--ds-surface)}
+.bad{font:600 var(--ds-t-xl)/1 var(--ds-font)}
+</style></head><body><div class="doc">
+
+<div class="sec">
+  <h1>Type &amp; numerals</h1>
+  <p class="note">The scale sits <b>one step above typical web</b> because the screen is on a music stand about 1.5 m
+  away and read at a glance, mid-song. 18px is the body default, not 14 or 16. <b>13px is a hard floor</b> and is
+  reserved for job history — the one table nobody reads while playing.</p>
+</div>
+
+<div class="sec">
+  <h2>Scale</h2>
+  <div class="spec">
+    <span class="k">display 48/52</span><span class="t-display">bar 17</span>
+    <span class="k">xl 32/38</span><span class="t-xl">Tightrope — Walk the Moon</span>
+    <span class="k">lg 24/30</span><span class="t-lg">Section heading</span>
+    <span class="k">md 18/26 · body</span><span class="t-md">Four stems, mixed live, looped against the beat grid.</span>
+    <span class="k">sm 15/22</span><span class="t-sm dim">Secondary label, control captions, table body</span>
+    <span class="k">xs 13/18 · floor</span><span class="t-xs dim3">Job history only — never used while playing</span>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Every numeral is mono and tabular</h2>
+  <p class="note">Bars, BPM, tempo percentage, semitones, timecode, durations, file sizes. Proportional digits shift
+  width as they change, which makes a live readout visibly wobble next to a moving playhead. <code class="num">font-variant-numeric: tabular-nums</code>
+  is applied by the <code class="num">.num</code> class and is not optional.</p>
+  <div class="jitter">
+    <div>
+      <div class="cap" style="color:var(--ds-ok)">Correct — .num</div>
+      <div class="num" style="font-size:var(--ds-t-xl);font-weight:600">128.0 BPM</div>
+      <div class="num" style="font-size:var(--ds-t-xl);font-weight:600">111.1 BPM</div>
+      <div class="num" style="font-size:var(--ds-t-xl);font-weight:600">96.4 BPM</div>
+    </div>
+    <div>
+      <div class="cap" style="color:var(--ds-error)">Wrong — proportional</div>
+      <div class="bad">128.0 BPM</div>
+      <div class="bad">111.1 BPM</div>
+      <div class="bad">96.4 BPM</div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Families</h2>
+  <div class="spec">
+    <span class="k">--ds-font</span><span class="t-sm">ui-sans-serif, -apple-system, "Segoe UI", Roboto, Inter, sans-serif</span>
+    <span class="k">--ds-mono</span><span class="t-sm num">ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace</span>
+  </div>
+  <p class="note">System stacks only. No webfont is loaded: the app is served from a home machine over LAN and a
+  blocked or slow font request must never delay first paint of a screen you are about to play along to.</p>
+</div>
+
+</div></body></html>
