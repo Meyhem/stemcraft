@@ -1,4 +1,15 @@
-from stemcraft_lib.jobs import connect, data_version, enqueue, get_job, list_jobs
+import sqlite3
+
+import pytest
+from stemcraft_lib.jobs import (
+    JOBS_SCHEMA_VERSION,
+    JobsSchemaError,
+    connect,
+    data_version,
+    enqueue,
+    get_job,
+    list_jobs,
+)
 
 
 def test_pragmas_match_the_spec(tmp_path):
@@ -40,6 +51,22 @@ def test_list_is_newest_first_and_filterable(tmp_path):
     second = enqueue(conn, kind="probe")
     assert [j.id for j in list_jobs(conn)] == [second, first]
     assert list_jobs(conn, states=("done",)) == []
+
+
+def test_a_fresh_database_is_stamped_with_the_current_schema_version(tmp_path):
+    conn = connect(tmp_path / "jobs.sqlite")
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == JOBS_SCHEMA_VERSION == 1
+
+
+def test_a_newer_schema_version_is_refused_rather_than_guessed_at(tmp_path):
+    path = tmp_path / "jobs.sqlite"
+    setup = sqlite3.connect(path)
+    setup.execute("PRAGMA user_version = 99")
+    setup.close()
+
+    with pytest.raises(JobsSchemaError) as err:
+        connect(path)
+    assert "99" in str(err.value)
 
 
 def test_data_version_changes_when_a_different_connection_writes(tmp_path):

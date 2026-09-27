@@ -33,6 +33,20 @@ CREATE INDEX IF NOT EXISTS jobs_state_id ON jobs (state, id);
 CREATE INDEX IF NOT EXISTS jobs_song ON jobs (song_id);
 """
 
+# jobs.sqlite's schema version, stored in PRAGMA user_version (SQLite's own
+# schema-version slot -- no extra column or table needed for it). Mirrors
+# song.json's schema_version: CREATE TABLE IF NOT EXISTS silently no-ops
+# against a pre-existing database, so without this there would be no way to
+# detect an old schema and every later query would just assume today's
+# columns exist.
+JOBS_SCHEMA_VERSION = 1
+
+
+class JobsSchemaError(Exception):
+    """jobs.sqlite's user_version is newer than this build understands.
+    Refuse to guess rather than run queries against an unknown schema (same
+    refusal shape as song.py's SongUnreadable for a future schema_version)."""
+
 
 @dataclass(frozen=True)
 class Job:
@@ -78,7 +92,21 @@ def connect(path: Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
     conn.execute("PRAGMA synchronous=NORMAL")
+
+    version = conn.execute("PRAGMA user_version").fetchone()[0]
+    if version > JOBS_SCHEMA_VERSION:
+        conn.close()
+        raise JobsSchemaError(
+            f"{path}: user_version {version} is newer than this build understands "
+            f"({JOBS_SCHEMA_VERSION}); refusing to guess"
+        )
+    # A fresh database (never stamped) and one already at the current
+    # version both take the same CREATE TABLE IF NOT EXISTS path -- it is a
+    # no-op on the latter. Only version 1 exists yet; when a v2 lands, a
+    # migration chain for 0 < version < JOBS_SCHEMA_VERSION goes here.
     conn.executescript(SCHEMA)
+    if version == 0:
+        conn.execute(f"PRAGMA user_version = {JOBS_SCHEMA_VERSION}")
     return conn
 
 
