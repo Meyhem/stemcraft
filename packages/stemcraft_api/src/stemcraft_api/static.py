@@ -3,17 +3,34 @@ the API are genuinely one origin and a stale bundle is impossible."""
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+log = logging.getLogger("stemcraft.api")
+
 
 def mount_spa(app: FastAPI, dist_dir: Path) -> None:
     dist_dir = dist_dir.resolve()
     index = dist_dir / "index.html"
-    app.mount("/assets", StaticFiles(directory=dist_dir / "assets"), name="assets")
+    assets = dist_dir / "assets"
+
+    # A partial build (e.g. interrupted, or a future bundler with no assets/
+    # dir) must never crash the process: StaticFiles raises at construction
+    # time if its directory is missing, and that would take /api/health and
+    # /api/jobs down with it -- the same blast-radius shape as invariant #1
+    # (torch-free API), just via a different mechanism. The API's own routes
+    # must stay reachable even when the bundle is broken.
+    if not index.is_file():
+        log.warning("skipping SPA mount: %s has no index.html", dist_dir)
+        return
+    if not assets.is_dir():
+        log.warning("skipping /assets mount: %s has no assets/ directory", dist_dir)
+    else:
+        app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa(full_path: str) -> FileResponse:
