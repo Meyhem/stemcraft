@@ -101,17 +101,12 @@ def _check_sqlite_wal() -> DepCheck:
     return DepCheck("sqlite_wal", True, str(cfg.jobs_db))
 
 
-def check_all(*, require_yt_dlp: bool = True) -> list[DepCheck]:
-    checks = [_check_ffmpeg(), _check_dirs(), _check_sqlite_wal()]
-    yt = _check_yt_dlp()
-    if not require_yt_dlp and not yt.ok:
-        yt = DepCheck("yt-dlp", True, f"not required in this configuration ({yt.detail})")
-    checks.append(yt)
-    return checks
+def check_all() -> list[DepCheck]:
+    return [_check_ffmpeg(), _check_dirs(), _check_sqlite_wal(), _check_yt_dlp()]
 
 
-def assert_ready(*, require_yt_dlp: bool = True) -> list[DepCheck]:
-    checks = check_all(require_yt_dlp=require_yt_dlp)
+def assert_ready() -> list[DepCheck]:
+    checks = check_all()
     failed = [c for c in checks if not c.ok]
     if failed:
         lines = "\n".join(f"  - {c.name}: {c.detail}" for c in failed)
