@@ -295,13 +295,26 @@ export function renderBlock(
   loop boundary — proving the detector actually catches a real click before trusting
   it to certify the crossfaded path.
 - **No drift:** after `N` loop repetitions at `readRate = 1`, `cursor.position` equals
-  the closed-form prediction `startFrame + crossfadeFrames + N * loopLength` (mod
-  floating-point epsilon) — the rebase arithmetic never accumulates error.
+  the closed-form prediction `startFrame + crossfadeFrames + N * (loopLength -
+  crossfadeFrames)` (mod floating-point epsilon) — **corrected from an earlier draft
+  of this plan**, which claimed `+ N * loopLength`. That's wrong: the rebase
+  (`pos = startFrame + crossfadeFrames + (pos - endFrame)`) jumps backward by
+  `loopLength - crossfadeFrames` relative to an unwrapped continuation every time it
+  fires, precisely because rebasing *past* `startFrame` (to `startFrame +
+  crossfadeFrames`, not to `startFrame` itself) is what makes "nothing repeats" true
+  — skipping the content already delivered as the crossfade's fade-in shortens the
+  *effective* period after the first pass by exactly `crossfadeFrames`. This is not
+  drift in the sense N-05 cares about (a small, fixed, exactly-reproducible-every-cycle
+  shortening not a progressive divergence) — assert against this corrected closed
+  form, not the position's raw distance from `startFrame`. Verify with a reference
+  model that computes the same recurrence via wrap-counting (`Math.ceil` division)
+  rather than accumulating frame-by-frame, so a real accumulation bug in `renderBlock`
+  can't hide by agreeing with its own arithmetic.
 - **Non-integer `readRate` drift:** repeat the drift check at `readRate = 0.7` (70 %
   tempo) — position after `N` repetitions still matches `startFrame + crossfadeFrames
-  + N * loopLength` exactly, because the loop period is defined in stem-domain
-  samples regardless of `readRate`; only wall-clock time to complete a repetition
-  changes.
+  + N * (loopLength - crossfadeFrames)` exactly, because the loop period is defined in
+  stem-domain samples regardless of `readRate`; only wall-clock time to complete a
+  repetition changes.
 - **No content repeats or is skipped across the wrap:** with a ramp stem, collect the
   sequence of *nominal* read positions (ignoring the blend) across one full
   repetition and assert the tail window's blended output lies strictly between the
