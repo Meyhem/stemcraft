@@ -64,7 +64,7 @@ songs/
   <id>-<slug>/
     song.json              # metadata, settings, edit recipe
     original.<ext>         # untouched upload or download
-    audio.wav              # 44.1 kHz stereo, normalized
+    audio.wav              # 48 kHz stereo, normalized (D-03)
     peaks.json             # waveform peaks for the UI
     analysis.json          # key candidates, beat grid, chords
     stems/
@@ -140,7 +140,7 @@ Anything ffmpeg can decode is accepted — no format whitelist.
 
 - **File upload:** audio or video; for video the audio track is extracted
 - **URL:** direct media links and sites like YouTube, fetched with yt-dlp
-- **Pipeline:** keep the original → decode to 44.1 kHz stereo WAV → compute waveform peaks → queue separation
+- **Pipeline:** keep the original → decode to 48 kHz stereo WAV (D-03) → compute waveform peaks → queue separation
 - Title and artist are prefilled from the file's own tags when present, always editable
 - A decode failure shows ffmpeg's message; the original stays so the import can be retried
 
@@ -195,7 +195,7 @@ Runs after separation, on CPU, in a few seconds.
 - Per-stem mute, solo and volume, over stacked waveforms with the beat grid
 - **Tempo** 50–100% without changing pitch, live during playback; clean down to about 60–70%, usable below
 - **Pitch shift** in semitones, live, e.g. to match a down-tuned instrument; clean within ±2–3
-- **A–B loop** snapped to bars, with an optional tempo ramp: start slow, speed up a step after each repetition
+- **A–B loop** snapped to bars
 - Count-in and metronome click locked to the beat grid
 - All settings auto-save to song.json
 
@@ -248,5 +248,10 @@ Guitar comes later via basic-pitch. Clean single-note lines transcribe well; dis
 
 ## Open questions
 
-- [ ] Install: uv with a pinned cu128 PyTorch, or a container on NVIDIA's PyTorch image?
-- [ ] GPU runtime: PyTorch, or the ONNX-only path that avoids torch entirely?
+Both are closed; the tech spec holds the live ones (§14, Q-01…Q-05).
+
+- [x] Install: uv with a pinned cu128 PyTorch, or a container on NVIDIA's PyTorch image?
+      → **uv with a constraints-pinned cu128 index** (D-02).
+- [x] GPU runtime: PyTorch, or the ONNX-only path that avoids torch entirely?
+      → **PyTorch in the worker**, with the API kept torch-free as the blast-radius
+      boundary instead (D-08, §4).
