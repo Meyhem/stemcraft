@@ -1,0 +1,39 @@
+.svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.fret {
+  stroke: var(--ds-border);
+  stroke-width: 1;
+}
+
+.nut {
+  stroke: var(--ds-border-strong);
+  stroke-width: 3;
+}
+
+.string {
+  stroke: var(--ds-border-strong);
+  stroke-width: 1;
+}
+
+.note {
+  fill: var(--ds-raised);
+  stroke: var(--ds-border-strong);
+  stroke-width: 2;
+}
+
+.root {
+  fill: var(--ds-bass);
+  stroke: var(--ds-bass);
+}
+
+.label {
+  font: 600 11px var(--ds-font);
+  fill: var(--ds-text);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
