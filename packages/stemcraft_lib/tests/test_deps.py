@@ -8,7 +8,7 @@ def test_reports_one_check_per_dependency(monkeypatch, tmp_path):
     monkeypatch.setenv("STEMCRAFT_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("STEMCRAFT_SONGS_DIR", str(tmp_path / "songs"))
     names = {c.name for c in check_all()}
-    assert names == {"ffmpeg", "yt-dlp", "data_dirs", "sqlite_wal"}
+    assert names == {"ffmpeg", "ffmpeg_rubberband", "yt-dlp", "data_dirs", "sqlite_wal"}
 
 
 def test_missing_ffmpeg_fails_loudly_with_the_real_reason(monkeypatch, tmp_path):
@@ -63,12 +63,17 @@ def test_subprocess_timeout_caught_as_failed_check(monkeypatch, tmp_path):
     checks = check_all()
     checks_by_name = {c.name: c for c in checks}
 
-    # All four checks must be present (even if some failed)
-    assert set(checks_by_name.keys()) == {"ffmpeg", "yt-dlp", "data_dirs", "sqlite_wal"}
+    # All five checks must be present (even if some failed)
+    assert set(checks_by_name.keys()) == {
+        "ffmpeg", "ffmpeg_rubberband", "yt-dlp", "data_dirs", "sqlite_wal"
+    }
 
-    # ffmpeg and yt-dlp should be failed due to timeout
+    # ffmpeg, ffmpeg_rubberband and yt-dlp should be failed due to timeout
     assert checks_by_name["ffmpeg"].ok is False
     assert "timed out" in checks_by_name["ffmpeg"].detail.lower()
+
+    assert checks_by_name["ffmpeg_rubberband"].ok is False
+    assert "timed out" in checks_by_name["ffmpeg_rubberband"].detail.lower()
 
     assert checks_by_name["yt-dlp"].ok is False
     assert "timed out" in checks_by_name["yt-dlp"].detail.lower()
@@ -78,3 +83,15 @@ def test_subprocess_timeout_caught_as_failed_check(monkeypatch, tmp_path):
         assert_ready()
     assert "ffmpeg" in str(err.value)
     assert "yt-dlp" in str(err.value)
+
+
+def test_rubberband_is_present_in_this_ffmpeg_build(monkeypatch, tmp_path):
+    # D7-01 made librubberband a correctness dependency. Same argument as the
+    # MP3 round trip already in _check_ffmpeg: a build without it passes
+    # `ffmpeg -version` and then fails at the first export.
+    from stemcraft_lib.deps import check_all
+
+    monkeypatch.setenv("STEMCRAFT_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("STEMCRAFT_SONGS_DIR", str(tmp_path / "songs"))
+    check = next(c for c in check_all() if c.name == "ffmpeg_rubberband")
+    assert check.ok, check.detail

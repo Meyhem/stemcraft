@@ -12,11 +12,15 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import tempfile
+import time
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 from .atomic import atomic_output
 from .config import SAMPLE_RATE
+from .export import EXPORT_BITRATE, ExportRecipe
 
 # Generous but finite: a hung ffmpeg must fail loudly (N-08), not hang the
 # worker's single serial queue forever.
@@ -97,3 +101,142 @@ def encode_opus(src: Path, dst: Path, *, bitrate: str = "128k") -> None:
         )
         if proc.returncode != 0:
             raise FfmpegError(f"opus encode of {src} failed: {proc.stderr.strip()[-500:]}")
+
+
+class FfmpegCancelled(Exception):
+    """render_export saw should_cancel() go true and terminated ffmpeg (D7-07).
+    A separate exception from FfmpegError because a cancel is not a failure --
+    the worker turns it into JobCancelled, which is a different job state."""
+
+
+# ffmpeg's own progress cadence (-stats_period defaults to 0.5 s). It bounds how
+# long a cancel takes to be noticed, because that is when we look.
+_PROGRESS_KEY = "out_time_us"
+
+
+def build_export_args(
+    stem_paths: Sequence[Path], recipe: ExportRecipe, dst: Path
+) -> list[str]:
+    """The whole render as one argv: per-stem gain, one amix, optionally one
+    rubberband, one MP3 encode. Pure, so the graph is testable as text.
+
+    One subprocess and no intermediate file is not an optimization: every extra
+    stage would be another 16-bit round trip, and D-10 promises this file is the
+    *better* one.
+    """
+    if len(stem_paths) != len(recipe.stems):
+        raise ValueError(
+            f"{len(stem_paths)} stem path(s) for {len(recipe.stems)} recipe stem(s); "
+            "input N maps to recipe.stems[N] and the two must line up"
+        )
+
+    args = [
+        "ffmpeg", "-hide_banner", "-nostdin", "-v", "error",
+        # Progress on stdout, so the caller can stream it without parsing the
+        # stderr log that N-08 wants kept verbatim for the failure message.
+        "-progress", "pipe:1", "-y",
+    ]
+    for path in stem_paths:
+        args += ["-i", str(path)]
+
+    chain = []
+    labels = []
+    for index, stem in enumerate(recipe.stems):
+        chain.append(f"[{index}:a]volume={stem.gain_db:.4f}dB[g{index}]")
+        labels.append(f"[g{index}]")
+    # normalize=0: amix normalizes by input count by default, which would make a
+    # four-stem export quieter than a one-stem export of the same material. The
+    # gains in the recipe are the mix; nothing else is allowed to scale them.
+    chain.append(f"{''.join(labels)}amix=inputs={len(labels)}:normalize=0[mix]")
+    out_label = "[mix]"
+    if not recipe.is_identity:
+        chain.append(
+            f"[mix]rubberband=tempo={recipe.tempo:.6f}:pitch={recipe.pitch_scale:.6f}"
+            # D7-01/D-10: the offline quality settings the real-time engine cannot
+            # afford. channels=together keeps the stereo pair phase-coherent; the
+            # filter's `apart` default smears the image on a mix.
+            ":pitchq=quality:channels=together:transients=crisp[out]"
+        )
+        out_label = "[out]"
+
+    args += [
+        "-filter_complex", ";".join(chain),
+        "-map", out_label,
+        "-ac", "2",
+        "-ar", str(SAMPLE_RATE),  # D-03, restated at the output, never 44.1
+        "-codec:a", "libmp3lame",
+        "-b:a", EXPORT_BITRATE,
+    ]
+    if recipe.title:
+        args += ["-metadata", f"title={recipe.title}"]
+    if recipe.artist:
+        args += ["-metadata", f"artist={recipe.artist}"]
+    # -f mp3 explicitly: dst is an atomic_output temp path whose suffix is .tmp,
+    # so ffmpeg has no extension to infer the muxer from.
+    args += ["-f", "mp3", str(dst)]
+    return args
+
+
+def render_export(
+    stem_paths: Sequence[Path],
+    recipe: ExportRecipe,
+    dst: Path,
+    *,
+    source_seconds: float,
+    on_progress: Callable[[float], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
+) -> float:
+    """Render `recipe` to `dst` atomically. Returns the output's duration in
+    seconds, which is `source_seconds / tempo` and therefore not the Song's
+    duration -- that is the number worth reporting back to the UI.
+
+    Streamed rather than run through _run() because an export of a real song is
+    seconds of work the Job Queue should show moving, and because a cancel has
+    to be noticed while it runs.
+    """
+    if shutil.which("ffmpeg") is None:
+        raise FfmpegError("ffmpeg is not on PATH (C-04: the only audio I/O path)")
+    expected_seconds = source_seconds / recipe.tempo if recipe.tempo else source_seconds
+    rendered = 0.0
+
+    with atomic_output(dst) as tmp:
+        args = build_export_args(stem_paths, recipe, tmp)
+        with tempfile.TemporaryFile("w+") as stderr_file:
+            # stderr to a file, not a pipe: reading only stdout while a full
+            # stderr pipe blocks ffmpeg is the classic deadlock, and N-08 needs
+            # all of stderr afterwards anyway.
+            proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=stderr_file, text=True)
+            deadline = time.monotonic() + _TIMEOUT_SECONDS
+            stdout = proc.stdout
+            assert stdout is not None  # stdout=PIPE above
+            try:
+                for line in stdout:
+                    key, _, value = line.strip().partition("=")
+                    if key == _PROGRESS_KEY and value not in ("", "N/A"):
+                        rendered = int(value) / 1_000_000
+                        if on_progress is not None and expected_seconds > 0:
+                            on_progress(min(1.0, rendered / expected_seconds))
+                    if should_cancel is not None and should_cancel():
+                        # D7-07: a CPU subprocess writing to a temp file has
+                        # nothing to orphan, so terminate rather than wait for a
+                        # checkpoint. atomic_output unlinks the temp file on the
+                        # way out of this `with`.
+                        proc.terminate()
+                        proc.wait(timeout=10)
+                        raise FfmpegCancelled(f"export of {dst.name} cancelled")
+                    if time.monotonic() > deadline:
+                        proc.kill()
+                        proc.wait(timeout=10)
+                        raise FfmpegError(f"ffmpeg timed out after {_TIMEOUT_SECONDS}s")
+            finally:
+                stdout.close()
+                if proc.poll() is None:
+                    proc.kill()
+                    proc.wait(timeout=10)
+            returncode = proc.wait()
+            stderr_file.seek(0)
+            stderr = stderr_file.read()
+        if returncode != 0:
+            raise FfmpegError(f"export render of {dst.name} failed: {stderr.strip()[-500:]}")
+
+    return rendered

@@ -116,3 +116,177 @@ def test_probe_of_unreadable_file_raises_with_ffprobes_message(tmp_path):
     with pytest.raises(FfmpegError) as err:
         probe(garbage)
     assert str(err.value)
+
+
+def _stem_wavs(tmp_path, names, *, seconds=2.0):
+    paths = []
+    for index, name in enumerate(names):
+        path = tmp_path / f"{name}.wav"
+        subprocess.run(
+            ["ffmpeg", "-hide_banner", "-nostdin", "-y", "-f", "lavfi",
+             "-i", f"sine=frequency={220 * (index + 1)}:duration={seconds}:sample_rate=48000",
+             "-ac", "2", "-c:a", "pcm_s16le", str(path)],
+            check=True, capture_output=True,
+        )
+        paths.append(path)
+    return paths
+
+
+def _recipe(**overrides):
+    from stemcraft_lib.export import ExportRecipe, ExportStem
+
+    base = dict(
+        song_id="01ABC",
+        name="mix",
+        stems=[ExportStem(name="vocals"), ExportStem(name="drums", gain_db=-6.0)],
+        tempo=0.82,
+        pitch_semitones=-2,
+        title="Tightrope",
+        artist="Walk the Moon",
+    )
+    return ExportRecipe(**{**base, **overrides})
+
+
+def test_export_args_mix_every_stem_with_its_gain_and_no_normalization(tmp_path):
+    from stemcraft_lib.ffmpeg import build_export_args
+
+    paths = _stem_wavs(tmp_path, ["vocals", "drums"])
+    args = build_export_args(paths, _recipe(), tmp_path / "out.mp3")
+    graph = args[args.index("-filter_complex") + 1]
+
+    assert "[0:a]volume=0.0000dB[g0]" in graph
+    assert "[1:a]volume=-6.0000dB[g1]" in graph
+    # normalize=0: amix's default divides by input count, which would make a
+    # four-stem export quieter than a one-stem export of the same material.
+    assert "[g0][g1]amix=inputs=2:normalize=0[mix]" in graph
+    assert args[:2] == ["ffmpeg", "-hide_banner"]
+    assert args[-1] == str(tmp_path / "out.mp3")
+
+
+def test_export_args_apply_rubberband_with_the_quality_options(tmp_path):
+    from stemcraft_lib.ffmpeg import build_export_args
+
+    paths = _stem_wavs(tmp_path, ["vocals", "drums"])
+    args = build_export_args(paths, _recipe(), tmp_path / "out.mp3")
+    graph = args[args.index("-filter_complex") + 1]
+
+    # D7-01: this option set *is* D-10's "higher quality than the preview".
+    assert "rubberband=tempo=0.820000:pitch=0.890899" in graph
+    assert "pitchq=quality" in graph
+    assert "channels=together" in graph
+    assert "transients=crisp" in graph
+    assert args[args.index("-map") + 1] == "[out]"
+
+
+def test_export_args_omit_rubberband_entirely_for_an_identity_recipe(tmp_path):
+    from stemcraft_lib.ffmpeg import build_export_args
+
+    paths = _stem_wavs(tmp_path, ["vocals", "drums"])
+    args = build_export_args(paths, _recipe(tempo=1.0, pitch_semitones=0), tmp_path / "o.mp3")
+    graph = args[args.index("-filter_complex") + 1]
+
+    # D7-05: a vocoder asked for identity still re-synthesises. Don't ask it.
+    assert "rubberband" not in graph
+    assert args[args.index("-map") + 1] == "[mix]"
+
+
+def test_export_args_encode_320k_mp3_at_48k_stereo_with_id3(tmp_path):
+    from stemcraft_lib.ffmpeg import build_export_args
+
+    paths = _stem_wavs(tmp_path, ["vocals", "drums"])
+    args = build_export_args(paths, _recipe(), tmp_path / "out.mp3")
+
+    assert args[args.index("-b:a") + 1] == "320k"
+    assert args[args.index("-ar") + 1] == "48000"  # D-03, never 44.1
+    assert args[args.index("-ac") + 1] == "2"
+    assert args[args.index("-codec:a") + 1] == "libmp3lame"
+    assert "title=Tightrope" in args
+    assert "artist=Walk the Moon" in args
+
+
+def test_export_args_reject_a_stem_count_that_does_not_match_the_recipe(tmp_path):
+    from stemcraft_lib.ffmpeg import build_export_args
+
+    paths = _stem_wavs(tmp_path, ["vocals"])
+    with pytest.raises(ValueError):
+        build_export_args(paths, _recipe(), tmp_path / "out.mp3")
+
+
+def test_render_export_stretches_the_output_and_tags_it(tmp_path):
+    from stemcraft_lib.ffmpeg import render_export
+
+    paths = _stem_wavs(tmp_path, ["vocals", "drums"], seconds=2.0)
+    dst = tmp_path / "exports" / "mix.mp3"
+
+    seconds = render_export(paths, _recipe(tempo=0.5), dst, source_seconds=2.0)
+
+    assert dst.is_file()
+    # Half speed is twice as long. The roadmap's exit criterion in miniature.
+    assert seconds == pytest.approx(4.0, abs=0.2)
+    tags = probe(dst)
+    assert tags.duration_seconds == pytest.approx(4.0, abs=0.2)
+    assert tags.title == "Tightrope"
+
+
+def test_render_export_of_one_stem_alone_works(tmp_path):
+    from stemcraft_lib.export import ExportStem
+    from stemcraft_lib.ffmpeg import render_export
+
+    paths = _stem_wavs(tmp_path, ["bass"])
+    dst = tmp_path / "exports" / "bass-only.mp3"
+    render_export(paths, _recipe(stems=[ExportStem(name="bass")]), dst, source_seconds=2.0)
+    assert dst.stat().st_size > 0
+
+
+def test_render_export_reports_progress_monotonically(tmp_path):
+    from stemcraft_lib.ffmpeg import render_export
+
+    paths = _stem_wavs(tmp_path, ["vocals", "drums"], seconds=3.0)
+    seen: list[float] = []
+    render_export(
+        paths, _recipe(), tmp_path / "exports" / "m.mp3",
+        source_seconds=3.0, on_progress=seen.append,
+    )
+    assert seen
+    assert seen == sorted(seen)
+    assert all(0.0 <= f <= 1.0 for f in seen)
+
+
+def test_render_export_cancels_and_leaves_nothing_behind(tmp_path):
+    from stemcraft_lib.ffmpeg import FfmpegCancelled, render_export
+
+    paths = _stem_wavs(tmp_path, ["vocals", "drums"])
+    dst = tmp_path / "exports" / "mix.mp3"
+
+    with pytest.raises(FfmpegCancelled):
+        render_export(paths, _recipe(), dst, source_seconds=2.0, should_cancel=lambda: True)
+
+    assert not dst.exists()
+    # The atomic temp file went with it -- no .mix.mp3.*.tmp left in exports/.
+    assert list((tmp_path / "exports").iterdir()) == []
+
+
+def test_render_export_failure_carries_ffmpegs_own_message(tmp_path):
+    from stemcraft_lib.ffmpeg import FfmpegError, render_export
+
+    bad = tmp_path / "vocals.wav"
+    bad.write_bytes(b"not audio at all")
+    other = _stem_wavs(tmp_path, ["drums"])[0]
+    dst = tmp_path / "exports" / "mix.mp3"
+
+    with pytest.raises(FfmpegError) as err:
+        render_export([bad, other], _recipe(), dst, source_seconds=2.0)
+    assert str(err.value)  # N-08: ffmpeg's stderr, not a wrapper's paraphrase
+    assert not dst.exists()
+
+
+def test_render_export_overwrites_a_previous_export_of_the_same_name(tmp_path):
+    from stemcraft_lib.ffmpeg import render_export
+
+    paths = _stem_wavs(tmp_path, ["vocals", "drums"])
+    dst = tmp_path / "exports" / "mix.mp3"
+    render_export(paths, _recipe(tempo=1.0, pitch_semitones=0), dst, source_seconds=2.0)
+    first = dst.read_bytes()
+    render_export(paths, _recipe(tempo=0.6), dst, source_seconds=2.0)
+
+    assert dst.read_bytes() != first  # §6: a re-run overwrites its own output

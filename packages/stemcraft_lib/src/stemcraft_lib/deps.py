@@ -56,6 +56,32 @@ def _check_ffmpeg() -> DepCheck:
     return DepCheck("ffmpeg", True, exe)
 
 
+def _check_ffmpeg_rubberband() -> DepCheck:
+    """D7-01 made librubberband a correctness floor for export, so it is checked
+    the same way the MP3 encoder is: by using it. `ffmpeg -filters` would list
+    a filter that fails to initialise; 0.1 s of sine through it would not."""
+    exe = shutil.which("ffmpeg")
+    if exe is None:
+        return DepCheck("ffmpeg_rubberband", False, "ffmpeg is not on PATH")
+    try:
+        proc = subprocess.run(
+            [exe, "-hide_banner", "-nostdin", "-f", "lavfi", "-i",
+             f"sine=frequency=440:duration=0.1:sample_rate={SAMPLE_RATE}",
+             "-af", "rubberband=tempo=0.8:pitch=0.9:pitchq=quality", "-f", "null", "-"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return DepCheck("ffmpeg_rubberband", False, "timed out after 30s in the rubberband filter")
+    if proc.returncode != 0:
+        return DepCheck(
+            "ffmpeg_rubberband",
+            False,
+            "this ffmpeg has no working rubberband filter (D-10/D7-01: export needs "
+            f"librubberband): {proc.stderr.strip()[-500:]}",
+        )
+    return DepCheck("ffmpeg_rubberband", True, "rubberband filter available")
+
+
 def _check_yt_dlp() -> DepCheck:
     exe = shutil.which("yt-dlp")
     if exe is None:
@@ -102,7 +128,13 @@ def _check_sqlite_wal() -> DepCheck:
 
 
 def check_all() -> list[DepCheck]:
-    return [_check_ffmpeg(), _check_dirs(), _check_sqlite_wal(), _check_yt_dlp()]
+    return [
+        _check_ffmpeg(),
+        _check_ffmpeg_rubberband(),
+        _check_dirs(),
+        _check_sqlite_wal(),
+        _check_yt_dlp(),
+    ]
 
 
 def assert_ready() -> list[DepCheck]:

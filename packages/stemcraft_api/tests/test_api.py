@@ -57,7 +57,9 @@ def test_the_api_never_imports_torch(tmp_path):
 
 def test_health_reports_every_dependency_and_the_sample_rate(client):
     body = client.get("/api/health").json()
-    assert {c["name"] for c in body["deps"]} == {"ffmpeg", "yt-dlp", "data_dirs", "sqlite_wal"}
+    assert {c["name"] for c in body["deps"]} == {
+        "ffmpeg", "ffmpeg_rubberband", "yt-dlp", "data_dirs", "sqlite_wal"
+    }
     assert body["sample_rate"] == 48000
     assert body["device"] is None
     assert body["fallback_reason"] is None
