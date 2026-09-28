@@ -1,0 +1,54 @@
+/* UI spec §5, "Chord strip": runs under the timeline, read at a glance from
+   ~1.5 m while playing. Token-only -- no hex, no raw px outside the 1px
+   hairline the bar ticks share with Timeline. No transition/animation on the
+   current-chord highlight: it is painted by usePlayhead's rAF loop via a ref. */
+
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+}
+
+.note {
+  margin: 0;
+  font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-font);
+  color: var(--ds-text-2);
+}
+
+.track {
+  position: relative;
+  height: var(--ds-7);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+}
+
+.barTick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--ds-border);
+}
+
+.segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--ds-border);
+  font: 700 var(--ds-t-md) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text-2);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* The read-at-a-glance signal: current chord is the accent, everything else
+   recedes. No transition -- this flips instantly, once per frame, from the
+   rAF loop, never from a CSS-eased state change. */
+.segment[data-current='true'] {
+  background: color-mix(in srgb, var(--ds-accent) 18%, transparent);
+  color: var(--ds-text);
+}

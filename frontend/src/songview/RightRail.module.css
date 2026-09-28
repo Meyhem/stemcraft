@@ -1,0 +1,173 @@
+/* UI spec §5, "Right rail": 320 px, setup tier throughout -- 40 px targets,
+   touched with both hands free, never with an instrument in hand. Token-only. */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-5);
+  width: 320px;
+  padding: var(--ds-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+}
+
+.heading {
+  margin: 0;
+  font: 600 var(--ds-t-xs) / 1 var(--ds-mono);
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+}
+
+.note {
+  margin: 0;
+  font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-font);
+  color: var(--ds-text-2);
+}
+
+.candidates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.candidate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--ds-hit-setup);
+  padding-inline: var(--ds-2);
+  font: 400 var(--ds-t-sm) / 1 var(--ds-font);
+  color: var(--ds-text);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+}
+
+.candidate b {
+  font: 700 var(--ds-t-sm) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text-2);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ds-hit-setup);
+  color: var(--ds-accent);
+  font: 400 var(--ds-t-sm) / 1 var(--ds-font);
+}
+
+.loops {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.loopRow {
+  display: flex;
+  align-items: stretch;
+  gap: var(--ds-1);
+}
+
+.loopRow button {
+  min-height: var(--ds-hit-setup);
+}
+
+.loopRow > button:first-child {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-1);
+  padding-inline: var(--ds-3);
+  font: 400 var(--ds-t-sm) / 1 var(--ds-font);
+  color: var(--ds-text);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  text-align: left;
+}
+
+.loopBars {
+  font: 400 var(--ds-t-xs) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text-2);
+}
+
+.delete {
+  width: var(--ds-hit-setup);
+  color: var(--ds-text-2);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+}
+
+.saveRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+}
+
+.nameField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+  font: 400 var(--ds-t-xs) / 1 var(--ds-font);
+  color: var(--ds-text-2);
+}
+
+.nameField input {
+  min-height: var(--ds-hit-setup);
+  padding-inline: var(--ds-3);
+  font: 400 var(--ds-t-sm) / 1 var(--ds-font);
+  color: var(--ds-text);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-input);
+}
+
+.saveRow > button {
+  min-height: var(--ds-hit-setup);
+  font: 600 var(--ds-t-sm) / 1 var(--ds-font);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  color: var(--ds-text);
+}
+
+.saveRow > button:disabled {
+  opacity: 0.5;
+}
+
+.seg {
+  display: flex;
+  gap: var(--ds-1);
+}
+
+.seg button {
+  flex: 1;
+  min-height: var(--ds-hit-setup);
+  font: 600 var(--ds-t-sm) / 1 var(--ds-font);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  color: var(--ds-text);
+}
+
+.seg button[aria-pressed='true'] {
+  background: var(--ds-accent);
+  color: var(--ds-ground);
+  border-color: var(--ds-accent);
+}
