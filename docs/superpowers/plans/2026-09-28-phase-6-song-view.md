@@ -2715,10 +2715,11 @@ export function Timeline({
 `Timeline.module.css`: `.track` is `position: relative; height: var(--ds-hit-perform);
 background: var(--ds-surface); border: 1px solid var(--ds-border);`. `.beat` is a 1 px
 `--ds-border` line, `.bar` a 1 px `--ds-border-strong` line, `.barLabel` mono +
-`tabular-nums` + `--ds-t-xs`. `.region` is `background: rgba(79, 163, 255, .18)` with
-`border-left`/`border-right` in `--ds-accent`; `.region[data-armed='false']` swaps both to
-`--ds-text-3` and drops the fill to `rgba(98, 106, 118, .18)` — that is U-06's visible
-disarm. `.playhead` is `position: absolute; top: 0; bottom: 0; width: 2px; background:
+`tabular-nums` + `--ds-t-xs`. `.region` is `background: color-mix(in srgb, var(--ds-accent) 18%, transparent)` with
+`border-left`/`border-right` in `--ds-accent`; `.region[data-armed='false']` swaps all
+three to `--ds-text-3` — that is U-06's visible disarm. Derive the fills with `color-mix`
+from the tokens rather than hand-typing their RGB, or a repaint of `--ds-accent` silently
+leaves the region behind. `.playhead` is `position: absolute; top: 0; bottom: 0; width: 2px; background:
 var(--ds-text); will-change: left;` with **no `transition` and no `animation`** (U-05).
 
 - [ ] **Step 4: Run the tests to verify they pass**
