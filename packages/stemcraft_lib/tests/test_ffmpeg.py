@@ -3,7 +3,18 @@ import subprocess
 import wave
 
 import pytest
-from stemcraft_lib.ffmpeg import FfmpegError, decode_to_wav, encode_mp3, encode_opus, probe
+from stemcraft_lib.album import TrackSpan
+from stemcraft_lib.config import SAMPLE_RATE
+from stemcraft_lib.export import EXPORT_BITRATE
+from stemcraft_lib.ffmpeg import (
+    FfmpegError,
+    build_track_args,
+    decode_to_wav,
+    encode_mp3,
+    encode_opus,
+    probe,
+    render_track,
+)
 
 pytestmark = pytest.mark.skipif(
     shutil.which("ffmpeg") is None, reason="ffmpeg not installed on this host"
@@ -313,3 +324,95 @@ def test_render_export_watchdog_kills_ffmpeg_that_outlives_the_timeout(tmp_path,
     assert "timed out" in str(err.value)
     assert not dst.exists()
     assert list((tmp_path / "exports").iterdir()) == []
+
+
+def _span(number=2, start_s=10.0, end_s=190.0, title="So What"):
+    return TrackSpan(
+        number=number,
+        title=title,
+        start_sample=int(start_s * SAMPLE_RATE),
+        end_sample=int(end_s * SAMPLE_RATE),
+        filename=f"{number:02d}-so-what.mp3",
+    )
+
+
+def test_track_argv_seeks_before_the_input_and_cuts_by_duration(tmp_path):
+    args = build_track_args(
+        tmp_path / "audio.wav", _span(), tmp_path / "out.tmp",
+        album_title="Kind of Blue", artist="Miles Davis", track_total=5,
+    )
+    # -ss BEFORE -i is the fast seek; with a re-encode it is also accurate, and
+    # the source is PCM (D8-03) so there is no frame boundary to land on.
+    assert args.index("-ss") < args.index("-i")
+    assert args[args.index("-ss") + 1] == "10.000000"
+    # -t, not -to: a duration is immune to the off-by-one that an end timestamp
+    # relative to a seeked-into stream invites.
+    assert args[args.index("-t") + 1] == "180.000000"
+
+
+def test_track_argv_carries_id3_including_album_and_track_number(tmp_path):
+    args = build_track_args(
+        tmp_path / "audio.wav", _span(), tmp_path / "out.tmp",
+        album_title="Kind of Blue", artist="Miles Davis", track_total=5,
+    )
+    joined = " ".join(args)
+    assert "title=So What" in joined
+    assert "artist=Miles Davis" in joined
+    assert "album=Kind of Blue" in joined
+    # D8-08: track numbering is the tag an export has no concept of, and the
+    # reason encode_mp3 was not grown a tags parameter instead.
+    assert "track=2/5" in joined
+
+
+def test_track_argv_reuses_the_export_bitrate_rather_than_redeclaring_it(tmp_path):
+    args = build_track_args(
+        tmp_path / "audio.wav", _span(), tmp_path / "out.tmp",
+        album_title="A", artist="B", track_total=1,
+    )
+    assert args[args.index("-b:a") + 1] == EXPORT_BITRATE
+    assert args[args.index("-ar") + 1] == str(SAMPLE_RATE)  # D-03, restated at the output
+
+
+def test_an_untitled_track_writes_no_empty_title_tag(tmp_path):
+    args = build_track_args(
+        tmp_path / "audio.wav", _span(title=""), tmp_path / "out.tmp",
+        album_title="A", artist="", track_total=1,
+    )
+    # An empty tag is worse than an absent one: players show a blank field
+    # instead of falling back to the filename.
+    assert "title=" not in " ".join(args)
+    assert "artist=" not in " ".join(args)
+
+
+def test_track_argv_names_the_muxer_explicitly(tmp_path):
+    # dst is an atomic_output temp path ending .tmp, so ffmpeg has no extension
+    # to infer the muxer from -- same reason build_export_args passes -f mp3.
+    args = build_track_args(
+        tmp_path / "audio.wav", _span(), tmp_path / "out.tmp",
+        album_title="A", artist="B", track_total=1,
+    )
+    assert args[args.index("-f") + 1] == "mp3"
+
+
+def test_render_track_cuts_at_the_requested_boundary(tmp_path):
+    # A 6-second 48 kHz tone, cut from 2.0 s to 5.0 s, must come back 3.0 s long.
+    src = tmp_path / "audio.wav"
+    subprocess.run(
+        ["ffmpeg", "-hide_banner", "-v", "error", "-y", "-f", "lavfi",
+         "-i", f"sine=frequency=440:sample_rate={SAMPLE_RATE}:duration=6",
+         "-ac", "2", "-c:a", "pcm_s16le", str(src)],
+        check=True,
+    )
+    span = TrackSpan(
+        number=1, title="Tone",
+        start_sample=2 * SAMPLE_RATE, end_sample=5 * SAMPLE_RATE,
+        filename="01-tone.mp3",
+    )
+    dst = tmp_path / "01-tone.mp3"
+    render_track(src, span, dst, album_title="Test", artist="Test", track_total=1)
+    assert dst.is_file()
+    # MP3 framing means the duration is not exact to the sample; 50 ms is the
+    # tolerance that catches a real off-by-a-track-length bug without failing
+    # on the encoder's own padding.
+    assert probe(dst).duration_seconds == pytest.approx(3.0, abs=0.05)
+    assert list(tmp_path.glob("*.tmp")) == []

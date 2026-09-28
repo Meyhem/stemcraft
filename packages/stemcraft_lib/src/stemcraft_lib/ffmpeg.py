@@ -18,6 +18,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from .album import TrackSpan
 from .atomic import atomic_output
 from .config import SAMPLE_RATE
 from .export import EXPORT_BITRATE, ExportRecipe
@@ -266,3 +267,70 @@ def render_export(
             raise FfmpegError(f"export render of {dst.name} failed: {stderr.strip()[-500:]}")
 
     return rendered
+
+
+def build_track_args(
+    src: Path,
+    span: TrackSpan,
+    dst: Path,
+    *,
+    album_title: str,
+    artist: str,
+    track_total: int,
+) -> list[str]:
+    """One track cut out of the decoded album master. Pure, so the argv is
+    testable as text -- same treatment as build_export_args.
+
+    -ss before -i is the fast seek. With a re-encode it is also exact, and
+    D8-03 has already guaranteed the source is PCM WAV, so there is no
+    compressed frame boundary for the seek to land on. -t rather than -to
+    because a duration is measured from the seek point and cannot drift with it.
+    """
+    args = [
+        "ffmpeg", "-hide_banner", "-nostdin", "-v", "error", "-y",
+        "-ss", f"{span.start_seconds:.6f}",
+        "-i", str(src),
+        "-t", f"{span.duration_seconds:.6f}",
+        "-ac", "2",
+        "-ar", str(SAMPLE_RATE),  # D-03, restated at the output, never 44.1
+        "-codec:a", "libmp3lame",
+        "-b:a", EXPORT_BITRATE,   # D8-08: imported, so the two paths cannot drift
+    ]
+    # An empty tag is worse than an absent one -- players show a blank field
+    # rather than falling back to the filename.
+    if span.title.strip():
+        args += ["-metadata", f"title={span.title}"]
+    if artist.strip():
+        args += ["-metadata", f"artist={artist}"]
+    if album_title.strip():
+        args += ["-metadata", f"album={album_title}"]
+    args += ["-metadata", f"track={span.number}/{track_total}"]
+    args += ["-f", "mp3", str(dst)]
+    return args
+
+
+def render_track(
+    src: Path,
+    span: TrackSpan,
+    dst: Path,
+    *,
+    album_title: str,
+    artist: str,
+    track_total: int,
+) -> None:
+    """Render one track atomically. Unlike render_export there is no progress
+    callback and no cancel hook: a single track is seconds of work, and the
+    split job's checkpoint is between tracks, where a cancel leaves nothing
+    half-written."""
+    with atomic_output(dst) as tmp:
+        proc = _run(
+            build_track_args(
+                src, span, tmp,
+                album_title=album_title, artist=artist, track_total=track_total,
+            )
+        )
+        if proc.returncode != 0:
+            raise FfmpegError(
+                f"render of track {span.number} ({span.filename}) failed: "
+                f"{proc.stderr.strip()[-500:]}"
+            )
