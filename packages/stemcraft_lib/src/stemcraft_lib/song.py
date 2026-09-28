@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, ValidationError
 from .atomic import atomic_write_json
 from .ids import new_song_id, song_dirname
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Fixed at HTDemucs v4 training time, not configured and not detected.
 STEM_NAMES: tuple[str, ...] = ("vocals", "drums", "bass", "other")
@@ -62,6 +62,13 @@ class Song(BaseModel):
     mix: dict[str, StemMix] = Field(default_factory=dict)
     playback: Playback = Field(default_factory=Playback)
     loops: list[Loop] = Field(default_factory=list)
+    # v2 (Phase 6). The A-B loop the user is currently practising, distinct from
+    # `loops` (the named ones they saved). Stored as bar numbers like every other
+    # loop, because bars are user-meaningful and survive a re-analysis that moves
+    # the sample indices under them (tech spec §5).
+    active_loop: Loop | None = None
+    metronome: bool = False
+    count_in_bars: int = 0
 
 
 def new_song(*, title: str, artist: str, source_kind: str, source_value: str) -> Song:
@@ -86,8 +93,15 @@ def _migrate(raw: dict, path: Path) -> dict:
             f"{path}: schema_version {version} is newer than this build understands "
             f"({SCHEMA_VERSION}); refusing to guess"
         )
-    # No older versions exist yet. When v2 lands, upgrade steps chain here and
-    # write_song persists the result forward in place.
+    if version == 1:
+        # v1 -> v2 (Phase 6) is purely additive: active_loop, metronome and
+        # count_in_bars take their pydantic defaults. Nothing is renamed or
+        # dropped, so the only work is stamping the version forward; the file
+        # itself is rewritten on the next write_song (§5: migrated in place).
+        raw = {**raw, "schema_version": 2}
+        version = 2
+    if version == SCHEMA_VERSION:
+        return raw
     raise SongUnreadable(f"{path}: no migration from schema_version {version}")
 
 

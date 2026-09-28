@@ -4,6 +4,7 @@ import pytest
 from stemcraft_lib.song import (
     SCHEMA_VERSION,
     STEM_NAMES,
+    Loop,
     SongUnreadable,
     create_song_dir,
     derive_files,
@@ -124,3 +125,57 @@ def test_find_song_dir_returns_none_for_unknown_id(tmp_path):
 def test_find_song_dir_ignores_a_directory_with_no_song_json(tmp_path):
     (tmp_path / "01J9-stray").mkdir()
     assert find_song_dir(tmp_path, "01J9") is None
+
+
+def test_new_song_defaults_to_no_active_loop_no_metronome_no_count_in():
+    song = new_song(title="T", artist="", source_kind="upload", source_value="original.mp3")
+    assert song.schema_version == 2
+    assert song.active_loop is None
+    assert song.metronome is False
+    assert song.count_in_bars == 0
+
+
+def test_active_loop_round_trips_through_disk(tmp_path):
+    song = new_song(title="T", artist="", source_kind="upload", source_value="original.mp3")
+    song.active_loop = Loop(name="Chorus", start_bar=16, end_bar=24)
+    song.metronome = True
+    song.count_in_bars = 2
+    song_dir = tmp_path / "song"
+    song_dir.mkdir()
+    write_song(song_dir, song)
+
+    reloaded = read_song(song_dir)
+    assert reloaded.active_loop == Loop(name="Chorus", start_bar=16, end_bar=24)
+    assert reloaded.metronome is True
+    assert reloaded.count_in_bars == 2
+
+
+def test_a_v1_song_migrates_forward_with_v1_fields_intact(tmp_path):
+    song_dir = tmp_path / "song"
+    song_dir.mkdir()
+    (song_dir / "song.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "id": "abc123",
+                "title": "Old Song",
+                "artist": "Someone",
+                "source": {"kind": "upload", "value": "original.mp3"},
+                "created_at": "2026-09-01T00:00:00+00:00",
+                "mix": {"vocals": {"gain_db": -3.0, "muted": True}},
+                "playback": {"tempo": 0.8, "pitch_semitones": -2},
+                "loops": [{"name": "Verse", "start_bar": 4, "end_bar": 12}],
+            }
+        )
+    )
+
+    song = read_song(song_dir)
+    assert song.schema_version == 2
+    # Everything v1 knew is preserved verbatim; only the new fields are defaulted.
+    assert song.title == "Old Song"
+    assert song.mix["vocals"].muted is True
+    assert song.playback.tempo == 0.8
+    assert song.loops == [Loop(name="Verse", start_bar=4, end_bar=12)]
+    assert song.active_loop is None
+    assert song.metronome is False
+    assert song.count_in_bars == 0
