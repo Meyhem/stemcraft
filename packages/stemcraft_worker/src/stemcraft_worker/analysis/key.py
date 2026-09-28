@@ -81,7 +81,19 @@ def detect_key(wav_paths: list[Path], *, sample_rate: int, top_n: int = 3) -> li
 
     top = scores[:top_n]
     weights = [max(c, 0.0) for c, _, _ in top]
-    total = sum(weights) or 1.0
+    total = sum(weights)
+    # `total > 0.0` is false both when every clamped weight is exactly 0 (no
+    # profile correlated positively -- plausible for atonal/percussive input)
+    # and when total is NaN (a perfectly flat/uniform chroma makes
+    # np.corrcoef's denominator zero). Do not write this as `total <= 0.0`:
+    # NaN compares false against both `<=` and `>`, so that form silently
+    # lets NaN through to `w / total` below -- exactly the "meaningless
+    # confidence numbers" N-08 forbids.
+    if not (total > 0.0):
+        raise InsufficientSignal(
+            f"no key profile correlated positively with the chroma extracted from "
+            f"{[str(p) for p in wav_paths]}"
+        )
     return [
         KeyCandidate(tonic=tonic, mode=mode, confidence=w / total)
         for (_, tonic, mode), w in zip(top, weights)
