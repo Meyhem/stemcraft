@@ -7,11 +7,19 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from stemcraft_lib import jobs as jobs_db
 from stemcraft_lib.analysis import read_analysis
 from stemcraft_lib.atomic import atomic_write_bytes
 from stemcraft_lib.config import settings
+from stemcraft_lib.export import (
+    NAME_PATTERN,
+    ExportRecipe,
+    ExportStem,
+    export_name,
+    export_path,
+    list_exports,
+)
 from stemcraft_lib.ffmpeg import FfmpegError
 from stemcraft_lib.ffmpeg import probe as ffprobe
 from stemcraft_lib.song import (
@@ -19,6 +27,7 @@ from stemcraft_lib.song import (
     STEM_NAMES,
     Song,
     SongUnreadable,
+    StemMix,
     create_song_dir,
     derive_files,
     find_song_dir,
@@ -37,6 +46,14 @@ class FromUrlRequest(BaseModel):
     url: str
     title: str
     artist: str = ""
+
+
+class ExportRequest(BaseModel):
+    stems: list[str]
+    # The mockup's "tempo & pitch" segmented control, and nothing else: stem
+    # gains are the mix and are applied either way (D7-03).
+    apply_recipe: bool = True
+    name: str = ""
 
 
 def _default_title(filename: str | None) -> str:
@@ -253,3 +270,73 @@ def delete_song(song_id: str, conn: Conn) -> Response:
     # could be writing into it right now.
     shutil.rmtree(song_dir)
     return Response(status_code=204)
+
+
+@router.post("/api/songs/{song_id}/export", status_code=201)
+def queue_export(song_id: str, body: ExportRequest, conn: Conn) -> dict:
+    """Resolve the live recipe into an immutable snapshot and queue the render.
+
+    D7-02: everything the worker needs goes into the payload here, because
+    song.json is autosaved continuously and §6 requires a job's inputs never to
+    change under it. This route reads song.json and writes nothing -- the worker
+    owns exports/ (§5).
+    """
+    song_dir = _find_dir(song_id)
+    song = read_song(song_dir)
+    if not derive_files(song_dir).has_stems:
+        raise HTTPException(
+            status_code=409,
+            detail=f"song {song_id} has no separated stems to export yet",
+        )
+    if not body.stems:
+        raise HTTPException(status_code=422, detail="pick at least one stem to export")
+    unknown = [name for name in body.stems if name not in STEM_NAMES]
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"unknown stem name(s) {', '.join(unknown)}; expected {', '.join(STEM_NAMES)}",
+        )
+
+    name = export_name(body.name, fallback=song.title)
+    try:
+        recipe = ExportRecipe(
+            song_id=song_id,
+            name=name,
+            stems=[
+                ExportStem(name=stem, gain_db=song.mix.get(stem, StemMix()).gain_db)
+                for stem in body.stems
+            ],
+            tempo=song.playback.tempo if body.apply_recipe else 1.0,
+            pitch_semitones=song.playback.pitch_semitones if body.apply_recipe else 0,
+            title=song.title,
+            artist=song.artist,
+        )
+    except ValidationError as exc:
+        # N-08: a song.json the Song view could not have produced (a tempo above
+        # 1.0, a pitch past an octave) is named, not clamped and not a traceback.
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    job_id = jobs_db.enqueue(
+        conn, kind="export", song_id=song_id, payload=recipe.model_dump(mode="json")
+    )
+    return {"job_id": job_id, "name": name, "file": f"exports/{name}.mp3"}
+
+
+@router.get("/api/songs/{song_id}/exports")
+def get_exports(song_id: str) -> dict:
+    # D7-08: a directory listing, like every other derived fact about a Song.
+    return {"exports": list_exports(_find_dir(song_id))}
+
+
+@router.get("/api/songs/{song_id}/exports/{name}.mp3")
+def download_export(song_id: str, name: str) -> FileResponse:
+    # `name` is user-typed and lands in a path, so it is matched against the
+    # alphabet slugify() produces rather than sanitized: a name outside it is a
+    # name this app never wrote. Same reasoning as the stem-name whitelist
+    # above, as a pattern because export names are chosen rather than fixed.
+    if not NAME_PATTERN.match(name):
+        raise HTTPException(status_code=404, detail=f"no export named {name!r}")
+    path = export_path(_find_dir(song_id), name)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=f"song {song_id} has no export {name!r}")
+    return FileResponse(path, media_type="audio/mpeg", filename=path.name)
