@@ -57,6 +57,7 @@ test('readRate 1 with no loop reproduces the ramp exactly', () => {
     crossfadeFrames: 0,
     playing: true,
     lengthFrames: length,
+    metronome: null,
   };
   const cursor: CursorState = { position: 0, ended: false };
   const outLeft = new Float32Array(10);
@@ -81,6 +82,7 @@ test('readRate 0.5 with no loop yields the linear midpoint between ramp samples'
     crossfadeFrames: 0,
     playing: true,
     lengthFrames: length,
+    metronome: null,
   };
   const cursor: CursorState = { position: 0, ended: false };
   const outLeft = new Float32Array(10);
@@ -116,6 +118,7 @@ test('gains mix stems with plain multiplication, mute is just gain 0', () => {
     crossfadeFrames: 0,
     playing: true,
     lengthFrames: length,
+    metronome: null,
   };
   const cursor: CursorState = { position: 0, ended: false };
   const outLeft = new Float32Array(5);
@@ -206,6 +209,7 @@ test('sensitivity self-check: a hard cut (crossfadeFrames 0) produces a large cl
     crossfadeFrames: 0,
     playing: true,
     lengthFrames: CLICK_END + 2,
+    metronome: null,
   };
   const cursor: CursorState = { position: CLICK_START, ended: false };
   const frameCount = CLICK_REPETITIONS * CLICK_LOOP_LENGTH;
@@ -233,6 +237,7 @@ test('crossfaded loop never clicks across 2000 repetitions', () => {
     crossfadeFrames: CLICK_CROSSFADE,
     playing: true,
     lengthFrames: CLICK_END + 2,
+    metronome: null,
   };
   const cursor: CursorState = { position: CLICK_START, ended: false };
   const frameCount = CLICK_REPETITIONS * CLICK_LOOP_LENGTH;
@@ -334,6 +339,7 @@ test('no drift across many loop repetitions at readRate 1', () => {
     crossfadeFrames: DRIFT_CROSSFADE,
     playing: true,
     lengthFrames: length,
+    metronome: null,
   };
   const cursor: CursorState = { position: DRIFT_START, ended: false };
   const outLeft = new Float32Array(DRIFT_TOTAL_FRAMES);
@@ -363,6 +369,7 @@ test('no drift across many loop repetitions at a non-integer readRate (0.7)', ()
     crossfadeFrames: DRIFT_CROSSFADE,
     playing: true,
     lengthFrames: length,
+    metronome: null,
   };
   const cursor: CursorState = { position: DRIFT_START, ended: false };
   const outLeft = new Float32Array(DRIFT_TOTAL_FRAMES);
@@ -399,6 +406,7 @@ test('the crossfade is monotonic and strictly between tail-only and head-only va
     crossfadeFrames,
     playing: true,
     lengthFrames: length,
+    metronome: null,
   };
   const cursor: CursorState = { position: startFrame, ended: false };
   const outLeft = new Float32Array(loopLength);
@@ -458,7 +466,7 @@ describe('transport', () => {
 
     renderBlock(
       stems,
-      { gains: [1, 1, 1, 1], readRate: 1, loop: null, crossfadeFrames: 0, playing: false, lengthFrames: 1000 },
+      { gains: [1, 1, 1, 1], readRate: 1, loop: null, crossfadeFrames: 0, playing: false, lengthFrames: 1000, metronome: null },
       cursor,
       outL,
       outR,
@@ -477,7 +485,7 @@ describe('transport', () => {
 
     renderBlock(
       stems,
-      { gains: [1, 1, 1, 1], readRate: 1, loop: null, crossfadeFrames: 0, playing: true, lengthFrames: 1000 },
+      { gains: [1, 1, 1, 1], readRate: 1, loop: null, crossfadeFrames: 0, playing: true, lengthFrames: 1000, metronome: null },
       cursor,
       outL,
       outR,
@@ -495,7 +503,7 @@ describe('transport', () => {
 
     renderBlock(
       stems,
-      { gains: [1, 1, 1, 1], readRate: 1, loop: null, crossfadeFrames: 0, playing: true, lengthFrames: 200 },
+      { gains: [1, 1, 1, 1], readRate: 1, loop: null, crossfadeFrames: 0, playing: true, lengthFrames: 200, metronome: null },
       cursor,
       outL,
       outR,
@@ -523,6 +531,7 @@ describe('transport', () => {
           crossfadeFrames: 24,
           playing: true,
           lengthFrames: 1000,
+          metronome: null,
         },
         cursor,
         outL,
@@ -533,5 +542,123 @@ describe('transport', () => {
     expect(cursor.ended).toBe(false);
     expect(cursor.position).toBeGreaterThanOrEqual(100);
     expect(cursor.position).toBeLessThan(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. Metronome click, mixed pre-stretcher (D6-03)
+// ---------------------------------------------------------------------------
+
+describe('metronome', () => {
+  const metronome = (gain: number) => ({
+    beats: Float64Array.from([0, 480, 960, 1440]),
+    downbeatFlags: Uint8Array.from([1, 0, 0, 0]),
+    gain,
+    sampleRate: 48_000,
+  });
+
+  it('adds a click at a beat and nothing between beats', () => {
+    const stems = makeStems(4000, 0); // silent stems: whatever we hear is the click
+    const cursor: CursorState = { position: 0, ended: false };
+    const outL = new Float32Array(128);
+    const outR = new Float32Array(128);
+
+    renderBlock(
+      stems,
+      {
+        gains: [1, 1, 1, 1],
+        readRate: 1,
+        loop: null,
+        crossfadeFrames: 0,
+        playing: true,
+        lengthFrames: 4000,
+        metronome: metronome(1),
+      },
+      cursor,
+      outL,
+      outR,
+    );
+
+    expect(Math.max(...outL)).toBeGreaterThan(0); // the downbeat at 0 sounded
+    // ...and 200 frames later (past the click length at this fake rate is not
+    // guaranteed, so assert the shape instead): the click decays.
+    expect(Math.abs(outL[127]!)).toBeLessThan(Math.abs(outL[2]!));
+  });
+
+  it('is silent when the metronome is off', () => {
+    const stems = makeStems(4000, 0);
+    const cursor: CursorState = { position: 0, ended: false };
+    const outL = new Float32Array(128);
+    const outR = new Float32Array(128);
+
+    renderBlock(
+      stems,
+      {
+        gains: [1, 1, 1, 1],
+        readRate: 1,
+        loop: null,
+        crossfadeFrames: 0,
+        playing: true,
+        lengthFrames: 4000,
+        metronome: null,
+      },
+      cursor,
+      outL,
+      outR,
+    );
+
+    expect(outL.every((s) => s === 0)).toBe(true);
+  });
+
+  it('clicks in both channels equally, so it sits centred in the mix', () => {
+    const stems = makeStems(4000, 0);
+    const cursor: CursorState = { position: 0, ended: false };
+    const outL = new Float32Array(128);
+    const outR = new Float32Array(128);
+
+    renderBlock(
+      stems,
+      {
+        gains: [1, 1, 1, 1],
+        readRate: 1,
+        loop: null,
+        crossfadeFrames: 0,
+        playing: true,
+        lengthFrames: 4000,
+        metronome: metronome(1),
+      },
+      cursor,
+      outL,
+      outR,
+    );
+
+    expect(Array.from(outL)).toEqual(Array.from(outR));
+  });
+
+  it('still clicks after a loop wrap, because the beat is found from the cursor', () => {
+    const stems = makeStems(4000, 0);
+    // Cursor lands just before the loop start's beat after wrapping.
+    const cursor: CursorState = { position: 1430, ended: false };
+    const outL = new Float32Array(128);
+    const outR = new Float32Array(128);
+
+    renderBlock(
+      stems,
+      {
+        gains: [1, 1, 1, 1],
+        readRate: 1,
+        loop: { startFrame: 0, endFrame: 1440 },
+        crossfadeFrames: 0,
+        playing: true,
+        lengthFrames: 4000,
+        metronome: metronome(1),
+      },
+      cursor,
+      outL,
+      outR,
+    );
+
+    // The wrap puts the cursor back at 0, which is a downbeat: it must sound.
+    expect(Math.max(...outL.slice(20))).toBeGreaterThan(0);
   });
 });

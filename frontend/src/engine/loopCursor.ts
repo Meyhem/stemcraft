@@ -1,3 +1,5 @@
+import { clickSample, findBeatIndexAt } from './click';
+
 export interface StemChannels {
   left: Float32Array;
   right: Float32Array;
@@ -26,6 +28,18 @@ export interface MixParams {
   playing: boolean;
   /** Frames in the stems. The cursor stops here rather than reading past them. */
   lengthFrames: number;
+  metronome: MetronomeParams | null;
+}
+
+export interface MetronomeParams {
+  /** Beat onsets in device-domain frames, ascending. */
+  beats: Float64Array;
+  /** 1 where the beat at the same index is a downbeat. */
+  downbeatFlags: Uint8Array;
+  /** 0 when off. Mixed in pre-stretcher (D6-03), so it is part of the same sum. */
+  gain: number;
+  /** The AudioContext's real rate, for click length and tone frequency. */
+  sampleRate: number;
 }
 
 export interface CursorState {
@@ -55,6 +69,14 @@ function readStereoMix(stems: FourStems, gains: MixParams['gains'], position: nu
     right += readAt(stem.right, position) * gain;
   }
   return [left, right];
+}
+
+function clickAt(metronome: MetronomeParams | null, position: number): number {
+  if (!metronome || metronome.gain === 0) return 0;
+  const index = findBeatIndexAt(metronome.beats, position);
+  if (index < 0) return 0;
+  const since = position - metronome.beats[index]!;
+  return clickSample(since, metronome.downbeatFlags[index] === 1, metronome.sampleRate) * metronome.gain;
 }
 
 /**
@@ -91,6 +113,9 @@ export function renderBlock(
       const [l, r] = readStereoMix(stems, params.gains, pos);
       outLeft[i] = l;
       outRight[i] = r;
+      const click = clickAt(params.metronome, pos);
+      outLeft[i] = outLeft[i]! + click;
+      outRight[i] = outRight[i]! + click;
       cursor.position = pos + params.readRate;
       continue;
     }
@@ -109,6 +134,10 @@ export function renderBlock(
       outLeft[i] = tailL * (1 - t) + headL * t;
       outRight[i] = tailR * (1 - t) + headR * t;
     }
+
+    const click = clickAt(params.metronome, pos);
+    outLeft[i] = outLeft[i]! + click;
+    outRight[i] = outRight[i]! + click;
 
     pos += params.readRate;
     if (pos >= endFrame) {

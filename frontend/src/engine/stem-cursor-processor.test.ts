@@ -70,6 +70,7 @@ function defaultParameters(overrides: Partial<Record<string, number>> = {}): Rec
     gain3: 1,
     readRate: 1,
     playing: 1,
+    metronomeGain: 0,
     ...overrides,
   };
   const out: Record<string, Float32Array> = {};

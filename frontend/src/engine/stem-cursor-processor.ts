@@ -29,7 +29,13 @@ interface SeekMessage {
   position: number;
 }
 
-type ControlMessage = LoadStemsMessage | SetLoopMessage | SeekMessage;
+interface SetGridMessage {
+  type: 'set-grid';
+  beats: number[];
+  downbeatFlags: number[];
+}
+
+type ControlMessage = LoadStemsMessage | SetLoopMessage | SeekMessage | SetGridMessage;
 
 const STEM_COUNT = 4;
 const POSITION_REPORT_INTERVAL_BLOCKS = 40; // ~107 ms at 128-sample blocks / 48 kHz
@@ -47,6 +53,7 @@ class StemCursorProcessor extends AudioWorkletProcessor {
       ...gainParams,
       { name: 'readRate', defaultValue: 1, minValue: 0.25, maxValue: 2, automationRate: 'k-rate' },
       { name: 'playing', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'metronomeGain', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
 
@@ -57,6 +64,8 @@ class StemCursorProcessor extends AudioWorkletProcessor {
   private lengthFrames = 0;
   private blockCount = 0;
   private endedReported = false;
+  private beats: Float64Array = new Float64Array(0);
+  private downbeatFlags: Uint8Array = new Uint8Array(0);
 
   constructor() {
     super();
@@ -81,6 +90,9 @@ class StemCursorProcessor extends AudioWorkletProcessor {
         // stay stuck true and the second `ended` message would be silently
         // dropped. Clearing it here makes every fresh end state eligible to post.
         this.endedReported = false;
+      } else if (msg.type === 'set-grid') {
+        this.beats = Float64Array.from(msg.beats);
+        this.downbeatFlags = Uint8Array.from(msg.downbeatFlags);
       }
     };
   }
@@ -92,6 +104,11 @@ class StemCursorProcessor extends AudioWorkletProcessor {
     const gains = [0, 1, 2, 3].map((i) => parameters[`gain${i}`]![0]!) as unknown as MixParams['gains'];
     const readRate = parameters.readRate![0]!;
     const playing = parameters.playing![0]! >= 0.5;
+    const metronomeGain = parameters.metronomeGain![0]!;
+    const metronome =
+      metronomeGain > 0 && this.beats.length > 0
+        ? { beats: this.beats, downbeatFlags: this.downbeatFlags, gain: metronomeGain, sampleRate }
+        : null;
 
     renderBlock(
       this.stems,
@@ -102,6 +119,7 @@ class StemCursorProcessor extends AudioWorkletProcessor {
         crossfadeFrames: this.crossfadeFrames,
         playing,
         lengthFrames: this.lengthFrames,
+        metronome,
       },
       this.cursor,
       output[0]!,

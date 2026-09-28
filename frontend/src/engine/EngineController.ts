@@ -17,6 +17,7 @@ export interface EngineLoop {
 
 export class EngineController {
   private readonly endedListeners = new Set<() => void>();
+  private countInBarsDefault = 0;
 
   private constructor(
     private readonly context: AudioContext,
@@ -146,6 +147,36 @@ export class EngineController {
     this.clock.resync({ contextTime: this.context.currentTime, position, samplesPerSecond: SAMPLE_RATE * this.tempoState.ratio });
   }
 
+  /**
+   * Hands the worklet the beat grid, converted to device-domain frames. Called
+   * once when analysis.json arrives; the grid does not change during playback.
+   */
+  setGrid(bars: SampleIndex[], beats: SampleIndex[]): void {
+    const barSet = new Set(bars.map((b) => b as number));
+    this.cursorNode.port.postMessage({
+      type: 'set-grid',
+      beats: beats.map((b) => toDeviceDomain(b, this.context.sampleRate)),
+      downbeatFlags: beats.map((b) => (barSet.has(b as number) ? 1 : 0)),
+    });
+  }
+
+  setMetronome(on: boolean): void {
+    this.cursorNode.parameters
+      .get('metronomeGain')!
+      .setValueAtTime(on ? 1 : 0, this.context.currentTime);
+  }
+
+  /**
+   * Stores the count-in length as a preference. `countInAndPlay` below takes
+   * `bars` explicitly per call rather than reading this field internally, so a
+   * single call site can override the default without a prior setter call;
+   * this setter exists for Task 13's settings UI to persist the user's choice
+   * across calls.
+   */
+  setCountInBars(bars: number): void {
+    this.countInBarsDefault = bars;
+  }
+
   getPositionSamples(): SampleIndex {
     return this.clock.positionAt(this.context.currentTime);
   }
@@ -162,6 +193,45 @@ export class EngineController {
 
   pause(): void {
     this.cursorNode.parameters.get('playing')!.setValueAtTime(0, this.context.currentTime);
+  }
+
+  /**
+   * Plays `bars` bars of metronome before the music, by starting the cursor
+   * that far back with the stems silenced. Resolves once the music has started.
+   * `barStarts` is the grid's downbeats (48 kHz domain); `from` is where
+   * playback should actually begin.
+   */
+  async countInAndPlay(
+    from: SampleIndex,
+    bars: number,
+    barStarts: SampleIndex[],
+    restoreGains: () => void,
+  ): Promise<void> {
+    if (bars <= 0) {
+      this.seek(from);
+      await this.play();
+      return;
+    }
+    const startBar = barStarts.findIndex((b) => b >= from);
+    const countFrom = startBar > 0 ? barStarts[Math.max(0, startBar - bars)]! : from;
+    for (const stem of STEM_ORDER) this.setStemGain(stem, 0);
+    this.setMetronome(true);
+    this.seek(countFrom);
+    await this.play();
+    // Polling the clock rather than setTimeout: the clock is the only thing
+    // that knows the real rate after a tempo change (U-05's rule, applied to
+    // an engine-internal decision rather than to the playhead).
+    await new Promise<void>((resolve) => {
+      const tick = () => {
+        if (this.getPositionSamples() >= from) {
+          restoreGains();
+          resolve();
+          return;
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
   }
 
   /** Returns an unsubscribe function, so a React effect can clean up. */
