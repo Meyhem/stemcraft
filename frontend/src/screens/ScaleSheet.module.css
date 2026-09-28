@@ -10,6 +10,18 @@
   gap: var(--ds-3);
 }
 
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.subtitle {
+  font: 400 var(--ds-t-sm) / 1 var(--ds-font);
+  color: var(--ds-text-2);
+  margin: 0;
+}
+
 .seg {
   display: flex;
   gap: var(--ds-1);

@@ -31,10 +31,14 @@ const analysis = {
 
 afterEach(() => vi.unstubAllGlobals());
 
-function renderScaleSheet() {
+function renderScaleSheet(options?: { analysisResponse?: () => Response | Promise<Response> }) {
   const fetchMock = vi.fn(async (url: string) => {
     if (url === '/api/songs') return new Response(JSON.stringify({ songs: [songEntry] }));
-    if (url === '/api/songs/01SONG/analysis') return new Response(JSON.stringify(analysis));
+    if (url === '/api/songs/01SONG/analysis') {
+      return options?.analysisResponse
+        ? options.analysisResponse()
+        : new Response(JSON.stringify(analysis));
+    }
     throw new Error(`unexpected fetch: ${url}`);
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -81,4 +85,38 @@ test('pentatonic toggle shrinks the note list', async () => {
   await userEvent.click(screen.getByRole('button', { name: /pentatonic/i }));
   const pentaCount = screen.getAllByText(/^(G|Bb|C|D|F)$/).length;
   expect(pentaCount).toBeLessThan(fullCount);
+});
+
+test('shows a loading state while analysis is being fetched', async () => {
+  let resolveAnalysis: (r: Response) => void = () => {};
+  const pending = new Promise<Response>((resolve) => {
+    resolveAnalysis = resolve;
+  });
+  renderScaleSheet({ analysisResponse: () => pending });
+
+  expect(await screen.findByText(/loading analysis/i)).toBeInTheDocument();
+
+  resolveAnalysis(new Response(JSON.stringify(analysis)));
+  await screen.findByText(/72%/);
+});
+
+test('a 404 (not analyzed yet) shows a calm empty state, not an alert with raw HTTP text', async () => {
+  renderScaleSheet({
+    analysisResponse: () =>
+      new Response('song 01SONG has no analysis yet', { status: 404 }),
+  });
+
+  expect(await screen.findByText(/hasn't been analyzed yet/i)).toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(screen.queryByText(/404/)).not.toBeInTheDocument();
+});
+
+test('a real analysis error (not a 404) keeps the loud N-08 alert with the real message', async () => {
+  renderScaleSheet({
+    analysisResponse: () => new Response('database is on fire', { status: 500 }),
+  });
+
+  const alert = await screen.findByRole('alert');
+  expect(alert.textContent).toMatch(/500/);
+  expect(alert.textContent).toMatch(/database is on fire/);
 });

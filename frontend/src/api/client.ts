@@ -1,3 +1,16 @@
+// Thrown by request() below. Carries the HTTP status alongside the message so
+// callers can distinguish "expected" statuses (e.g. a 404 meaning "not
+// computed yet") from real failures without parsing the message string.
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 // Same-origin by construction (D-15): relative paths only, so dev goes through
 // the Vite proxy and prod hits the static mount. No base URL, no CORS.
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -8,7 +21,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     // N-08: carry the server's real message to the UI, never a generic one.
     const detail = await response.text();
-    throw new Error(`${init?.method ?? 'GET'} ${path} → ${response.status}: ${detail}`);
+    throw new ApiError(
+      response.status,
+      `${init?.method ?? 'GET'} ${path} → ${response.status}: ${detail}`,
+    );
   }
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }

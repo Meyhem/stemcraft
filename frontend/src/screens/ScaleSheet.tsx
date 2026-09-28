@@ -5,6 +5,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { ApiError } from '../api/client';
 import { useAnalysis, useSongs } from '../api/queries';
 import { Fretboard } from '../music/Fretboard';
 import { BASS_TUNING, GUITAR_TUNING, pitchClassOf, scaleNoteNames, scaleSemitones } from '../music/theory';
@@ -36,11 +37,19 @@ export function ScaleSheet() {
     return scaleNoteNames(tonicPc, mode, pentatonic);
   }, [tonicPc, mode, pentatonic]);
 
+  // A 404 here means "this song hasn't been analyzed yet" -- the normal state
+  // for a song that's only been imported/separated so far, not a failure.
+  // Any other error (network, 500, ...) keeps the loud N-08 treatment below.
+  const notAnalyzedYet = analysis.error instanceof ApiError && analysis.error.status === 404;
+
   return (
     <section className={styles.page}>
       <div className={styles.topbar}>
         <Link to={`/songs/${songId}`}>&larr; Back</Link>
-        <h1>Scale &amp; fretboard &middot; {entry?.song?.title ?? songId}</h1>
+        <div className={styles.titles}>
+          <h1>{entry?.song?.title ?? songId}</h1>
+          <h2 className={styles.subtitle}>Scale &amp; fretboard</h2>
+        </div>
         <div className={styles.seg}>
           <button aria-pressed={instrument === 'bass'} onClick={() => setInstrument('bass')}>
             Bass &middot; 4 string
@@ -51,7 +60,17 @@ export function ScaleSheet() {
         </div>
       </div>
 
-      {analysis.isError && <p role="alert">{String(analysis.error)}</p>}
+      {analysis.isPending && <p className={styles.note}>Loading analysis&hellip;</p>}
+
+      {notAnalyzedYet && (
+        <p className={styles.note}>
+          This song hasn&apos;t been analyzed yet. Analysis runs automatically after separation
+          finishes.
+        </p>
+      )}
+
+      {analysis.isError && !notAnalyzedYet && <p role="alert">{String(analysis.error)}</p>}
+
       {analysis.data && candidates.length === 0 && <p>No key candidates in this analysis.</p>}
 
       {candidates.length > 0 && (
