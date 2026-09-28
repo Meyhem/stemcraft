@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from stemcraft_lib import jobs as jobs_db
 from stemcraft_lib.analysis import read_analysis
@@ -14,6 +15,7 @@ from stemcraft_lib.config import settings
 from stemcraft_lib.ffmpeg import FfmpegError
 from stemcraft_lib.ffmpeg import probe as ffprobe
 from stemcraft_lib.song import (
+    STEM_NAMES,
     SongUnreadable,
     create_song_dir,
     derive_files,
@@ -96,6 +98,39 @@ def get_analysis(song_id: str) -> dict:
     if not (song_dir / "analysis.json").is_file():
         raise HTTPException(status_code=404, detail=f"song {song_id} has no analysis yet")
     return read_analysis(song_dir).model_dump(mode="json")
+
+
+@router.get("/api/songs/{song_id}/stems/{stem}.opus")
+def get_stem(song_id: str, stem: str) -> FileResponse:
+    # §6: .opus per stem is the only thing ever served for playback (D-04).
+    # `stem` is path-shaped and attacker-controlled, so it is matched against
+    # the fixed four names rather than sanitized -- there is no case where a
+    # fifth name is legitimate (the stem set is fixed at training time), so a
+    # whitelist is both the safest and the most honest check.
+    if stem not in STEM_NAMES:
+        raise HTTPException(status_code=404, detail=f"no stem named {stem!r}")
+    path = _find_dir(song_id) / "stems" / f"{stem}.opus"
+    if not path.is_file():
+        raise HTTPException(
+            status_code=404, detail=f"song {song_id} has no {stem}.opus yet (not separated)"
+        )
+    return FileResponse(path, media_type="audio/ogg")
+
+
+@router.get("/api/songs/{song_id}/peaks")
+def get_peaks(song_id: str) -> FileResponse:
+    path = _find_dir(song_id) / "peaks.json"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=f"song {song_id} has no peaks.json yet")
+    return FileResponse(path, media_type="application/json")
+
+
+@router.get("/api/songs/{song_id}/audio.wav")
+def get_audio(song_id: str) -> FileResponse:
+    path = _find_dir(song_id) / "audio.wav"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=f"song {song_id} has no audio.wav yet")
+    return FileResponse(path, media_type="audio/wav")
 
 
 @router.post("/api/songs/upload", status_code=201)
