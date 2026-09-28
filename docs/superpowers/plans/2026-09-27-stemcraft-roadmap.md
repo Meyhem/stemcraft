@@ -234,6 +234,13 @@ section. `rubberband` also became a refuse-to-start dependency this phase (D7-01
 **Decides:** Q-04 — whether output lands in the library as Songs or stays a zip. This
 changes whether the splitter shares the Song write path.
 
+**Plan:** [2026-09-28-phase-8-album-splitter.md](2026-09-28-phase-8-album-splitter.md).
+**Q-04 is closed there: output stays a zip and the splitter is a standalone tool** — it gets
+its own `albums/` tree and two job kinds (`import_album`, `split_album`), and touches no Song
+code path. The seam for a later "add to library" is named in that document (D8-01): the
+finished MP3s are on disk, so it would feed one through the existing upload route as an
+ordinary import, needing no shared write path.
+
 ---
 
 ## Phase 9 — Operations
