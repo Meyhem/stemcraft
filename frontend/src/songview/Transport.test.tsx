@@ -116,12 +116,23 @@ describe('Transport', () => {
   });
 
   it('withholds Set A/Set B when there is no grid to snap them to', async () => {
-    const props = renderTransport({ grid: null, barsAvailable: false });
+    const props = renderTransport({ grid: null });
     const setA = screen.getByRole('button', { name: /set a/i });
     expect(setA).toBeDisabled();
     expect(setA).toHaveAttribute('title', expect.stringMatching(/analysis/i));
     expect(screen.getByRole('button', { name: /set b/i })).toBeDisabled();
     await userEvent.keyboard('a');
     expect(props.onSetLoopStart).not.toHaveBeenCalled();
+  });
+
+  it('withholds Set B until there is an A behind it', async () => {
+    const props = renderTransport({ hasLoop: false });
+    const setB = screen.getByRole('button', { name: /set b/i });
+    expect(setB).toBeDisabled();
+    expect(setB).toHaveAttribute('title', 'Set A first');
+    // Set A is what creates the loop, so it stays live.
+    expect(screen.getByRole('button', { name: /set a/i })).toBeEnabled();
+    await userEvent.keyboard('b');
+    expect(props.onSetLoopEnd).not.toHaveBeenCalled();
   });
 });

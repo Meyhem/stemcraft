@@ -9,6 +9,7 @@ import { usePlayhead } from './usePlayhead';
 import styles from './Transport.module.css';
 
 const TEMPO_STEP = 0.05; // UI spec §7: up/down arrows move 5%
+const NO_BARS = 'Bars need analysis to have run';
 
 export interface TransportProps {
   playing: boolean;
@@ -19,8 +20,6 @@ export interface TransportProps {
   metronome: boolean;
   loopArmed: boolean;
   hasLoop: boolean;
-  /** False when analysis has not run: without a grid there are no bars to snap A/B to. */
-  barsAvailable?: boolean;
   onPlayPause(): void;
   onTempoChange(tempo: number): void;
   onPitchChange(semitones: number): void;
@@ -41,7 +40,6 @@ export function Transport({
   metronome,
   loopArmed,
   hasLoop,
-  barsAvailable = true,
   onPlayPause,
   onTempoChange,
   onPitchChange,
@@ -53,6 +51,11 @@ export function Transport({
   onMuteLane,
 }: TransportProps) {
   const barRef = useRef<HTMLSpanElement | null>(null);
+
+  // Derived, never a prop: `grid === null` *is* "analysis hasn't run", and a
+  // second prop saying the same thing is a second source of truth a caller can
+  // make disagree with the grid this component already draws from.
+  const barsAvailable = grid !== null;
 
   const paint = useCallback(
     (position: SampleIndex) => {
@@ -88,8 +91,8 @@ export function Transport({
         L: () => hasLoop && onLoopArmToggle(),
         a: () => barsAvailable && onSetLoopStart(),
         A: () => barsAvailable && onSetLoopStart(),
-        b: () => barsAvailable && onSetLoopEnd(),
-        B: () => barsAvailable && onSetLoopEnd(),
+        b: () => barsAvailable && hasLoop && onSetLoopEnd(),
+        B: () => barsAvailable && hasLoop && onSetLoopEnd(),
         m: onMetronomeToggle,
         M: onMetronomeToggle,
         ArrowUp: () => onTempoChange(Math.min(1, Number((tempo + TEMPO_STEP).toFixed(2)))),
@@ -188,19 +191,21 @@ export function Transport({
         Loop
       </button>
       {/* Bars come from analysis; without a grid there is nothing to snap to,
-          so the control is withheld and says why rather than no-opping. */}
+          so the control is withheld and says why rather than no-opping. And a
+          B with no A behind it is not an end of anything, so it waits for one
+          rather than accepting a click that cannot mean what it looks like. */}
       <button
         type="button"
         disabled={!barsAvailable}
-        title={barsAvailable ? undefined : 'Bars need analysis to have run'}
+        title={barsAvailable ? undefined : NO_BARS}
         onClick={onSetLoopStart}
       >
         Set A
       </button>
       <button
         type="button"
-        disabled={!barsAvailable}
-        title={barsAvailable ? undefined : 'Bars need analysis to have run'}
+        disabled={!barsAvailable || !hasLoop}
+        title={!barsAvailable ? NO_BARS : !hasLoop ? 'Set A first' : undefined}
         onClick={onSetLoopEnd}
       >
         Set B

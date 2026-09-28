@@ -1,11 +1,16 @@
-/* UI spec §6, screen 3: the performing surface on the left -- timeline, chord
-   strip, four full-height stem lanes, transport -- and a 320 px setup-tier rail
+/* UI spec §6, screen 3: the performing surface on the left -- timeline, four
+   full-height stem lanes, chord strip, transport, in that order so the chords
+   sit against the transport in one reading zone -- and a 320 px setup-tier rail
    on the right. Tokens only; the rail width is the one literal the layout owns. */
 .page {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: var(--ds-5);
-  align-items: start;
+  align-items: stretch;
+  /* The lane height is the readability budget at 1.5 m, so the screen claims
+     the viewport minus AppShell's nav and main padding and hands the slack to
+     the lanes (mockup: .body2 { flex: 1; min-height: 0 }). */
+  min-height: calc(100dvh - var(--ds-9));
 }
 
 .main {
@@ -13,6 +18,7 @@
   flex-direction: column;
   gap: var(--ds-4);
   min-width: 0;
+  min-height: 0;
 }
 
 .header {
@@ -46,10 +52,19 @@
   align-items: center;
 }
 
+/* Four full-height lanes: the column takes every pixel the timeline, chord
+   strip and transport leave, and shares it equally (mockup: .stem-row). */
 .lanes {
   display: flex;
   flex-direction: column;
   gap: var(--ds-2);
+  flex: 1;
+  min-height: 0;
+}
+
+.lanes > * {
+  flex: 1;
+  min-height: 0;
 }
 
 /* The transport stays reachable while the lanes scroll: it is the one control

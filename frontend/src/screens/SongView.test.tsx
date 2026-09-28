@@ -16,7 +16,11 @@ const engine = {
   setStemGain: vi.fn(),
   setMetronome: vi.fn(),
   setGrid: vi.fn(),
-  countInAndPlay: vi.fn(async () => {}),
+  // Typed after the real signature: the fourth argument is the restore-gains
+  // callback, and one test reads it back off the mock.
+  countInAndPlay: vi.fn(
+    async (_from: number, _bars: number, _barStarts: number[], _restoreGains: () => void) => {},
+  ),
   onEnded: vi.fn(() => () => {}),
   getPositionSamples: vi.fn(() => 0),
   dispose: vi.fn(async () => {}),
@@ -164,9 +168,44 @@ describe('SongView', () => {
         'false',
       ),
     );
-    // D-06: the loop is released at the engine before the cursor is moved.
-    expect(engine.setLoop).toHaveBeenLastCalledWith(null);
+    // D-06: the loop is released at the engine *before* the cursor is moved.
+    // Asserted as an ordering, not just as a final value: "setLoop was last
+    // called with null and seek was called" also passes for an implementation
+    // that seeks first and lets an effect release the loop afterwards, which
+    // is the exact bug the constraint forbids. So: of the setLoop calls that
+    // happened before the seek, the last one must be the release.
     expect(engine.seek).toHaveBeenCalled();
+    const seekOrder = engine.seek.mock.invocationCallOrder[0]!;
+    const beforeSeek = engine.setLoop.mock.calls.filter(
+      (_, i) => engine.setLoop.mock.invocationCallOrder[i]! < seekOrder,
+    );
+    expect(beforeSeek.at(-1)).toEqual([null]);
+    expect(engine.setLoop).toHaveBeenLastCalledWith(null);
+  });
+
+  it('turns the metronome back off after a count-in, on every play', async () => {
+    // countInAndPlay turns the click on unconditionally and never turns it off
+    // -- undoing that is the caller's job. A song with metronome: false would
+    // otherwise click for its whole length with the button reading off, and
+    // only from the second play on: the first play's last_played_at stamp
+    // pushes the recipe and hides it.
+    mockFetch({
+      '/api/songs/abc123': {
+        ...songEntry,
+        song: { ...songEntry.song, count_in_bars: 2, metronome: false },
+      },
+    });
+    renderSongView();
+    await userEvent.click(await screen.findByRole('button', { name: /^play$/i }));
+    await waitFor(() => expect(engine.countInAndPlay).toHaveBeenCalledTimes(1));
+    await userEvent.click(await screen.findByRole('button', { name: /^pause$/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /^play$/i }));
+    await waitFor(() => expect(engine.countInAndPlay).toHaveBeenCalledTimes(2));
+
+    engine.setMetronome.mockClear();
+    const restoreGains = engine.countInAndPlay.mock.calls[1]![3];
+    act(() => restoreGains());
+    expect(engine.setMetronome).toHaveBeenCalledWith(false);
   });
 
   it('refuses to build an engine for a song with no stems, and says why', async () => {

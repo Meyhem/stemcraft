@@ -237,7 +237,11 @@ export function SongView() {
           current.getPositionSamples(),
           currentSong.count_in_bars,
           currentGrid.bars,
-          () => pushMix(current, latest.current.song ?? currentSong, latest.current.soloed),
+          // The whole audible recipe, not just the mix: countInAndPlay turns
+          // the click on unconditionally and never turns it off -- undoing
+          // that is the caller's job, and this callback is also what
+          // cancelCountIn runs when a pause or a seek interrupts the count-in.
+          () => pushRecipe(current, latest.current.song ?? currentSong, latest.current.soloed),
         );
       } else {
         await current.play();
@@ -460,7 +464,8 @@ export function SongView() {
   // words, and offers nothing that would need it.
   if (entry?.unreadable) {
     return (
-      <section className={styles.page}>
+      <section className={styles.empty}>
+        <h1>{songId}</h1>
         <p role="alert" className={styles.alert}>
           {entry.unreadable}
         </p>
@@ -521,14 +526,6 @@ export function SongView() {
               onScrub={handleScrub}
             />
 
-            <ChordStrip
-              chords={analysisQuery.data?.chords ?? []}
-              grid={grid}
-              durationSamples={engine.durationSamples}
-              getPosition={getPosition}
-              playing={playing}
-            />
-
             <div className={styles.lanes}>
               {engine.stemSummaries.map((summary) => (
                 <StemLane
@@ -546,6 +543,14 @@ export function SongView() {
               ))}
             </div>
 
+            <ChordStrip
+              chords={analysisQuery.data?.chords ?? []}
+              grid={grid}
+              durationSamples={engine.durationSamples}
+              getPosition={getPosition}
+              playing={playing}
+            />
+
             <div className={styles.transport}>
               <Transport
                 playing={playing}
@@ -556,7 +561,6 @@ export function SongView() {
                 metronome={song.metronome}
                 loopArmed={loopArmed}
                 hasLoop={Boolean(grid && song.active_loop)}
-                barsAvailable={grid !== null}
                 onPlayPause={handlePlayPause}
                 onTempoChange={handleTempoChange}
                 onPitchChange={handlePitchChange}
