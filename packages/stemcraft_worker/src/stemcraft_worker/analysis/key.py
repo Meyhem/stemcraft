@@ -15,7 +15,6 @@ from pathlib import Path
 
 import essentia.standard as es
 import numpy as np
-
 from stemcraft_lib.analysis import KeyCandidate
 
 # essentia's HPCP bin 0 is A, ascending by semitone (verified empirically: a
@@ -96,5 +95,5 @@ def detect_key(wav_paths: list[Path], *, sample_rate: int, top_n: int = 3) -> li
         )
     return [
         KeyCandidate(tonic=tonic, mode=mode, confidence=w / total)
-        for (_, tonic, mode), w in zip(top, weights)
+        for (_, tonic, mode), w in zip(top, weights, strict=True)
     ]

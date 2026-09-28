@@ -37,9 +37,10 @@ def data_dir(tmp_path, monkeypatch):
 
 def _click_and_chord_wav(path, *, bpm=120, seconds=12, sample_rate=SAMPLE_RATE):
     interval = 60.0 / bpm
+    click_expr = f"aevalsrc=0.5*sin(2*PI*1000*t)*lt(mod(t\\,{interval})\\,0.03):d={seconds}"
     subprocess.run(
         ["ffmpeg", "-hide_banner", "-nostdin", "-y",
-         "-f", "lavfi", "-i", f"aevalsrc=0.5*sin(2*PI*1000*t)*lt(mod(t\\,{interval})\\,0.03):d={seconds}",
+         "-f", "lavfi", "-i", click_expr,
          "-f", "lavfi", "-i", f"sine=frequency=196.00:duration={seconds}",
          "-f", "lavfi", "-i", f"sine=frequency=233.08:duration={seconds}",
          "-f", "lavfi", "-i", f"sine=frequency=293.66:duration={seconds}",

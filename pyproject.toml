@@ -49,6 +49,18 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# btc_model.py and transformer_modules.py are a verbatim vendored copy of the
+# MIT-licensed BTC-ISMIR19 model, pinned to upstream commit
+# 2682317be668032e6e4b269ded36adaa2ad57df0. Their value is that they can be
+# diffed against that commit to prove the vendoring is faithful; reformatting
+# them (line length, import sorting, `super()` modernization, ...) would
+# destroy that property permanently. Do not lint or reformat them. This does
+# NOT cover the rest of analysis/chords/ (recognize.py, align.py, __init__.py),
+# which is our own code and must stay linted.
+extend-exclude = [
+    "packages/stemcraft_worker/src/stemcraft_worker/analysis/chords/btc_model.py",
+    "packages/stemcraft_worker/src/stemcraft_worker/analysis/chords/transformer_modules.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

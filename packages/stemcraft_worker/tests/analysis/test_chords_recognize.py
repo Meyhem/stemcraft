@@ -2,7 +2,6 @@ import subprocess
 
 import numpy as np
 import soundfile as sf
-
 from stemcraft_worker.analysis.chords.recognize import _predictions_to_segments, recognize_frames
 
 SAMPLE_RATE = 48000
@@ -31,8 +30,10 @@ def test_recognize_frames_covers_the_whole_file(tmp_path):
     assert starts[0] == 0.0
     assert ends == sorted(ends)
     assert all(isinstance(label, str) and label for _, _, label in segments)
-    # Contiguous: each segment's end is the next one's start.
-    for (_, end, _), (next_start, _, _) in zip(segments, segments[1:]):
+    # Contiguous: each segment's end is the next one's start. This is the
+    # pairwise-adjacent idiom -- segments[1:] is always exactly one shorter
+    # than segments, so strict=True would fail here by construction.
+    for (_, end, _), (next_start, _, _) in zip(segments, segments[1:], strict=False):
         assert abs(end - next_start) < 1e-6
 
 

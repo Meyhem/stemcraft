@@ -130,7 +130,9 @@ def test_separate_chains_into_analyze(conn, songs_dir, worker_state):
     assert analyze_jobs[0].song_id == song.id
 
 
-def test_cancel_mid_separation_lands_as_cancelled_not_failed(conn, songs_dir, worker_state, monkeypatch):
+def test_cancel_mid_separation_lands_as_cancelled_not_failed(
+    conn, songs_dir, worker_state, monkeypatch
+):
     song, song_dir = _make_song(songs_dir, seconds=20)
 
     calls = {"n": 0}

@@ -1,6 +1,13 @@
 import pytest
 from pydantic import ValidationError
-from stemcraft_lib.analysis import Analysis, BeatGrid, ChordSegment, KeyCandidate, read_analysis, write_analysis
+from stemcraft_lib.analysis import (
+    Analysis,
+    BeatGrid,
+    ChordSegment,
+    KeyCandidate,
+    read_analysis,
+    write_analysis,
+)
 
 
 def _sample_analysis() -> Analysis:

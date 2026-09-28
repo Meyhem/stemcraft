@@ -17,7 +17,7 @@ import wave
 
 from stemcraft_lib.analysis import Analysis, BeatGrid, write_analysis
 from stemcraft_lib.config import SAMPLE_RATE, settings
-from stemcraft_lib.song import STEM_NAMES, derive_files, find_song_dir, read_song
+from stemcraft_lib.song import derive_files, find_song_dir, read_song
 
 from ..analysis.beats import detect_beats
 from ..analysis.chords.align import align_to_bars

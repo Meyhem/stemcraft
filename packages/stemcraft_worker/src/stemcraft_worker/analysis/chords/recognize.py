@@ -13,7 +13,6 @@ from pathlib import Path
 import librosa
 import numpy as np
 import torch
-
 from stemcraft_lib.config import settings
 
 from .btc_model import BTC_model
