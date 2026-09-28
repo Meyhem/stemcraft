@@ -74,8 +74,20 @@ test('defaults to the top candidate and shows its correctly-spelled notes', asyn
 test('switching candidates re-renders the fretboard for the new key', async () => {
   renderScaleSheet();
   await screen.findByText(/72%/);
-  await userEvent.click(screen.getByRole('button', { name: /A# major/i }));
-  expect(screen.getByRole('img', { name: /A# major fretboard/i })).toBeInTheDocument();
+  // A# major is in the flat-key family (relative to Bb major territory via
+  // the flat-family tonic set), so it must display as "Bb major", not the
+  // theoretical 10-sharp spelling carried on the wire.
+  await userEvent.click(screen.getByRole('button', { name: /Bb major/i }));
+  expect(screen.getByRole('img', { name: /Bb major fretboard/i })).toBeInTheDocument();
+});
+
+test('a sharp-family candidate keeps its sharp spelling (no over-flattening)', async () => {
+  renderScaleSheet();
+  await screen.findByText(/72%/);
+  // D minor is not in the flat family, so it should render as "D minor"
+  // unchanged -- guards against a fix that always flattens tonics.
+  await userEvent.click(screen.getByRole('button', { name: /D minor/i }));
+  expect(screen.getByRole('img', { name: /D minor fretboard/i })).toBeInTheDocument();
 });
 
 test('pentatonic toggle shrinks the note list', async () => {

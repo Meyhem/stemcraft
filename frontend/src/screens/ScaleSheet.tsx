@@ -8,7 +8,14 @@ import { Link, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { useAnalysis, useSongs } from '../api/queries';
 import { Fretboard } from '../music/Fretboard';
-import { BASS_TUNING, GUITAR_TUNING, pitchClassOf, scaleNoteNames, scaleSemitones } from '../music/theory';
+import {
+  BASS_TUNING,
+  GUITAR_TUNING,
+  noteName,
+  pitchClassOf,
+  scaleNoteNames,
+  scaleSemitones,
+} from '../music/theory';
 import type { Mode } from '../music/theory';
 import styles from './ScaleSheet.module.css';
 
@@ -77,11 +84,15 @@ export function ScaleSheet() {
         <>
           <div className={styles.candidates}>
             <span className={styles.cap}>key candidates</span>
-            {candidates.map((c, i) => (
-              <button key={`${c.tonic}-${c.mode}`} aria-pressed={i === selected} onClick={() => setSelected(i)}>
-                {c.tonic} {c.mode} <b>{Math.round(c.confidence * 100)}%</b>
-              </button>
-            ))}
+            {candidates.map((c, i) => {
+              const candidatePc = pitchClassOf(c.tonic);
+              const candidateLabel = noteName(candidatePc, candidatePc, c.mode as Mode);
+              return (
+                <button key={`${c.tonic}-${c.mode}`} aria-pressed={i === selected} onClick={() => setSelected(i)}>
+                  {candidateLabel} {c.mode} <b>{Math.round(c.confidence * 100)}%</b>
+                </button>
+              );
+            })}
             <div className={styles.seg}>
               <button aria-pressed={!pentatonic} onClick={() => setPentatonic(false)}>
                 Full scale
@@ -95,7 +106,7 @@ export function ScaleSheet() {
           {active && (
             <div className={styles.panel}>
               <h2>
-                {active.tonic} {active.mode}
+                {tonicPc !== null ? noteName(tonicPc, tonicPc, mode) : active.tonic} {active.mode}
               </h2>
               <div className={styles.notes}>
                 {noteNames.map((n, i) => (

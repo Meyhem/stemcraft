@@ -50,6 +50,20 @@ def test_beats_are_48khz_sample_indices_not_seconds(tmp_path):
     assert all(b > 1000 for b in grid.beats[1:])
 
 
+def test_downbeats_are_a_subset_of_beats(tmp_path):
+    # stemcraft_lib.analysis documents downbeats as a subset of beats.
+    # beat_this returns beats and downbeats as two independently-rounded
+    # float arrays, so without snapping, a downbeat can land a sample or two
+    # off its matching beat -- this asserts detect_beats enforces the
+    # invariant by construction.
+    wav = tmp_path / "click.wav"
+    _click_track(wav, bpm=120)
+
+    grid = detect_beats(wav, checkpoint_path=_TEST_CHECKPOINT)
+
+    assert set(grid.downbeats) <= set(grid.beats)
+
+
 def test_silence_raises_insufficient_beats(tmp_path):
     silence = tmp_path / "silence.wav"
     subprocess.run(

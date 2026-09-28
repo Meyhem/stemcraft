@@ -43,5 +43,13 @@ def detect_beats(
 
     bpm = 60.0 / float(np.median(np.diff(beats_sec)))
     beats = [round(float(t) * sample_rate) for t in beats_sec]
-    downbeats = [round(float(t) * sample_rate) for t in downbeats_sec]
+    downbeats_raw = [round(float(t) * sample_rate) for t in downbeats_sec]
+
+    # beat_this returns beats and downbeats as two independently-rounded
+    # float arrays, so a downbeat can land a sample or two off its matching
+    # beat. stemcraft_lib.analysis documents downbeats as a subset of beats
+    # (Phase 6's sample-accurate bar snapping and metronome depend on that
+    # being exactly true), so snap each downbeat to its nearest beat here.
+    downbeats = [min(beats, key=lambda b: abs(b - d)) for d in downbeats_raw]
+
     return BeatGridRaw(bpm=bpm, beats=beats, downbeats=downbeats)

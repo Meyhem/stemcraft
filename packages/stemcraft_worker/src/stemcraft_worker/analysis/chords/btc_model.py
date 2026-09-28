@@ -1,5 +1,13 @@
 """Vendored from jayg996/BTC-ISMIR19 (MIT License), commit 2682317be668032e6e4b269ded36adaa2ad57df0,
 btc_model.py -- see the phase-5 plan's "Why a vendored BTC" section.
+
+Two changes from upstream:
+1. Upstream's wildcard `from utils.transformer_modules import *` replaced by
+   two explicit `from .transformer_modules import ...` lines (relative import
+   into this package, no wildcard).
+2. `x, list = inputs` renamed to `x, list_ = inputs` in
+   bi_directional_self_attention.forward, to avoid shadowing the `list`
+   builtin.
 """
 import torch
 import torch.nn as nn

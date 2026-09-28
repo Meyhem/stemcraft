@@ -1,4 +1,4 @@
-import { noteAtFret, pitchClassOf } from './theory';
+import { noteAtFret, noteName, pitchClassOf } from './theory';
 import type { Mode } from './theory';
 import styles from './Fretboard.module.css';
 
@@ -17,6 +17,7 @@ export interface FretboardProps {
 
 export function Fretboard({ tuning, tonic, mode, scaleNotes }: FretboardProps) {
   const tonicPc = pitchClassOf(tonic);
+  const tonicLabel = noteName(tonicPc, tonicPc, mode);
   const width = NECK_LEFT + FRET_GAP * FRETS + 20;
   const height = TOP + STRING_GAP * (tuning.length - 1) + 20;
 
@@ -25,7 +26,7 @@ export function Fretboard({ tuning, tonic, mode, scaleNotes }: FretboardProps) {
       viewBox={`0 0 ${width} ${height}`}
       className={styles.svg}
       role="img"
-      aria-label={`${tonic} ${mode} fretboard`}
+      aria-label={`${tonicLabel} ${mode} fretboard`}
     >
       {Array.from({ length: FRETS + 1 }, (_, fret) => (
         <line
