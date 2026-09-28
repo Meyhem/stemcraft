@@ -25,6 +25,21 @@ test('extrapolates position with tempo scaling', () => {
   expect(result).toBe(72_000);
 });
 
+test('a zero rate freezes the position, however much real time passes', () => {
+  // How a pause is expressed: EngineController resyncs at samplesPerSecond 0,
+  // and create()'s port.onmessage keeps reporting at that rate while stopped.
+  // Without it the reported position would sawtooth forward between the
+  // worklet's ~9 reports a second while the cursor stood still.
+  const clock = new EngineClock({
+    contextTime: 10,
+    position: sampleIndex(48_000),
+    samplesPerSecond: 0,
+  });
+
+  expect(clock.positionAt(11)).toBe(48_000);
+  expect(clock.positionAt(40)).toBe(48_000);
+});
+
 test('resync updates the anchor and does not leak stale state', () => {
   const clock = new EngineClock({
     contextTime: 10,

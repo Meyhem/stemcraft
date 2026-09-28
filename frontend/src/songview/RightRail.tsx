@@ -127,6 +127,13 @@ export function RightRail({
             </button>
           ))}
         </div>
+        {/* The count-in is played out of the bars *before* the start point, so
+            there has to be room for it: starting from the top of a song plays
+            none. Said here rather than left to be discovered mid-practice. */}
+        <p className={styles.note}>
+          A count-in is played from the bars before your start point, so starting at the top
+          of a song plays none.
+        </p>
       </section>
     </aside>
   );

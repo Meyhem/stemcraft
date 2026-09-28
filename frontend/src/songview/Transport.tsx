@@ -15,6 +15,11 @@ export interface TransportProps {
   playing: boolean;
   grid: Grid | null;
   getPosition(): SampleIndex;
+  /**
+   * Bumped by the owner whenever it moves the engine cursor, so this readout
+   * repaints after a scrub or a bar nudge made while paused (usePlayhead).
+   */
+  seekNonce: number;
   tempo: number; // 0.5..1.0
   pitchSemitones: number; // -12..12
   metronome: boolean;
@@ -35,6 +40,7 @@ export function Transport({
   playing,
   grid,
   getPosition,
+  seekNonce,
   tempo,
   pitchSemitones,
   metronome,
@@ -66,7 +72,7 @@ export function Transport({
     },
     [grid],
   );
-  usePlayhead(getPosition, paint, playing);
+  usePlayhead(getPosition, paint, playing, seekNonce);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {

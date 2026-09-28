@@ -6,10 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SongView } from './SongView';
 
+let cursor = 0;
+
 const engine = {
   play: vi.fn(async () => {}),
   pause: vi.fn(),
-  seek: vi.fn(),
+  seek: vi.fn((position: number) => {
+    cursor = position;
+  }),
   setLoop: vi.fn(),
   setTempo: vi.fn(),
   setPitchSemitones: vi.fn(),
@@ -22,7 +26,9 @@ const engine = {
     async (_from: number, _bars: number, _barStarts: number[], _restoreGains: () => void) => {},
   ),
   onEnded: vi.fn(() => () => {}),
-  getPositionSamples: vi.fn(() => 0),
+  // The cursor the fake engine actually holds. seek() moves it and nothing
+  // else does -- which is the paused case the playhead has to repaint for.
+  getPositionSamples: vi.fn(() => cursor),
   dispose: vi.fn(async () => {}),
   durationSamples: 48_000 * 32,
   durationSeconds: 32,
@@ -80,10 +86,13 @@ const analysis = {
   chords: [{ bar: 0, start_sample: 0, end_sample: 96_000, chord: 'G:maj' }],
 };
 
-function mockFetch(overrides: Record<string, unknown> = {}) {
+function mockFetch(overrides: Record<string, unknown> = {}, putStatus = 200) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT' && putStatus !== 200) {
+        return new Response('song.json belongs to a different song', { status: putStatus });
+      }
       const body =
         overrides[url] ??
         (url.endsWith('/analysis') ? analysis : url.includes('/api/songs/abc123') ? songEntry : {});
@@ -106,7 +115,10 @@ function renderSongView() {
   );
 }
 
-beforeEach(() => mockFetch());
+beforeEach(() => {
+  cursor = 0;
+  mockFetch();
+});
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
@@ -222,6 +234,48 @@ describe('SongView', () => {
     renderSongView();
     expect(await screen.findByRole('button', { name: /^play$/i })).toBeInTheDocument();
     expect(screen.getByText(/no beat grid/i)).toBeInTheDocument();
+  });
+
+  it('surfaces a failed autosave verbatim, rather than editing into the void (N-08)', async () => {
+    mockFetch({}, 409);
+    renderSongView();
+    await userEvent.click(await screen.findByRole('button', { name: /mute vocals/i }));
+    // The server's own words, carried by ApiError, not a paraphrase.
+    const alert = await screen.findByRole('alert', {}, { timeout: 3000 });
+    expect(alert).toHaveTextContent('belongs to a different song');
+    expect(alert).toHaveTextContent('409');
+  });
+
+  it('repaints the readouts after a scrub made while paused', async () => {
+    // The bug this covers: `getPosition` is stable per engine and the painters
+    // are stable, so a seek changes nothing usePlayhead's effect depends on --
+    // the cursor moves and every readout stays frozen until play is pressed.
+    // It has to be asserted here rather than in Timeline.test: a component-level
+    // test passing a fresh inline getPosition re-runs the effect on every
+    // render and so passes against the bug.
+    renderSongView();
+    await screen.findByRole('heading', { name: /Test Song/ });
+    // Bar 1 once the grid has arrived: the cursor is at 0.
+    await waitFor(() => expect(screen.getByTestId('bar-readout')).toHaveTextContent('1'));
+
+    const track = screen.getByTestId('timeline-track');
+    vi.spyOn(track, 'getBoundingClientRect').mockReturnValue({
+      left: 0, width: 1000, top: 0, height: 40, right: 1000, bottom: 40, x: 0, y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+    act(() => {
+      // Halfway: 768 000 samples in, which is downbeat 8 -- bar 9 on screen.
+      track.dispatchEvent(new MouseEvent('click', { clientX: 500, bubbles: true }));
+    });
+
+    expect(engine.seek).toHaveBeenCalledWith(768_000);
+    // Still paused: no rAF loop is running, so this can only come from the
+    // repaint the seek itself asked for.
+    expect(screen.getByRole('button', { name: /^play$/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('bar-readout')).toHaveTextContent('9'));
+    await waitFor(() =>
+      expect(document.querySelector('[class*="playhead"]')).toHaveStyle({ left: '50%' }),
+    );
   });
 
   it('surfaces an engine construction failure verbatim (N-08)', async () => {

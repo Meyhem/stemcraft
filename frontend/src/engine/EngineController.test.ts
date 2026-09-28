@@ -86,9 +86,12 @@ function makeController(initialContextTime = 0) {
   };
   const cursorNode = makeCursorNode();
   const stNode = {};
-  const clock = new EngineClock({ contextTime: initialContextTime, position: sampleIndex(0), samplesPerSecond: SAMPLE_RATE });
+  // Stopped, exactly as create() builds it: the clock only advances once
+  // play() has said so.
+  const clock = new EngineClock({ contextTime: initialContextTime, position: sampleIndex(0), samplesPerSecond: 0 });
   const tempoState = { ratio: 1 };
   const endedBox = { fire: () => {} };
+  const playingState = { playing: false };
   const durationFrames = 10_000_000;
 
   const Ctor = EngineController as unknown as new (
@@ -98,14 +101,60 @@ function makeController(initialContextTime = 0) {
     clock: unknown,
     tempoState: unknown,
     endedBox: unknown,
+    playingState: unknown,
     durationFrames: unknown,
   ) => EngineControllerType;
 
-  const controller = new Ctor(context, cursorNode, stNode, clock, tempoState, endedBox, durationFrames);
-  return { controller, context, cursorNode };
+  const controller = new Ctor(
+    context,
+    cursorNode,
+    stNode,
+    clock,
+    tempoState,
+    endedBox,
+    playingState,
+    durationFrames,
+  );
+  return { controller, context, cursorNode, clock };
 }
 
 const BAR_STARTS = [0, 480, 960, 1440].map(sampleIndex);
+
+describe('EngineController transport and the clock', () => {
+  it('does not advance the reported position while stopped', async () => {
+    const { controller, context } = makeController(0);
+    await controller.play();
+    context.currentTime = 1;
+    expect(controller.getPositionSamples()).toBe(SAMPLE_RATE);
+
+    controller.pause();
+    // A whole second of real time passes with the transport stopped: the
+    // cursor is not moving, so neither may the position the UI reads.
+    context.currentTime = 2;
+    expect(controller.getPositionSamples()).toBe(SAMPLE_RATE);
+  });
+
+  it('resumes from where it was paused rather than from the old anchor', async () => {
+    const { controller, context } = makeController(0);
+    await controller.play();
+    context.currentTime = 1;
+    controller.pause();
+
+    context.currentTime = 5; // four seconds of sitting still
+    await controller.play();
+    context.currentTime = 6;
+
+    // One second of playback after the pause, not five.
+    expect(controller.getPositionSamples()).toBe(2 * SAMPLE_RATE);
+  });
+
+  it('seeking while paused leaves the position exactly where it was put', () => {
+    const { controller, context } = makeController(0);
+    controller.seek(sampleIndex(123_456));
+    context.currentTime = 2;
+    expect(controller.getPositionSamples()).toBe(123_456);
+  });
+});
 
 describe('EngineController.countInAndPlay cancellation', () => {
   it('restores gains exactly once when the cursor reaches from (normal path)', async () => {

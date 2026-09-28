@@ -40,6 +40,13 @@ export class EngineController {
     // and the constructor below wires the box to the real instance-level handling
     // (pause the transport, notify subscribers) that only the instance can do.
     private readonly endedBox: { fire: () => void },
+    // Same pattern again: whether the transport is running. The clock
+    // extrapolates from its last anchor, so it has to be told to stop
+    // advancing when the cursor does -- otherwise a paused position sawtooths
+    // forward between worklet reports and "set A exactly where I stopped"
+    // stops being exact. create()'s port.onmessage reads this box too, so the
+    // next report after a pause does not undo the stop.
+    private readonly playingState: { playing: boolean },
     private readonly durationFrames: number,
     private readonly summaries: readonly StemSummary[],
   ) {
@@ -104,7 +111,9 @@ export class EngineController {
 
     const tempoState = { ratio: 1.0 };
     const endedBox: { fire: () => void } = { fire: () => {} };
-    const clock = new EngineClock({ contextTime: context.currentTime, position: sampleIndex(0), samplesPerSecond: SAMPLE_RATE });
+    // Nothing plays until play() is called, so the clock starts stopped.
+    const playingState = { playing: false };
+    const clock = new EngineClock({ contextTime: context.currentTime, position: sampleIndex(0), samplesPerSecond: 0 });
     cursorNode.port.onmessage = (event: MessageEvent) => {
       if (event.data.type === 'position') {
         clock.resync({
@@ -114,8 +123,11 @@ export class EngineController {
           // convert it back before handing it to the clock (D-03).
           position: toStemDomain(event.data.position, context.sampleRate),
           // Stem-domain samples advanced per real second is the tempo-scaled rate
-          // (Task 2's clock test asserts exactly this), not the raw sample rate.
-          samplesPerSecond: SAMPLE_RATE * tempoState.ratio,
+          // (Task 2's clock test asserts exactly this), not the raw sample rate --
+          // and zero while paused, because the cursor is not advancing at all.
+          // The worklet keeps reporting while stopped, so without this flag the
+          // first report after a pause would start the clock extrapolating again.
+          samplesPerSecond: playingState.playing ? SAMPLE_RATE * tempoState.ratio : 0,
         });
       } else if (event.data.type === 'ended') {
         endedBox.fire();
@@ -128,7 +140,17 @@ export class EngineController {
 
     const summaries = STEM_ORDER.map((name, i) => summariseStem(buffers[i]!, name));
 
-    return new EngineController(context, cursorNode, stNode, clock, tempoState, endedBox, durationFrames, summaries);
+    return new EngineController(
+      context,
+      cursorNode,
+      stNode,
+      clock,
+      tempoState,
+      endedBox,
+      playingState,
+      durationFrames,
+      summaries,
+    );
   }
 
   setStemGain(stem: StemName, linearGain: number): void {
@@ -162,10 +184,19 @@ export class EngineController {
     });
   }
 
+  /**
+   * Stem-domain samples the cursor advances per second of real time: the
+   * tempo-scaled rate while running, and zero while stopped. Every resync this
+   * class makes goes through here so a paused clock never extrapolates.
+   */
+  private get clockRate(): number {
+    return this.playingState.playing ? SAMPLE_RATE * this.tempoState.ratio : 0;
+  }
+
   seek(position: SampleIndex): void {
     this.cancelCountIn();
     this.cursorNode.port.postMessage({ type: 'seek', position: toDeviceDomain(position, this.context.sampleRate) });
-    this.clock.resync({ contextTime: this.context.currentTime, position, samplesPerSecond: SAMPLE_RATE * this.tempoState.ratio });
+    this.clock.resync({ contextTime: this.context.currentTime, position, samplesPerSecond: this.clockRate });
   }
 
   /**
@@ -198,11 +229,24 @@ export class EngineController {
    */
   async play(): Promise<void> {
     if (this.context.state === 'suspended') await this.context.resume();
+    // Anchor the clock where the paused cursor stood, then let it run: the
+    // position it reports has to start advancing from this instant, not from
+    // whenever the worklet last reported.
+    const position = this.getPositionSamples();
+    this.playingState.playing = true;
+    this.clock.resync({ contextTime: this.context.currentTime, position, samplesPerSecond: this.clockRate });
     this.cursorNode.parameters.get('playing')!.setValueAtTime(1, this.context.currentTime);
   }
 
   pause(): void {
     this.cancelCountIn();
+    // Freeze the clock at the position it had reached. Without this it would
+    // keep extrapolating through the pause, and every setting taken from "where
+    // the cursor is" -- set A, set B, a bar nudge, the next play's start point
+    // -- would be read from a position the cursor never had.
+    const position = this.getPositionSamples();
+    this.playingState.playing = false;
+    this.clock.resync({ contextTime: this.context.currentTime, position, samplesPerSecond: this.clockRate });
     this.cursorNode.parameters.get('playing')!.setValueAtTime(0, this.context.currentTime);
   }
 
@@ -246,6 +290,12 @@ export class EngineController {
       await this.play();
       return;
     }
+    // Known limitation, not a bug: findIndex returns 0 when `from` is at or
+    // before the first downbeat, so `countFrom` falls back to `from` and no
+    // count-in bars play -- including the commonest case of all, pressing play
+    // at position 0. Counting over silence ahead of sample 0 would need the
+    // worklet's cursor to run negative, which it does not support; fixing it is
+    // a worklet change, not a change here. The UI says so next to the control.
     const startBar = barStarts.findIndex((b) => b >= from);
     const countFrom = startBar > 0 ? barStarts[Math.max(0, startBar - bars)]! : from;
     for (const stem of STEM_ORDER) this.setStemGain(stem, 0);

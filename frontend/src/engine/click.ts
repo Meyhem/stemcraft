@@ -39,8 +39,11 @@ export function clickSample(
  * Index of the latest beat at or before `position`, or -1 if `position` is
  * before the first beat. Binary search rather than a carried index: the cursor
  * jumps at every loop wrap and every seek, and a carried index would have to be
- * invalidated at both -- cheaper and less error-prone to just search, once per
- * block rather than once per frame.
+ * invalidated at both -- less error-prone to just search. This does run once
+ * per frame (128 times a block, from loopCursor's sample loop), not once per
+ * block: log2(beats) comparisons on a few thousand beats is a handful of
+ * integer compares per sample, which the render budget absorbs. The reason to
+ * prefer it is correctness across jumps, not a lower call count.
  */
 export function findBeatIndexAt(beats: Float64Array, position: number): number {
   if (beats.length === 0 || position < beats[0]!) return -1;

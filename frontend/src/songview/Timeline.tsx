@@ -5,6 +5,7 @@
 import { useCallback, useRef, type MouseEvent } from 'react';
 
 import { barStart, type Grid } from '../music/grid';
+import { percentOf } from '../music/percent';
 import { sampleIndex, type SampleIndex } from '../engine/types';
 import { usePlayhead } from './usePlayhead';
 import styles from './Timeline.module.css';
@@ -16,6 +17,11 @@ export interface TimelineProps {
   loopArmed: boolean;
   getPosition(): SampleIndex;
   playing: boolean;
+  /**
+   * Bumped by the owner whenever it moves the engine cursor, so this readout
+   * repaints after a scrub or a bar nudge made while paused (usePlayhead).
+   */
+  seekNonce: number;
   onScrub(position: SampleIndex): void;
 }
 
@@ -26,13 +32,14 @@ export function Timeline({
   loopArmed,
   getPosition,
   playing,
+  seekNonce,
   onScrub,
 }: TimelineProps) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const playheadRef = useRef<HTMLDivElement | null>(null);
 
   const pct = useCallback(
-    (position: number) => (durationSamples > 0 ? (position / durationSamples) * 100 : 0),
+    (position: number) => percentOf(durationSamples, position),
     [durationSamples],
   );
 
@@ -43,7 +50,7 @@ export function Timeline({
     },
     [pct],
   );
-  usePlayhead(getPosition, paint, playing);
+  usePlayhead(getPosition, paint, playing, seekNonce);
 
   const handleClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {

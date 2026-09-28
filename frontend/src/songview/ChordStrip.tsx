@@ -2,14 +2,16 @@
 // ~1.5 m while playing. Segments position by their own start_sample/end_sample
 // (the analysis already aligned them to bars) as a percentage of the song's
 // sample length, same convention as Timeline. The current-chord highlight is
-// painted from the shared rAF loop into a ref, same pattern as Timeline's
-// playhead -- never React state, which at 60 fps would re-render a tree
-// containing four canvases sixty times a second.
+// painted from this component's own rAF loop into a ref, same pattern as
+// Timeline's playhead and reading the same engine clock -- never React state,
+// which at 60 fps would re-render a tree containing four canvases sixty times
+// a second.
 import { useCallback, useRef } from 'react';
 
 import type { ChordSegment } from '../api/client';
 import { sampleIndex, type SampleIndex } from '../engine/types';
 import type { Grid } from '../music/grid';
+import { percentOf } from '../music/percent';
 import { usePlayhead } from './usePlayhead';
 import styles from './ChordStrip.module.css';
 
@@ -19,6 +21,11 @@ export interface ChordStripProps {
   durationSamples: SampleIndex;
   getPosition(): SampleIndex;
   playing: boolean;
+  /**
+   * Bumped by the owner whenever it moves the engine cursor, so this readout
+   * repaints after a scrub or a bar nudge made while paused (usePlayhead).
+   */
+  seekNonce: number;
 }
 
 /**
@@ -38,7 +45,14 @@ export function formatChord(chord: string): { text: string; label: string } {
   return { text: `${root}${quality}`, label: `${root} ${quality}` };
 }
 
-export function ChordStrip({ chords, grid, durationSamples, getPosition, playing }: ChordStripProps) {
+export function ChordStrip({
+  chords,
+  grid,
+  durationSamples,
+  getPosition,
+  playing,
+  seekNonce,
+}: ChordStripProps) {
   const segmentRefs = useRef<(HTMLDivElement | null)[]>([]);
   const currentIndex = useRef<number>(-1);
 
@@ -74,10 +88,10 @@ export function ChordStrip({ chords, grid, durationSamples, getPosition, playing
     },
     [findCurrent],
   );
-  usePlayhead(getPosition, paint, playing);
+  usePlayhead(getPosition, paint, playing, seekNonce);
 
   const pct = useCallback(
-    (position: number) => (durationSamples > 0 ? (position / durationSamples) * 100 : 0),
+    (position: number) => percentOf(durationSamples, position),
     [durationSamples],
   );
 

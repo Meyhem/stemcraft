@@ -21,6 +21,7 @@ function renderTransport(over: Partial<Parameters<typeof Transport>[0]> = {}) {
     playing: false,
     grid: grid8(),
     getPosition: () => sampleIndex(0),
+    seekNonce: 0,
     tempo: 1,
     pitchSemitones: 0,
     metronome: false,

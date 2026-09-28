@@ -29,7 +29,7 @@ class JobContext:
     job_id: int
     payload: dict
     device: str
-    worker_state: "WorkerState | None" = None
+    worker_state: WorkerState | None = None
 
     def progress(self, fraction: float) -> None:
         jobs_db.set_progress(self.conn, self.job_id, fraction)

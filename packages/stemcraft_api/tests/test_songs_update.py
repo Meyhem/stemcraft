@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 import pytest
 from fastapi.testclient import TestClient
 from stemcraft_api.app import create_app
@@ -94,5 +92,5 @@ def test_last_write_wins_with_no_version_check(client: TestClient):
 def test_put_to_an_unknown_song_404s(client: TestClient):
     song = _create(client)
     song["id"] = "nope"
-    response = client.put(f"/api/songs/nope", json=song)
+    response = client.put("/api/songs/nope", json=song)
     assert response.status_code == 404

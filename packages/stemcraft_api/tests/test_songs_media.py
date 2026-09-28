@@ -94,7 +94,6 @@ def test_audio_wav_is_served(client: TestClient, tmp_path):
     assert response.content == b"RIFF-fake"
 
 
-def test_media_for_an_unknown_song_404s(client: TestClient, tmp_path):
-    songs_dir = tmp_path / "songs"
+def test_media_for_an_unknown_song_404s(client: TestClient):
     response = client.get("/api/songs/nope/stems/bass.opus")
     assert response.status_code == 404

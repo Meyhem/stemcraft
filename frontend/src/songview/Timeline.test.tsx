@@ -25,6 +25,7 @@ describe('Timeline', () => {
         loopArmed={false}
         getPosition={() => sampleIndex(0)}
         playing={false}
+        seekNonce={0}
         onScrub={vi.fn()}
       />,
     );
@@ -42,6 +43,7 @@ describe('Timeline', () => {
         loopArmed
         getPosition={() => sampleIndex(0)}
         playing={false}
+        seekNonce={0}
         onScrub={vi.fn()}
       />,
     );
@@ -60,6 +62,7 @@ describe('Timeline', () => {
         loopArmed={false}
         getPosition={() => sampleIndex(0)}
         playing={false}
+        seekNonce={0}
         onScrub={vi.fn()}
       />,
     );
@@ -76,6 +79,7 @@ describe('Timeline', () => {
         loopArmed={false}
         getPosition={() => sampleIndex(0)}
         playing={false}
+        seekNonce={0}
         onScrub={onScrub}
       />,
     );
@@ -99,6 +103,7 @@ describe('Timeline', () => {
         loopArmed={false}
         getPosition={() => sampleIndex(0)}
         playing={false}
+        seekNonce={0}
         onScrub={vi.fn()}
       />,
     );

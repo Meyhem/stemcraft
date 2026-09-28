@@ -274,7 +274,9 @@ class WorkerStatus:
     updated_at: float
 
 
-def set_worker_status(conn: sqlite3.Connection, *, device: str, fallback_reason: str | None) -> None:
+def set_worker_status(
+    conn: sqlite3.Connection, *, device: str, fallback_reason: str | None
+) -> None:
     """Written once, at worker boot (§4: the device decision doesn't change during the
     process's life). Single row by construction (id=1's CHECK constraint) -- this is how
     the API learns the worker's device without importing anything torch-touching (§4)."""
@@ -293,7 +295,11 @@ def get_worker_status(conn: sqlite3.Connection) -> WorkerStatus | None:
         "SELECT device, fallback_reason, updated_at FROM worker_status WHERE id = 1"
     ).fetchone()
     return (
-        WorkerStatus(device=row["device"], fallback_reason=row["fallback_reason"], updated_at=row["updated_at"])
+        WorkerStatus(
+            device=row["device"],
+            fallback_reason=row["fallback_reason"],
+            updated_at=row["updated_at"],
+        )
         if row
         else None
     )

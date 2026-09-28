@@ -68,7 +68,12 @@ export function SongView() {
   const { songId } = useParams();
   const songQuery = useSong(songId);
   const analysisQuery = useAnalysis(songId);
-  const { save } = useUpdateSong(songId);
+  // N-08: a save that failed must say so. Everything on this screen edits a
+  // recipe that is only real once it reaches song.json, so a rejected PUT (a
+  // 409 on an id mismatch, a 500 on an unreadable song.json, a dropped LAN
+  // connection) leaves the user editing something nothing is persisting --
+  // silently, unless this error is rendered.
+  const { save, error: saveError } = useUpdateSong(songId);
 
   const [engine, setEngine] = useState<EngineController | null>(null);
   const [engineError, setEngineError] = useState<string | null>(null);
@@ -77,6 +82,12 @@ export function SongView() {
   const [soloed, setSoloed] = useState<ReadonlySet<StemName>>(NO_SOLO);
   const [playing, setPlaying] = useState(false);
   const [loopArmed, setLoopArmed] = useState(false);
+  // A repaint ticket, not a position. The readouts read the cursor through
+  // `getPosition`, whose identity depends only on the engine, so moving the
+  // cursor while paused changes nothing any of their rAF effects depend on and
+  // they stay frozen on the old position. Bumping this is how a seek tells them
+  // to paint one more frame.
+  const [seekNonce, setSeekNonce] = useState(0);
 
   const entry = songQuery.data;
   const fetchedSong = entry?.song ?? null;
@@ -88,9 +99,11 @@ export function SongView() {
   );
 
   // Handlers must keep a stable identity: Transport registers a window keydown
-  // listener in an effect keyed on them, and usePlayhead's rAF loop restarts
-  // when its callbacks change. So they read the current render's values from
-  // here instead of closing over them.
+  // listener in an effect keyed on them, and the rAF loops usePlayhead runs --
+  // one each in Timeline, ChordStrip and Transport, all reading the same engine
+  // clock, so they cannot disagree -- restart when their callbacks change. So
+  // the handlers read the current render's values from here instead of closing
+  // over them.
   const latest = useRef({ engine, song, grid, soloed, playing, loopArmed });
   useEffect(() => {
     latest.current = { engine, song, grid, soloed, playing, loopArmed };
@@ -274,10 +287,12 @@ export function SongView() {
       setLoopArmed(false);
     }
     current.seek(position);
+    setSeekNonce((n) => n + 1);
   }, []);
 
   // A bar nudge is a cursor move like any other, so it goes through the same
-  // rule rather than inventing a second one.
+  // rule rather than inventing a second one -- including the repaint ticket,
+  // which handleScrub bumps on its behalf.
   const handleNudgeBars = useCallback(
     (delta: number) => {
       const { engine: current, grid: currentGrid } = latest.current;
@@ -506,6 +521,14 @@ export function SongView() {
           </p>
         )}
 
+        {/* ApiError's message already carries the server's own detail, so it is
+            shown as it came rather than paraphrased into reassurance. */}
+        {saveError && (
+          <p role="alert" className={styles.alert}>
+            {saveError.message}
+          </p>
+        )}
+
         {analysisQuery.isError && !notAnalyzedYet && (
           <p role="alert" className={styles.alert}>
             {String(analysisQuery.error)}
@@ -523,6 +546,7 @@ export function SongView() {
               loopArmed={loopArmed}
               getPosition={getPosition}
               playing={playing}
+              seekNonce={seekNonce}
               onScrub={handleScrub}
             />
 
@@ -549,6 +573,7 @@ export function SongView() {
               durationSamples={engine.durationSamples}
               getPosition={getPosition}
               playing={playing}
+              seekNonce={seekNonce}
             />
 
             <div className={styles.transport}>
@@ -556,6 +581,7 @@ export function SongView() {
                 playing={playing}
                 grid={grid}
                 getPosition={getPosition}
+                seekNonce={seekNonce}
                 tempo={song.playback.tempo}
                 pitchSemitones={song.playback.pitch_semitones}
                 metronome={song.metronome}

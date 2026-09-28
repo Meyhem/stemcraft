@@ -9,6 +9,12 @@ import type { StemName } from './EngineController';
  * packages/stemcraft_worker/src/stemcraft_worker/kinds/separate_song.py (~-34 dBFS).
  * If one moves, move the other: a lane marked empty here and not there (or the
  * reverse) is exactly the kind of quiet disagreement N-08 forbids.
+ *
+ * The two do not read bit-identical audio, though: the worker measures the raw
+ * float PCM it separated, this measures the same stem after an Opus encode and
+ * a browser decode. So a stem whose peak sits right on the threshold may be
+ * classified differently on the two sides -- that is the codec, not a bug. Only
+ * a disagreement on a stem that is clearly one or the other is a real one.
  */
 export const NEAR_SILENT_THRESHOLD = 0.02;
 
