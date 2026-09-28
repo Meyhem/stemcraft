@@ -216,6 +216,13 @@ alignment) are an open checklist in that document's verification section.
 **Exit criteria:** an export at 70 % tempo matches what was practised to; the toggle
 produces an original-tempo file; the job is re-runnable and overwrites its own output.
 
+**Plan:** [2026-09-28-phase-7-export.md](2026-09-28-phase-7-export.md). Code landed and
+reviewed. Measured against the real song: 70 % gives 202.56 s from a 141.77 s source, the
+original toggle gives 141.79 s, and a re-run is byte-identical. The one exit criterion that
+needs ears — whether the 70 % file *matches what was practised to*, and whether D-10's
+"better, never worse" actually holds — is an open checklist in that document's verification
+section. `rubberband` also became a refuse-to-start dependency this phase (D7-01).
+
 ---
 
 ## Phase 8 — Album splitter

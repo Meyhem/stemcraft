@@ -2117,7 +2117,10 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { exportUrl } from '../api/client';
 import { queryKeys, useExports, useJobs, useQueueExport, useSong } from '../api/queries';
-import { STEM_ORDER, type StemName } from '../engine/EngineController';
+// STEM_ORDER/StemName come from `engine/types` (import-free), never from
+// EngineController: that module transitively loads @soundtouchjs/audio-worklet,
+// whose top level subclasses AudioWorkletNode, which does not exist in jsdom.
+import { STEM_ORDER, type StemName } from '../engine/types';
 import { proposeExportName } from './exportName';
 import styles from './Export.module.css';
 
@@ -2626,3 +2629,86 @@ git commit -m "docs: Phase 7 verification log and roadmap update"
       original-tempo file — Task 7 (measured **and** listened to).
 - [ ] The job is re-runnable and overwrites its own output — Task 3's idempotency test and
       Task 7's md5 check.
+
+---
+
+## Real-hardware verification (Task 7)
+
+**Status: the measured half is done; the listening half is open.** Everything mechanically
+checkable was run on 2026-09-28 against the real separated song and is recorded below.
+Everything *audible* still needs a human with ears at a music stand — and the roadmap's
+exit criterion ("an export at 70 % tempo **matches what was practised to**") is an audible
+claim, so recording it as passed on the strength of a duration figure would be exactly the
+silent degradation N-08 exists to prevent.
+
+Song under test: `Fortunate Son` (CCR), `01M3KG53V18KDRT2GNW6X3S9RJ` — the same song Phase 6
+verified against. Source stems 141.767 s.
+
+### How it was run, and the one caveat
+
+A long-running `stemcraft-api` and `stemcraft-worker` (started ~4 h before this work) were
+already live on this machine, both predating Phase 7's code. They were **left running and
+untouched**: enqueuing an export into the live `jobs.sqlite` would have handed the job to a
+worker with no `export` kind registered, producing a misleading failure row in the user's
+own queue. Instead the run used an isolated `STEMCRAFT_SONGS_DIR`/`STEMCRAFT_DATA_DIR` over
+a hard-linked copy of the real song, a second API on port 8099, and `run_one` driving the
+worker loop in-process.
+
+**What that leaves unverified:** the full-stack path through the *installed* `stemcraft-worker`
+binary and the WebSocket job-progress push to a real browser. The job kind, the API routes
+and the render are all exercised below; the worker's own boot path (which loads torch and
+proves the GPU) is not, because export needs none of it.
+
+### Measured — 2026-09-28
+
+| Check | Result |
+| --- | --- |
+| Boot check for librubberband (new this phase) | `ffmpeg_rubberband: ok` in `/api/health`, alongside the four existing checks |
+| Source duration | 141.767 s |
+| Export at 70 %, −2 st, bass excluded | **202.56 s** (predicted 141.767 / 0.70 = 202.52) — job reported 202.513 s |
+| Export at original | **141.79 s**, matching the source |
+| Bitrate, both | **320 kbps** CBR (D7-09) |
+| ID3 (D7-06) | title and artist present in the file |
+| Render cost, 70 % + pitch (`rubberband` path) | 6.89 s wall for a 141 s song |
+| Render cost, original (identity path) | **1.23 s — 5.6× faster**, the visible proof D7-05's short filtergraph really skips the vocoder |
+| Re-run of the same export | **byte-identical** (`md5 8af5193029618edbc35332b42ece191d` twice) — §6 idempotency, on real audio |
+| One stem alone (`bass`) | renders, 202.56 s at the same recipe |
+| Cancel mid-render | job → `cancelled`, **no traceback**, stopped ~0.08 s after the request; no `.mp3`, **no stray `.tmp`** in `exports/` |
+| `POST /export`, messy name | `API — round trip, 70%` → `api-round-trip-70` |
+| Payload snapshot (D7-02) | carries `tempo 0.7`, `pitch_semitones -2`, per-stem gains, title and artist — resolved at enqueue, not a pointer to `song.json` |
+| `apply_recipe: false` | payload `tempo 1.0`, `pitch 0`; rendered file 141.745 s |
+| Validation | no stems → **422**; unknown stem → **422**; unknown song → **404**; unseparated song → **409** naming the reason |
+| Download | `200`, `content-type: audio/mpeg`, `content-disposition: attachment; filename="…"` |
+| Path traversal | `../song`, `..%2F..%2Fsong.json`, `Fortunate` (uppercase), a missing name — **all 404** |
+| `GET /exports` | derived from the directory, newest first, sizes matching disk |
+| Automated suites | lib 97, api 61, worker 61, frontend 179 — all passing; `tsc --noEmit`, `vite build`, `ruff check packages/` clean |
+
+One incidental confirmation: a three-stem export and a one-stem export of the same duration
+produce byte counts that are *identical* (8 103 483). That is correct for 320 kbps CBR, not a
+bug — the md5s differ.
+
+### Still open — needs a human at the practice machine
+
+Restart the API and worker first (**the instances currently running predate this phase and
+have no `export` job kind**), then:
+
+- [ ] **The exit criterion: does the 70 % export match what was practised to?** Play the
+      exported file against the Song view at 70 % and play along with both. The duration
+      arithmetic above proves only that it is the right *length*.
+- [ ] **D-10's promise, which is the whole reason the export is rendered server-side.** Judge
+      the 70 % export against the live preview at 70 % on quality. It must be **better, never
+      worse**. If it is worse, that is a finding — record it and open the question rather
+      than rounding it into a pass. The banner in the UI makes this promise to the user in
+      writing, so it has to be true.
+- [ ] **The −2 semitone shift.** Same comparison, for pitch: does the file sit where the
+      slider said, and is it clean at ±2–3 st as the domain spec claims?
+- [ ] **The original-tempo export.** Sounds like the song, at the song's pitch.
+- [ ] **`bass-only`.** It is the bass, and it is not clipped. (`amix` runs with
+      `normalize=0`, so a single loud stem is the case most likely to clip — worth a listen
+      at the extreme.)
+- [ ] **The full stack.** Queue an export from the Export screen in a browser, watch the
+      progress bar move from the WebSocket, and download the finished file from the link.
+      None of the browser path is covered above.
+
+Record measured numbers, not "works". A number that misses its target gets recorded as a
+miss and opens a question; it does not get rounded into a pass.
