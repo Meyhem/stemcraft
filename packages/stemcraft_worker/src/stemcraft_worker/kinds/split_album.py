@@ -7,8 +7,9 @@ because §6 requires idempotency by re-derivation from inputs that never change
 and album.json is autosaved as the user drags markers and types titles.
 
 The zip is built from the recipe's filenames, not from a directory listing --
-so a track renamed between two splits leaves its old file on disk but never
-ships in the new zip.
+so a track renamed between two splits never ships in the new zip, and the
+orphaned file it left behind is swept before the zip is written so that the
+directory listing agrees with the archive.
 
 No torch: every track is one ffmpeg subprocess.
 """
@@ -79,6 +80,17 @@ def run(ctx: JobContext) -> dict:
 
     if ctx.cancelled():
         raise JobCancelled
+
+    # Sweep the tracks the recipe no longer names. The zip was already built
+    # from the recipe, so the archive was never wrong -- but list_tracks globs
+    # the directory, so a track renamed between two splits left its old file
+    # behind and GET /api/albums/{id}/tracks showed a 12-track album as 13.
+    # Pruning here is also what makes §6 true of the *directory* and not only
+    # of the zip: after this job, the recipe fully determines tracks/.
+    keep = {track.filename for track in recipe.tracks}
+    for stale in tracks_dir(album_dir).glob("*.mp3"):
+        if stale.name not in keep:
+            stale.unlink()
 
     archive = write_album_zip(album_dir, [t.filename for t in recipe.tracks])
     ctx.progress(1.0)

@@ -144,6 +144,31 @@ def test_delete_is_blocked_while_a_job_for_the_song_is_live(client, tmp_path):
     assert song_dir.exists()
 
 
+def test_song_delete_gate_sees_past_the_first_200_jobs(client, tmp_path):
+    # jobs_db.list_jobs defaults to the newest 200 rows, ordered id DESC. The
+    # worker is strictly serial, so a song's RUNNING job is always the OLDEST
+    # row among queued-or-running jobs. Enqueue the song's own job first, then
+    # bury it under 200 newer unrelated jobs: a page-limited scan of the live
+    # set finds `live` empty here and rmtrees a directory the worker is
+    # actively writing into. Same gate, same fix as delete_album.
+    song = new_song(title="T", artist="A", source_kind="upload", source_value="o.mp3")
+    song_dir = tmp_path / "songs" / f"{song.id}-t"
+    write_song(song_dir, song)
+    (song_dir / "original.mp3").write_bytes(b"x")
+
+    job_id = client.post(
+        "/api/jobs", json={"kind": "probe", "song_id": song.id, "payload": {}}
+    ).json()["id"]
+    conn = jobs_db.connect(settings().jobs_db)
+    for _ in range(200):
+        jobs_db.enqueue(conn, kind="probe", payload={})
+
+    response = client.delete(f"/api/songs/{song.id}")
+    assert response.status_code == 409
+    assert str(job_id) in response.json()["detail"]
+    assert song_dir.exists()
+
+
 def test_delete_succeeds_when_only_finished_jobs_reference_the_song(client, tmp_path):
     song = new_song(title="T", artist="A", source_kind="upload", source_value="o.mp3")
     song_dir = tmp_path / "songs" / f"{song.id}-t"

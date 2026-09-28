@@ -165,7 +165,15 @@ def get_proposals(album_id: str) -> dict:
             detail=f"album {album_id} has no silence proposals yet; its import job "
             "has not finished",
         )
-    return json.loads(path.read_text())
+    # N-08: a corrupt proposals.json is a real failure and stays a 500 -- but a
+    # bare traceback names nothing the user can act on. Every other read path in
+    # this module surfaces a reason; so does this one.
+    try:
+        return json.loads(path.read_text())
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
+        raise HTTPException(
+            status_code=500, detail=f"{path}: unreadable silence proposals: {exc}"
+        ) from exc
 
 
 @router.get("/api/albums/{album_id}/peaks")

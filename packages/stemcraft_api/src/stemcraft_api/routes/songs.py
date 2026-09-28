@@ -255,7 +255,14 @@ def create_song_from_url(body: FromUrlRequest, conn: Conn) -> dict:
 @router.delete("/api/songs/{song_id}", status_code=204)
 def delete_song(song_id: str, conn: Conn) -> Response:
     song_dir = _find_dir(song_id)
-    running = jobs_db.list_jobs(conn, states=("queued", "running"))
+    # limit=None: this is a correctness gate, not a UI listing. list_jobs
+    # defaults to the newest 200 rows, and the worker is strictly serial, so
+    # a song's RUNNING job -- if the queue is deep -- is the OLDEST
+    # queued-or-running row, not among the newest 200. A page-limited scan
+    # would miss it, `live` would come back empty, and rmtree would delete a
+    # directory the worker is actively writing into. A gate that exists to
+    # prevent a race must see the whole table. (Same fix as delete_album.)
+    running = jobs_db.list_jobs(conn, states=("queued", "running"), limit=None)
     live = [j for j in running if j.song_id == song_id]
     if live:
         ids = ", ".join(str(j.id) for j in live)

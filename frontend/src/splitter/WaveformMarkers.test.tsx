@@ -222,6 +222,44 @@ describe('WaveformMarkers', () => {
     }
   });
 
+  it('measures the scrub strip against its own box, not the waveform\'s', () => {
+    // The scrub strip is a SIBLING of the waveform, not a child of it. They
+    // happen to be the same width today, so reading the waveform's box from
+    // the scrub handler is invisible -- until either grows a padding or a
+    // margin, at which point every seek lands in the wrong place.
+    //
+    // The other tests in this file mock getBoundingClientRect on
+    // Element.prototype with a single fixed rect, which makes both elements
+    // report the same box and so cannot tell the two apart. This one gives
+    // the scrub strip a box offset from the waveform's, which is what makes
+    // the difference observable.
+    const rect = vi
+      .spyOn(Element.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: Element) {
+        const scrub = this.getAttribute('aria-label') === 'Scrub the preview';
+        return {
+          left: scrub ? 40 : 0,
+          width: 100,
+          right: scrub ? 140 : 100,
+          top: 0,
+          bottom: 0,
+          height: 0,
+          x: scrub ? 40 : 0,
+          y: 0,
+          toJSON: () => ({}),
+        } as DOMRect;
+      });
+    try {
+      render(<WaveformMarkers {...props} />);
+      fireEvent.click(screen.getByRole('button', { name: /scrub/i }), { clientX: 65 });
+      // 25 % into the scrub strip's own box. Measured against the waveform's
+      // box instead it would be 65 %, i.e. 312000.
+      expect(props.onScrub).toHaveBeenCalledWith(120000);
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
   it('draws its own playhead from the prop, since wavesurfer\'s cursor is off', () => {
     render(<WaveformMarkers {...props} playheadSample={120000} />);
     expect(screen.getByTestId('album-playhead').style.left).toBe('25%');

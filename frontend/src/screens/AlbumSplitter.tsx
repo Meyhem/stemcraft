@@ -217,7 +217,7 @@ function AlbumEditor({ albumId }: { albumId: string }) {
   // out-of-range boundary, a full disk -- would otherwise let the user type a
   // whole album of titles into nothing and find it gone after a reload.
   // Same reasoning, same treatment as SongView.
-  const { save, error: saveError } = useUpdateAlbum(albumId);
+  const { save, flush, error: saveError } = useUpdateAlbum(albumId);
 
   const fetched = albumQuery.data?.album ?? null;
   const files = albumQuery.data?.files ?? null;
@@ -348,6 +348,21 @@ function AlbumEditor({ albumId }: { albumId: string }) {
     if (!audio) return;
     audio.currentTime = sample / SAMPLE_RATE;
     setPlayheadSample(sample);
+  }
+
+  // D8-05: POST /split reads album.json off disk and snapshots it into the
+  // job payload. Every edit on this screen is autosaved through a 600 ms
+  // debounce, so pressing Split within that window would queue the render
+  // against the PREVIOUS document -- the last title typed missing from its
+  // tags, or a boundary still in its old place -- and the job would succeed,
+  // producing a well-formed zip that does not match what the table shows.
+  // So the pending save is flushed and AWAITED first: `useQueueSplit` does not
+  // await the PUT, so firing both together would not order them. A failed save
+  // aborts the split rather than queueing against a document the server
+  // rejected; `saveError` above shows why (N-08).
+  async function handleSplit() {
+    if (!(await flush())) return;
+    queueSplit.mutate(albumId);
   }
 
   // ---- render -----------------------------------------------------------
@@ -496,7 +511,7 @@ function AlbumEditor({ albumId }: { albumId: string }) {
         className={styles.submit}
         disabled={Boolean(reason) || queueSplit.isPending}
         aria-describedby={reason ? 'split-reason' : undefined}
-        onClick={() => queueSplit.mutate(albumId)}
+        onClick={() => void handleSplit()}
       >
         {queueSplit.isPending ? 'Queueing…' : `Split into ${spans.length} tracks`}
       </button>

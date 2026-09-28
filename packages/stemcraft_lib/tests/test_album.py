@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import zipfile
 
 import pytest
@@ -89,6 +90,33 @@ def test_unreadable_album_json_names_the_file_and_the_reason(tmp_path):
     with pytest.raises(AlbumUnreadable) as exc:
         read_album(album_dir)
     assert "album.json" in str(exc.value)
+
+
+def test_album_json_that_is_not_valid_utf8_is_unreadable_not_an_exception(tmp_path):
+    # The listing route turns AlbumUnreadable into one flagged entry; anything
+    # else escapes and 500s the whole of GET /api/albums. Invalid UTF-8 is
+    # exactly the case where "one bad file never breaks the library" has to
+    # hold, because a truncated or half-written file looks like this.
+    album_dir = create_album_dir(tmp_path, _album())
+    (album_dir / "album.json").write_bytes(b'{"title": "\xff\xfe not utf-8"}')
+    with pytest.raises(AlbumUnreadable) as exc:
+        read_album(album_dir)
+    assert "album.json" in str(exc.value)
+    assert "utf-8" in str(exc.value).lower()
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores the file mode")
+def test_an_album_json_that_cannot_be_opened_is_unreadable_not_an_exception(tmp_path):
+    album_dir = create_album_dir(tmp_path, _album())
+    path = album_dir / "album.json"
+    path.chmod(0o000)
+    try:
+        with pytest.raises(AlbumUnreadable) as exc:
+            read_album(album_dir)
+    finally:
+        path.chmod(0o600)
+    assert "album.json" in str(exc.value)
+    assert "permission" in str(exc.value).lower()
 
 
 def test_a_newer_schema_version_refuses_to_guess(tmp_path):

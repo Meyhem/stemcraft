@@ -37,6 +37,11 @@ class ProbeResult:
     duration_seconds: float
     title: str | None
     artist: str | None
+    # D8-08: a split track also carries album and track ("N/total") tags, which
+    # an export has no notion of. Exposed here so the end-to-end tag test can
+    # actually assert what its name claims.
+    album: str | None = None
+    track: str | None = None
 
 
 def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -64,6 +69,8 @@ def probe(path: Path) -> ProbeResult:
         duration_seconds=float(duration) if duration is not None else 0.0,
         title=tags.get("title"),
         artist=tags.get("artist"),
+        album=tags.get("album"),
+        track=tags.get("track"),
     )
 
 

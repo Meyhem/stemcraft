@@ -157,6 +157,20 @@ def test_proposals_are_served_as_written(client, albums_dir):
     assert body["split_points"] == [400, 700]
 
 
+def test_corrupt_proposals_fail_loudly_but_legibly(client, albums_dir):
+    # N-08: a 500 is the honest status -- a corrupt worker-owned file is a real
+    # failure, not a state -- but a bare traceback names nothing. The response
+    # must say which file and what went wrong, like every other read path here.
+    album_id = _upload(client).json()["album"]["id"]
+    album_dir = next(albums_dir.iterdir())
+    (album_dir / "proposals.json").write_text("{not json")
+    response = client.get(f"/api/albums/{album_id}/proposals")
+    assert response.status_code == 500
+    detail = response.json()["detail"]
+    assert "proposals.json" in detail
+    assert "Expecting property name" in detail
+
+
 # --- queueing a split ---------------------------------------------------
 
 def _ready(client, albums_dir, *, split_points=None, titles=None):

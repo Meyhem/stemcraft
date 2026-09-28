@@ -130,6 +130,17 @@ def read_album(album_dir: Path) -> Album:
         raise AlbumUnreadable(f"{path}: missing") from exc
     except json.JSONDecodeError as exc:
         raise AlbumUnreadable(f"{path}: invalid JSON at line {exc.lineno}: {exc.msg}") from exc
+    # A file that cannot be decoded or opened is *this album* being unreadable,
+    # not the library being broken: the listing route turns AlbumUnreadable into
+    # one flagged entry, but an escaping OSError/UnicodeDecodeError 500s the
+    # whole of GET /api/albums. Note: read_song() in song.py has the identical
+    # gap (it catches only FileNotFoundError/JSONDecodeError/ValidationError);
+    # it is Phase 1 code, deliberately left alone here -- this is the reference
+    # for whoever fixes it.
+    except UnicodeDecodeError as exc:
+        raise AlbumUnreadable(f"{path}: not valid {exc.encoding}: {exc.reason}") from exc
+    except PermissionError as exc:
+        raise AlbumUnreadable(f"{path}: cannot be read: {exc.strerror}") from exc
     if not isinstance(raw, dict):
         raise AlbumUnreadable(f"{path}: expected an object")
     try:

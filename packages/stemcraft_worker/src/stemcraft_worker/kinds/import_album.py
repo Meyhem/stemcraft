@@ -26,6 +26,10 @@ from stemcraft_lib.config import SAMPLE_RATE, settings
 from .. import peaks as peaks_module
 from ..registry import JobCancelled, JobContext, register
 
+# See the comment at the compute_peaks call below for why this is not the
+# song default of 100.
+ALBUM_BUCKETS_PER_SECOND = 10
+
 
 def _existing_original(album_dir: Path) -> Path | None:
     matches = sorted(album_dir.glob("original.*"))
@@ -55,7 +59,19 @@ def run(ctx: JobContext) -> dict:
     duration_seconds = ffmpeg.probe(audio_wav).duration_seconds
     total_samples = int(round(duration_seconds * SAMPLE_RATE))
 
-    atomic_write_json(album_dir / "peaks.json", peaks_module.compute_peaks(audio_wav))
+    # A deliberate divergence from D8-01's "mirror songs/": a song's peaks.json
+    # is computed at the default 100 buckets/s, which is right for four minutes
+    # and absurd for seventy. At 100/s a 70-minute album is ~1.68 M floats --
+    # tens of megabytes the browser must download in full before any waveform
+    # appears. 10/s gives ~42,000 buckets, still an order of magnitude more than
+    # the few thousand pixels the strip is ever drawn into, and the album
+    # waveform is an overview for placing boundaries, not a zoomable editor.
+    # (Sample-accurate positioning is unaffected: boundaries are integer sample
+    # indices, never read off the peaks array.)
+    atomic_write_json(
+        album_dir / "peaks.json",
+        peaks_module.compute_peaks(audio_wav, buckets_per_second=ALBUM_BUCKETS_PER_SECOND),
+    )
     ctx.progress(0.8)
     if ctx.cancelled():
         raise JobCancelled

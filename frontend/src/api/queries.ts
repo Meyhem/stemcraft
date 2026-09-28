@@ -265,16 +265,27 @@ export function useUpdateAlbum(albumId: string | undefined) {
     },
   });
 
-  const { mutate } = mutation;
-  const flush = useCallback(() => {
+  // Returns whether the document is saved, and never rejects: both the
+  // debounce timer and the unmount effect below call it without a catch, and
+  // the error is already surfaced through `mutation.error` (N-08). The boolean
+  // exists for the one caller that must not proceed on a failed save -- Split,
+  // which queues a job against whatever album.json is on disk (D8-05).
+  const { mutateAsync } = mutation;
+  const flush = useCallback(async (): Promise<boolean> => {
     if (timer.current !== null) {
       window.clearTimeout(timer.current);
       timer.current = null;
     }
     const album = pending.current;
     pending.current = null;
-    if (album) mutate(album);
-  }, [mutate]);
+    if (!album) return true;
+    try {
+      await mutateAsync(album);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [mutateAsync]);
 
   const save = useCallback(
     (album: Album) => {
@@ -285,7 +296,7 @@ export function useUpdateAlbum(albumId: string | undefined) {
     [flush],
   );
 
-  useEffect(() => () => flush(), [flush]);
+  useEffect(() => () => void flush(), [flush]);
 
   return { save, flush, error: mutation.error };
 }

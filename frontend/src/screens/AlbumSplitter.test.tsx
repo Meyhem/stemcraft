@@ -64,9 +64,13 @@ interface Extras {
   tracks?: unknown[];
   putStatus?: number;
   putDetail?: string;
+  peaksDoc?: unknown;
 }
 
 const puts: unknown[] = [];
+// An ordered log of the write requests, so the Split button's sequencing can
+// be asserted rather than merely the fact that both requests happened.
+const order: string[] = [];
 
 function putBody(): {
   total_samples: number;
@@ -82,16 +86,23 @@ function putBody(): {
 
 function renderWith(entry: unknown, extras: Extras = {}) {
   puts.length = 0;
+  order.length = 0;
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (init?.method === 'PUT') {
       const body = JSON.parse(String(init.body));
       puts.push(body);
+      order.push('put:start');
+      // A real round trip takes time. Resolving synchronously would let a
+      // broken ordering pass by accident.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      order.push('put:end');
       if (extras.putStatus) {
         return new Response(extras.putDetail ?? 'rejected', { status: extras.putStatus });
       }
       return new Response(JSON.stringify({ ...(entry as object), album: body }));
     }
     if (init?.method === 'POST') {
+      order.push('post');
       return new Response(JSON.stringify({ job_id: 9, tracks: 2 }), { status: 201 });
     }
     if (url.startsWith('/api/jobs')) {
@@ -103,7 +114,7 @@ function renderWith(entry: unknown, extras: Extras = {}) {
       }
       return new Response(JSON.stringify(extras.proposals));
     }
-    if (url.endsWith('/peaks')) return new Response(JSON.stringify(peaks));
+    if (url.endsWith('/peaks')) return new Response(JSON.stringify(extras.peaksDoc ?? peaks));
     if (url.endsWith('/tracks')) {
       return new Response(JSON.stringify({ tracks: extras.tracks ?? [] }));
     }
@@ -280,6 +291,40 @@ describe('AlbumSplitter', () => {
     expect(screen.queryByRole('link', { name: /download/i })).toBeNull();
   });
 
+  it('flushes the pending autosave and waits for it before queueing a split (D8-05)', async () => {
+    // POST /split reads album.json off disk and snapshots it into the job
+    // payload, so the render is only as current as the last PUT that landed.
+    // Every edit here is autosaved through a 600 ms debounce: type the last
+    // title, press Split inside that window, and the worker would render the
+    // PREVIOUS document -- a track missing its title tag, or a boundary in the
+    // wrong place -- and succeed, producing a well-formed zip that does not
+    // match the table the user was looking at.
+    renderWith(readyAlbum);
+    const titleInputs = await screen.findAllByRole('textbox', { name: /track title/i });
+    fireEvent.change(titleInputs[0]!, { target: { value: 'So What' } });
+    // Still inside the debounce window: nothing has been sent yet.
+    expect(order).toEqual([]);
+
+    fireEvent.click(screen.getByRole('button', { name: /split into/i }));
+    await waitFor(() => expect(order).toContain('post'));
+    // ORDER, not merely presence: firing the flush alongside the POST would
+    // put both in this array and still queue against the stale document.
+    expect(order).toEqual(['put:start', 'put:end', 'post']);
+    expect(putBody().tracks[0]!.title).toBe('So What');
+  });
+
+  it('does not queue a split when the flushed save fails (N-08)', async () => {
+    // A rejected PUT means the document on disk is not what the table shows.
+    // Queueing anyway would render the stale one and report success.
+    renderWith(readyAlbum, { putStatus: 422, putDetail: 'split_points: out of range' });
+    const titleInputs = await screen.findAllByRole('textbox', { name: /track title/i });
+    fireEvent.change(titleInputs[0]!, { target: { value: 'So What' } });
+    fireEvent.click(screen.getByRole('button', { name: /split into/i }));
+    const alert = await screen.findByRole('alert', {}, { timeout: 3000 });
+    expect(alert).toHaveTextContent('out of range');
+    expect(order).toEqual(['put:start', 'put:end']);
+  });
+
   it('shows the real error text when a split job fails (N-08)', async () => {
     renderWith(readyAlbum, {
       jobs: [
@@ -296,6 +341,28 @@ describe('AlbumSplitter', () => {
       ],
     });
     expect(await screen.findByText(/Invalid data found/)).toBeInTheDocument();
+  });
+
+  it('renders the same from the coarse album peaks the worker now writes', async () => {
+    // import_album writes peaks.json at 10 buckets/s, not the song default of
+    // 100: at 100/s a 70-minute album is tens of megabytes of JSON. Nothing on
+    // this screen may depend on the bucket rate -- the time axis comes from
+    // total_samples, never from the peaks array's length -- so verify it
+    // rather than assume it.
+    const coarse = {
+      ...peaks,
+      buckets_per_second: 10,
+      peaks: [[-0.4, 0.6, -0.2, 0.3, -0.5, 0.5, -0.1, 0.2]],
+    };
+    renderWith(readyAlbum, { peaksDoc: coarse });
+    // The boundary is still placed by sample, at 300 s of a 600 s album.
+    const marker = await screen.findByRole('slider', { name: /split point 1/i });
+    expect(marker.style.left).toBe('50%');
+    await waitFor(() => expect(createWaveSurfer).toHaveBeenCalled());
+    const options = createWaveSurfer.mock.calls.at(-1)![0];
+    // Duration comes from total_samples / 48000, not from the bucket count.
+    expect(options.duration).toBe(600);
+    expect(options.peaks).toEqual([[0.6, 0.3, 0.5, 0.2]]);
   });
 
   it('never constructs a wavesurfer that can play (invariant 7 / D-07)', async () => {

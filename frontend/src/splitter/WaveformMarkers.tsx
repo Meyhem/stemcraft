@@ -73,11 +73,18 @@ export function WaveformMarkers({
     return () => ws.destroy();
   }, [channels, durationSeconds]);
 
-  // Pointer x -> sample, rounded. Invariant 4: an integer sample index, never
-  // a float. Returns null when the element has no measurable width (jsdom, or
-  // a container that has not been laid out yet), rather than NaN.
-  function sampleAt(clientX: number): number | null {
-    const rect = trackRef.current?.getBoundingClientRect();
+  // Pointer x -> sample, rounded, against the box of the element the position
+  // is being measured *in*. That element is an argument rather than always
+  // trackRef because the scrub strip is a sibling of the waveform, not the
+  // waveform: they happen to be the same width today, and reading the wrong
+  // one would start seeking to the wrong place the moment either grows a
+  // padding or a margin.
+  //
+  // Invariant 4: an integer sample index, never a float. Returns null when the
+  // element has no measurable width (jsdom, or a container that has not been
+  // laid out yet), rather than NaN.
+  function sampleAt(clientX: number, element: Element | null | undefined): number | null {
+    const rect = element?.getBoundingClientRect();
     if (!rect || rect.width <= 0) return null;
     const fraction = (clientX - rect.left) / rect.width;
     const clamped = Math.min(1, Math.max(0, fraction));
@@ -130,7 +137,7 @@ export function WaveformMarkers({
         // and the scrub strip stop propagation, so this only ever fires for
         // the background.
         onClick={(event) => {
-          const sample = sampleAt(event.clientX);
+          const sample = sampleAt(event.clientX, event.currentTarget);
           if (sample !== null) onAdd(sample);
         }}
       >
@@ -163,7 +170,9 @@ export function WaveformMarkers({
               }}
               onPointerMove={(event) => {
                 if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-                const next = sampleAt(event.clientX);
+                // The grip, not its box: a drag is measured against the
+                // track the marker slides along.
+                const next = sampleAt(event.clientX, trackRef.current);
                 if (next !== null) moveTo(index, next);
               }}
               onPointerUp={(event) => {
@@ -198,7 +207,7 @@ export function WaveformMarkers({
         className={styles.scrub}
         onClick={(event) => {
           event.stopPropagation();
-          const sample = sampleAt(event.clientX);
+          const sample = sampleAt(event.clientX, event.currentTarget);
           if (sample !== null) onScrub(sample);
         }}
       >

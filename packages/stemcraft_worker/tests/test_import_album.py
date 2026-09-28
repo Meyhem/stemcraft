@@ -66,6 +66,22 @@ def test_import_album_writes_the_three_worker_owned_files(conn, albums_dir):
     assert done.result["total_samples"] == pytest.approx(12 * SAMPLE_RATE, rel=0.01)
 
 
+def test_album_peaks_are_coarse_enough_to_download(conn, albums_dir):
+    # A deliberate divergence from D8-01's "mirror songs/": at the song default
+    # of 100 buckets/s a 70-minute album is ~1.68 M floats, tens of megabytes
+    # the browser must fetch before it can draw anything. 10/s still gives
+    # ~42,000 buckets for 70 minutes -- an order of magnitude more than the
+    # pixels the strip is ever drawn into.
+    album, album_dir = _make_album(albums_dir)
+    _queue(conn, album)
+    run_one(conn, device="cpu")
+
+    doc = json.loads((album_dir / "peaks.json").read_text())
+    assert doc["buckets_per_second"] == 10
+    # min/max pairs, so two floats per bucket per channel.
+    assert len(doc["peaks"][0]) == pytest.approx(12 * 10 * 2, abs=4)
+
+
 def test_import_album_never_writes_album_json(conn, albums_dir):
     # Invariant 2 / D8-04, asserted directly: the API owns album.json.
     album, album_dir = _make_album(albums_dir)
