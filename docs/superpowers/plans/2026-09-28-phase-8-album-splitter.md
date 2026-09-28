@@ -3338,6 +3338,74 @@ git commit -m "docs: Phase 8 verification log"
 - [ ] **Q-04 decided and recorded:** output stays a zip; the splitter does not share the Song
       write path. The seam for changing that later is named in D8-01 and Q-04 above.
 
+## Known issues and deliberate deferrals
+
+Raised during review, triaged by the final whole-branch review, and left in. Recorded here
+because the review workspace is scratch and this file is the record.
+
+**Accepted as-is**
+
+- `list_tracks` sorts on a two-digit zero-padded name, so an album of 100+ tracks would order
+  `100-` before `99-`. Needs an album nobody makes.
+- `parse_silencedetect` silently drops an unpaired `silence_start`. Unreachable from a single
+  `silencedetect` instance, which alternates by construction.
+- A partial split failure (track 7 of 12) leaves tracks 1-6 on disk, the job `failed` and no
+  zip. Correct and consistent with idempotent re-run; no test covers it.
+- A symlink planted inside worker-owned `tracks/` would be followed by the download route.
+  Requires filesystem write access, and `songs.py` has the same property.
+- `total_samples` comes from ffprobe's float duration rounded to the nearest sample, while
+  `peaks.json` carries the WAV header's exact frame count. Worst case is a boundary one sample
+  past the true end, where ffmpeg's `-t` simply stops at EOF. `peaks["length"]` is the exact
+  value if this is ever tightened.
+- `Album.total_samples` arrives from the client unvalidated. Acceptable under C-01
+  (single active session); it is the value the client read from worker-written `proposals.json`.
+- `AlbumSplitter`'s Split button opens a brief double-click window: `queueSplit.isPending`
+  only goes true after the autosave flush resolves, so a second click inside the PUT round
+  trip can queue a duplicate job. Consequence is a redundant job, not corruption — the split
+  is idempotent and both jobs carry the same recipe.
+
+**Should fix, deliberately out of this phase's scope**
+
+- **`read_song` in `song.py` does not catch `UnicodeDecodeError` or `PermissionError`.**
+  `read_album` was fixed this phase; `read_song` has the identical gap, so a `song.json` with
+  invalid UTF-8 still 500s the whole library listing rather than marking one song unreadable.
+  `read_album` is the working reference.
+- **`compute_peaks` loads the entire WAV via `readframes`.** For a 70-minute album master
+  (~800 MB, D8-03) that is ~1.6 GB resident in the worker. The bucket rate was lowered for
+  albums (D8-12 below) which fixed the delivery size, but not the peak memory. Fixing it means
+  streaming the WAV — its own design problem.
+- **The album `state` stays `"split"` after boundaries are re-edited**, so the screen keeps
+  offering a zip that no longer matches the document. Consistent with derive-from-files, but
+  the UI gives no hint the zip is stale.
+
+## A decision added during implementation
+
+- **D8-12 — album peaks are computed at 10 buckets/second, not the song default of 100.**
+  A 70-minute album at 100/s is ~1.68 M floats: tens of megabytes of JSON the browser must
+  download before any waveform appears. 10/s gives ~42,000 buckets, far more than the few
+  thousand pixels a waveform is ever drawn into. This is a deliberate divergence from D8-01's
+  "mirror `songs/`" — the layout mirrors, the scale constants do not, because an album is two
+  orders of magnitude longer than a song. Nothing in the waveform path assumes a bucket rate.
+
+## A lesson this phase paid for four times
+
+Four separate tests named a property they did not exercise, and **every one was caught only
+by deliberately breaking the code to see whether the test noticed**:
+
+| Where | Claimed | Actually asserted |
+| --- | --- | --- |
+| `render_track` | the seek lands at the right sample | the output's duration |
+| track download | path traversal is rejected by the filename check | cases the router rejected first |
+| `slugify` mirror | the TS matches the Python | inputs that agree under both the right and wrong code |
+| zip download | gated on server-derived state | never performed the action it ruled out |
+
+All four originated in this plan's own test code, not in implementer improvisation. A green
+test run and a test that would catch the bug are different claims, and the difference is
+invisible from the outside. **For any test whose purpose is to pin a specific invariant,
+mutate the implementation and watch it fail before trusting it.** Several tests in this
+branch now carry comments saying which case is load-bearing and why, to stop them being
+"simplified" back into vacuity.
+
 ## Verification log
 
 *(Task 9 fills this in. Until then it is empty, and the phase is not done.)*
