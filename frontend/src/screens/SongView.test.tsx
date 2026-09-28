@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -151,7 +151,12 @@ describe('SongView', () => {
       left: 0, width: 1000, top: 0, height: 40, right: 1000, bottom: 40, x: 0, y: 0,
       toJSON: () => ({}),
     } as DOMRect);
-    track.dispatchEvent(new MouseEvent('click', { clientX: 500, bubbles: true }));
+    // Wrapped in act() only so React flushes the resulting state update inside
+    // the test's own tick: a raw dispatchEvent is how the stubbed rect above is
+    // made to matter, and what is asserted below is unchanged.
+    act(() => {
+      track.dispatchEvent(new MouseEvent('click', { clientX: 500, bubbles: true }));
+    });
 
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /arm loop/i })).toHaveAttribute(
