@@ -199,6 +199,10 @@ observed and accepted, not fixed (§5).
 **Note:** the A–B tempo ramp described at domain-spec.md:198 is **not** in scope —
 commit 2c934e4 removed it from the design and that line is stale.
 
+**Plan:** [2026-09-28-phase-6-song-view.md](2026-09-28-phase-6-song-view.md). Code landed
+and reviewed; the exit criteria that need ears (N-03 over LAN, N-05, N-06, metronome
+alignment) are an open checklist in that document's verification section.
+
 ---
 
 ## Phase 7 — Export
