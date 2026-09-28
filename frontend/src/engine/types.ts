@@ -1,5 +1,12 @@
 export const SAMPLE_RATE = 48_000;
 
+// The four stems HTDemucs v4 produces, in the order the UI stacks them.
+// Declared here rather than in EngineController so that pure consumers --
+// naming, formatting, the Export screen -- can import the canonical order
+// without pulling the Web Audio engine into their import graph.
+export const STEM_ORDER = ['vocals', 'drums', 'bass', 'other'] as const;
+export type StemName = (typeof STEM_ORDER)[number];
+
 declare const sampleIndexBrand: unique symbol;
 /** An integer sample offset in the 48 kHz stem domain (D-03). Never a float second. */
 export type SampleIndex = number & { readonly [sampleIndexBrand]: true };

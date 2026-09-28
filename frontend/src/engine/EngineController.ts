@@ -3,12 +3,11 @@ import processorUrl from '@soundtouchjs/audio-worklet/processor?url';
 import { ProcessorMetrics, SoundTouchNode } from '@soundtouchjs/audio-worklet';
 import { computeSoundTouchParams } from './soundtouch';
 import { EngineClock } from './clock';
-import { SAMPLE_RATE, SampleIndex, sampleIndex, toDeviceDomain, toStemDomain } from './types';
+import { SAMPLE_RATE, SampleIndex, sampleIndex, toDeviceDomain, toStemDomain, STEM_ORDER, type StemName } from './types';
 import { summariseStem } from './stemPeaks';
 import type { StemSummary } from './stemPeaks';
 
-export const STEM_ORDER = ['vocals', 'drums', 'bass', 'other'] as const;
-export type StemName = (typeof STEM_ORDER)[number];
+export { STEM_ORDER, type StemName } from './types';
 
 const CROSSFADE_SAMPLES = Math.round(0.005 * SAMPLE_RATE); // 5 ms, A-05
 

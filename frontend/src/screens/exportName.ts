@@ -2,7 +2,7 @@
 // receives (stemcraft_lib.export.export_name), so this is a courtesy rather than
 // a validator -- but it is the name the user sees in the field before they queue,
 // and "tightrope-no-bass-82" says more at a glance than "export".
-import { STEM_ORDER, type StemName } from '../engine/EngineController';
+import { STEM_ORDER, type StemName } from '../engine/types';
 
 export interface NameRecipe {
   tempo: number;
