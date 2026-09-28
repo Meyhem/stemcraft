@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 from stemcraft_lib import jobs as jobs_db
+from stemcraft_lib.analysis import read_analysis
 from stemcraft_lib.atomic import atomic_write_bytes
 from stemcraft_lib.config import settings
 from stemcraft_lib.ffmpeg import FfmpegError
@@ -87,6 +88,14 @@ def list_songs() -> dict:
 @router.get("/api/songs/{song_id}")
 def get_song(song_id: str) -> dict:
     return _entry(_find_dir(song_id))
+
+
+@router.get("/api/songs/{song_id}/analysis")
+def get_analysis(song_id: str) -> dict:
+    song_dir = _find_dir(song_id)
+    if not (song_dir / "analysis.json").is_file():
+        raise HTTPException(status_code=404, detail=f"song {song_id} has no analysis yet")
+    return read_analysis(song_dir).model_dump(mode="json")
 
 
 @router.post("/api/songs/upload", status_code=201)
