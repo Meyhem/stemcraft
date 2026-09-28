@@ -13,7 +13,11 @@ def conn(tmp_path):
 
 
 def test_runs_a_job_and_records_its_result(conn):
-    register("t_ok", lambda ctx: {"doubled": ctx.payload["n"] * 2})
+    seen_worker_state = []
+    register(
+        "t_ok",
+        lambda ctx: seen_worker_state.append(ctx.worker_state) or {"doubled": ctx.payload["n"] * 2},
+    )
     job_id = enqueue(conn, kind="t_ok", payload={"n": 21})
 
     assert run_one(conn, device="cpu") == job_id
@@ -21,6 +25,7 @@ def test_runs_a_job_and_records_its_result(conn):
     assert done.state == "done"
     assert done.result == {"doubled": 42}
     assert done.progress == 1.0
+    assert seen_worker_state == [None]
 
 
 def test_empty_queue_returns_none(conn):
