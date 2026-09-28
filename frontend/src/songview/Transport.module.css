@@ -1,0 +1,89 @@
+/* UI spec §5, "Transport bar": performance tier throughout -- 56 px targets,
+   the bar number in display/mono, and an untouched tempo/pitch value renders
+   muted so the eye finds the one that moved. No transition/animation anywhere
+   here: the bar readout is painted by usePlayhead's rAF loop, not React. */
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-3);
+  padding: var(--ds-2) var(--ds-3);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+}
+
+.play {
+  width: var(--ds-hit-perform);
+  height: var(--ds-hit-perform);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--ds-t-lg);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  color: var(--ds-text);
+}
+
+.barNumber {
+  min-width: 3ch;
+  text-align: center;
+  font: 700 var(--ds-t-display) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text);
+}
+
+/* Implementation note (UI spec §5): the visual track is 8-14 px tall; the
+   interactive element carries its own padded hit area meeting the
+   performance tier so the whole control -- not just the thin track -- is a
+   56 px target. */
+.slider {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ds-1);
+  min-height: var(--ds-hit-perform);
+  justify-content: center;
+  font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-font);
+  color: var(--ds-text-2);
+}
+
+.slider input[type='range'] {
+  min-height: var(--ds-hit-perform);
+  padding-block: calc((var(--ds-hit-perform) - 14px) / 2);
+  accent-color: var(--ds-accent); /* tempo fill takes the accent, not a stem hue */
+}
+
+.slider output {
+  font: 400 var(--ds-t-md) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text);
+  text-align: right;
+}
+
+/* An untouched tempo/pitch renders muted so the eye finds the one that is
+   not at its default (UI spec §5). */
+.slider output[data-default='true'] {
+  color: var(--ds-text-3);
+}
+
+.bar > button:not(.play) {
+  min-width: var(--ds-hit-perform);
+  min-height: var(--ds-hit-perform);
+  padding-inline: var(--ds-3);
+  font: 600 var(--ds-t-sm) / 1 var(--ds-font);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  color: var(--ds-text);
+}
+
+.bar > button[aria-pressed='true'] {
+  background: var(--ds-accent); /* a lit control is chrome, never a stem hue */
+  color: var(--ds-ground);
+}
+
+.bar > button:disabled {
+  opacity: 0.5;
+}
