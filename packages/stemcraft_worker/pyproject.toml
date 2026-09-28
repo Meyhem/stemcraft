@@ -8,7 +8,25 @@ requires-python = ">=3.12,<3.13"
 # not the version. numpy is pinned explicitly because demucs imports it directly
 # but its own metadata doesn't declare it on Linux (verified against the real
 # package on PyPI -- a real gap, not a hypothetical).
-dependencies = ["stemcraft-lib", "torch", "demucs>=4.1", "numpy>=2"]
+dependencies = [
+    "stemcraft-lib", "torch", "torchaudio", "demucs>=4.1", "numpy>=2",
+    # Phase 5 (Q-01): beat_this replaces madmom, which fails to install on this
+    # toolchain (verified: undeclared Cython build dep, then a pkg_resources
+    # ImportError at runtime against modern setuptools -- see the phase-5 plan's
+    # "Why beat_this" section). torchaudio and soundfile are its audio-loading
+    # backends; without soundfile it falls through to a madmom-based loader we
+    # don't want.
+    "beat-this>=1.1", "soundfile>=0.12",
+    # Phase 5 (chords, vendored BTC): CQT feature extraction, same tool BTC's own
+    # upstream code uses.
+    "librosa>=0.10",
+    # Phase 5 (Q-02 deviation, key detection): pinned to an exact dev build, not a
+    # range -- it is the *only* essentia release with a manylinux/cp312 Linux wheel.
+    # Every later dev build (up to today's 2.1b6.dev1438) only ships macOS and
+    # Python-3.14 wheels; a bare "essentia" or a floor pin would silently break the
+    # next `uv sync` on this machine.
+    "essentia==2.1b6.dev1389",
+]
 
 [project.scripts]
 stemcraft-worker = "stemcraft_worker.main:main"

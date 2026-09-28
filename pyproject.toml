@@ -31,7 +31,13 @@ explicit = true
 stemcraft-lib = { workspace = true }
 stemcraft-worker = { workspace = true }
 stemcraft-api = { workspace = true }
+# D-02: torch is pinned to the cu128 index, not a version range (see the comment
+# above this table). torchaudio must be pinned the same way: beat_this depends on
+# it, and left alone uv could resolve a plain-PyPI torchaudio build mismatched
+# against the cu128 torch this project actually runs -- the two ship as matched
+# pairs (verified: both publish a 2.11.0+cu128 build on this same index).
 torch = [{ index = "pytorch-cu128" }]
+torchaudio = [{ index = "pytorch-cu128" }]
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6", "httpx>=0.27"]
