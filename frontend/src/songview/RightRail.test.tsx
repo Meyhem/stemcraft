@@ -46,8 +46,25 @@ describe('RightRail', () => {
 
   it('recalls a saved loop', async () => {
     const props = renderRail();
-    await userEvent.click(screen.getByRole('button', { name: /Chorus/ }));
+    // Anchored: the delete button for the same loop is also named "Delete
+    // loop Chorus, bars …" (R-05-adjacent -- it must name the loop it would
+    // delete), so an unanchored /Chorus/ would match both. The recall
+    // button's accessible name starts with the loop's own name; the delete
+    // button's does not.
+    await userEvent.click(screen.getByRole('button', { name: /^Chorus/ }));
     expect(props.onRecallLoop).toHaveBeenCalledWith({ name: 'Chorus', start_bar: 16, end_bar: 24 });
+  });
+
+  it('deletes a saved loop by name, not by row position', async () => {
+    const props = renderRail({
+      savedLoops: [
+        { name: 'Chorus', start_bar: 16, end_bar: 24 },
+        { name: 'Verse', start_bar: 0, end_bar: 8 },
+      ],
+    });
+    await userEvent.click(screen.getByRole('button', { name: /^Delete loop Verse/i }));
+    expect(props.onDeleteLoop).toHaveBeenCalledWith('Verse');
+    expect(props.onDeleteLoop).not.toHaveBeenCalledWith('Chorus');
   });
 
   it('saves the active loop under a typed name', async () => {

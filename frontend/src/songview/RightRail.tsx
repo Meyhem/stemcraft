@@ -84,7 +84,7 @@ export function RightRail({
               <button
                 type="button"
                 className={styles.delete}
-                aria-label={`Delete loop, bars ${loop.start_bar + 1}–${loop.end_bar + 1}`}
+                aria-label={`Delete loop ${loop.name}, bars ${loop.start_bar + 1}–${loop.end_bar + 1}`}
                 onClick={() => onDeleteLoop(loop.name)}
               >
                 &times;

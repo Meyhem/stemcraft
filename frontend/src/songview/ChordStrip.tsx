@@ -44,15 +44,20 @@ export function ChordStrip({ chords, grid, durationSamples, getPosition, playing
 
   const findCurrent = useCallback(
     (position: SampleIndex) => {
-      // Segments are in ascending order; the last one whose start is at or
-      // before the playhead and whose end is after it is current.
-      for (let i = chords.length - 1; i >= 0; i--) {
-        const segment = chords[i]!;
-        if (position >= sampleIndex(segment.start_sample)) {
-          return i;
-        }
+      // Segments are in ascending order. Rather than rescan the whole array
+      // every frame, walk from last frame's answer -- the playhead almost
+      // always advances by a hair between ticks, so this is O(1) amortized in
+      // realistic playback, matching Timeline's painter (and barAt's own
+      // walk-from-the-last-answer discipline for the same reason).
+      if (chords.length === 0) return -1;
+      let i = currentIndex.current >= 0 ? currentIndex.current : 0;
+      while (i + 1 < chords.length && position >= sampleIndex(chords[i + 1]!.start_sample)) {
+        i++;
       }
-      return -1;
+      while (i > 0 && position < sampleIndex(chords[i]!.start_sample)) {
+        i--;
+      }
+      return position >= sampleIndex(chords[i]!.start_sample) ? i : -1;
     },
     [chords],
   );
