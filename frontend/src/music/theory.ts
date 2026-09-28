@@ -31,7 +31,7 @@ function familyIsFlat(tonicPitchClass: number, mode: Mode): boolean {
 
 export function noteName(pitchClass: number, tonicPitchClass: number, mode: Mode): string {
   const pc = ((pitchClass % 12) + 12) % 12;
-  return familyIsFlat(tonicPitchClass, mode) ? FLAT_NAMES[pc] : SHARP_NAMES[pc];
+  return familyIsFlat(tonicPitchClass, mode) ? FLAT_NAMES[pc]! : SHARP_NAMES[pc]!;
 }
 
 const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
@@ -43,7 +43,7 @@ export function scaleSemitones(mode: Mode, pentatonic: boolean): number[] {
   const base = mode === 'major' ? MAJOR_INTERVALS : MINOR_INTERVALS;
   if (!pentatonic) return base;
   const degrees = mode === 'major' ? MAJOR_PENTATONIC_DEGREES : MINOR_PENTATONIC_DEGREES;
-  return degrees.map((d) => base[d]);
+  return degrees.map((d) => base[d]!);
 }
 
 export function scaleNoteNames(
