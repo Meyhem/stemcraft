@@ -294,27 +294,35 @@ export function renderBlock(
   the same render *does* produce at least one delta far above that threshold at the
   loop boundary — proving the detector actually catches a real click before trusting
   it to certify the crossfaded path.
-- **No drift:** after `N` loop repetitions at `readRate = 1`, `cursor.position` equals
-  the closed-form prediction `startFrame + crossfadeFrames + N * (loopLength -
-  crossfadeFrames)` (mod floating-point epsilon) — **corrected from an earlier draft
-  of this plan**, which claimed `+ N * loopLength`. That's wrong: the rebase
-  (`pos = startFrame + crossfadeFrames + (pos - endFrame)`) jumps backward by
-  `loopLength - crossfadeFrames` relative to an unwrapped continuation every time it
-  fires, precisely because rebasing *past* `startFrame` (to `startFrame +
-  crossfadeFrames`, not to `startFrame` itself) is what makes "nothing repeats" true
-  — skipping the content already delivered as the crossfade's fade-in shortens the
-  *effective* period after the first pass by exactly `crossfadeFrames`. This is not
-  drift in the sense N-05 cares about (a small, fixed, exactly-reproducible-every-cycle
-  shortening not a progressive divergence) — assert against this corrected closed
-  form, not the position's raw distance from `startFrame`. Verify with a reference
-  model that computes the same recurrence via wrap-counting (`Math.ceil` division)
-  rather than accumulating frame-by-frame, so a real accumulation bug in `renderBlock`
-  can't hide by agreeing with its own arithmetic.
-- **Non-integer `readRate` drift:** repeat the drift check at `readRate = 0.7` (70 %
-  tempo) — position after `N` repetitions still matches `startFrame + crossfadeFrames
-  + N * (loopLength - crossfadeFrames)` exactly, because the loop period is defined in
-  stem-domain samples regardless of `readRate`; only wall-clock time to complete a
-  repetition changes.
+- **No drift:** `cursor.position` never grows unboundedly with repetition count — a
+  **second correction to this plan**, superseding an earlier draft that first claimed
+  `cursor.position` after `N` repetitions equals `startFrame + crossfadeFrames + N *
+  loopLength`, then (still wrong) `startFrame + crossfadeFrames + N * (loopLength -
+  crossfadeFrames)`. Both describe unbounded *growth*; the rebase does the opposite.
+  Hand-trace it: with `startFrame=0, endFrame=10, crossfadeFrames=3, readRate=1`
+  starting at `pos=0`, the first wrap (after 10 frames) rebases to `pos=3`; the
+  *next* wrap fires after only 7 more frames (not 10) and rebases to `pos=3` again —
+  forever. Every wrap's rebase (`pos = startFrame + crossfadeFrames + (pos -
+  endFrame)`) subtracts exactly `loopLength - crossfadeFrames` from what continuing
+  unwrapped would have reached, and that subtraction happens once per wrap at
+  *exactly* the rate wraps occur — the two effects cancel, so `pos` stays bounded
+  within `[startFrame + crossfadeFrames, endFrame)` for the life of the render,
+  converging to a fixed point at integer `readRate` and wandering within a bounded
+  band (one `readRate`-sized step) at fractional `readRate`, never drifting outward.
+  This boundedness — not a growth formula — is the actual "no drift" property, and
+  it's a *good* one: an ever-growing `cursor.position` would eventually lose
+  floating-point precision over an arbitrarily long practice session; a bounded one
+  never does. Test it by comparing `renderBlock`'s position after a large number of
+  frames against an independently-coded reference model of the same per-frame
+  recurrence (`pos_after = pos_before + readRate - (loopLength - crossfadeFrames) *
+  [wrapped this frame]`), computed via wrap-counting (`Math.ceil` division) rather
+  than frame-by-frame accumulation, so a real accumulation bug in `renderBlock` shows
+  up as a divergence from the reference rather than agreeing with its own arithmetic.
+- **Non-integer `readRate` drift:** repeat the same reference-model comparison at
+  `readRate = 0.7` (70 % tempo) — the boundedness property holds for any `readRate`,
+  though the exact position within the band shifts cycle to cycle (the fractional
+  "overshoot" carried across each wrap no longer cancels to zero), which is exactly
+  why the reference model — not a single predicted value — is the right check.
 - **No content repeats or is skipped across the wrap:** with a ramp stem, collect the
   sequence of *nominal* read positions (ignoring the blend) across one full
   repetition and assert the tail window's blended output lies strictly between the
