@@ -1,0 +1,136 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-4);
+  max-width: 640px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-4);
+}
+
+.sub {
+  margin: 0;
+  color: var(--ds-text-2);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+  padding: var(--ds-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+}
+
+.check,
+.radio {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-2);
+  min-height: var(--ds-hit-setup);
+}
+
+.stemName {
+  flex: 1;
+}
+
+.gain,
+.meta {
+  font: 400 var(--ds-t-xs) / 1.4 var(--ds-mono);
+  color: var(--ds-text-2);
+}
+
+.banner {
+  padding: var(--ds-3) var(--ds-4);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-panel);
+  color: var(--ds-text-2);
+}
+
+.banner strong {
+  color: var(--ds-text);
+}
+
+.row {
+  display: flex;
+  gap: var(--ds-4);
+  align-items: flex-end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+  flex: 1;
+}
+
+.field input {
+  min-height: var(--ds-hit-setup);
+  padding: 0 var(--ds-2);
+  background: var(--ds-ground);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-input);
+  color: var(--ds-text);
+}
+
+.format {
+  min-height: var(--ds-hit-setup);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--ds-3);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+}
+
+.submit {
+  min-height: var(--ds-hit-setup);
+  align-self: flex-start;
+}
+
+.note {
+  margin: 0;
+  color: var(--ds-text-2);
+  font: 400 var(--ds-t-sm) / 1.5 var(--ds-font);
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-3);
+  margin: 0;
+}
+
+.progress {
+  flex: 1;
+}
+
+.exports,
+.exportRow {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exportRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-3);
+  min-height: var(--ds-hit-setup);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.link {
+  color: var(--ds-accent);
+}
+
+.error {
+  margin: 0;
+  white-space: pre-wrap;
+  font: 400 var(--ds-t-xs) / 1.4 var(--ds-mono);
+  color: var(--ds-error);
+}

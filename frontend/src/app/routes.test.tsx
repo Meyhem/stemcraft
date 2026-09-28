@@ -107,7 +107,9 @@ test.each([
   // The Song view's heading is the song's own title (UI spec §6, screen 3).
   ['/songs/01ABC', /tightrope/i],
   ['/songs/01ABC/scale', /scale/i],
-  ['/songs/01ABC/export', /export/i],
+  // Exact match: the screen also has an "Exports" h2 for past files (Task 6),
+  // which /export/i would ambiguously match too.
+  ['/songs/01ABC/export', /^export$/i],
 ])('%s renders its screen', async (path, heading) => {
   renderAt(path);
   expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
