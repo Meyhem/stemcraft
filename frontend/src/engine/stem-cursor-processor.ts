@@ -74,6 +74,13 @@ class StemCursorProcessor extends AudioWorkletProcessor {
       } else if (msg.type === 'seek') {
         this.cursor.position = msg.position;
         this.cursor.ended = false;
+        // Without this, a seek that lands at or past lengthFrames re-triggers
+        // `ended` on the very next process() call before the post-render
+        // "!this.cursor.ended" reset below ever runs (renderBlock re-clamps and
+        // sets `ended` back to true within that same call) — endedReported would
+        // stay stuck true and the second `ended` message would be silently
+        // dropped. Clearing it here makes every fresh end state eligible to post.
+        this.endedReported = false;
       }
     };
   }
