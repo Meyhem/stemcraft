@@ -7,4 +7,5 @@ from . import (  # noqa: F401
     import_song,
     probe,
     separate_song,
+    split_album,
 )

@@ -152,11 +152,19 @@ def create_album_dir(albums_dir: Path, album: Album) -> Path:
 def find_album_dir(albums_dir: Path, album_id: str) -> Path | None:
     """The id, not the slug, is authoritative -- the slug is decoration and is
     never parsed back except for this prefix match. Mirrors find_song_dir, and
-    returns None rather than raising so each caller picks its own error."""
+    returns None rather than raising so each caller picks its own error.
+
+    Deliberately does NOT require album.json to exist (unlike find_song_dir's
+    song.json check): split_album (D8-05) must locate the directory from the
+    recipe snapshot alone, even when album.json has been deleted or is
+    mid-autosave, because that job's only input is the payload, never the
+    document. albums_dir holds nothing but directories this app created, so
+    the id prefix alone is already unambiguous.
+    """
     if not albums_dir.is_dir():
         return None
     for candidate in albums_dir.iterdir():
-        if candidate.name.split("-", 1)[0] == album_id and (candidate / "album.json").is_file():
+        if candidate.is_dir() and candidate.name.split("-", 1)[0] == album_id:
             return candidate
     return None
 
