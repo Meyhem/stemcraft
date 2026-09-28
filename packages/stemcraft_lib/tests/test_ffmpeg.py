@@ -416,3 +416,45 @@ def test_render_track_cuts_at_the_requested_boundary(tmp_path):
     # on the encoder's own padding.
     assert probe(dst).duration_seconds == pytest.approx(3.0, abs=0.05)
     assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_render_track_seeks_to_the_correct_position(tmp_path):
+    # Duration alone cannot catch a systematically wrong seek: -t measures from
+    # wherever -ss actually landed, so a seek at 1.9s or 2.3s instead of 2.0s
+    # still yields a ~3.0s file. Build a source where position is observable
+    # instead: silence, then tone, then silence, and cut exactly the tone
+    # region out. If the seek is accurate the render is tone start-to-end with
+    # no silence anywhere in it; landing early or late puts silence at one end
+    # or the other, and either is caught.
+    src = tmp_path / "audio.wav"
+    subprocess.run(
+        [
+            "ffmpeg", "-hide_banner", "-v", "error", "-y",
+            "-f", "lavfi", "-i", f"anullsrc=r={SAMPLE_RATE}:cl=stereo",
+            "-f", "lavfi", "-i", f"sine=frequency=440:sample_rate={SAMPLE_RATE}:duration=3",
+            "-f", "lavfi", "-i", f"anullsrc=r={SAMPLE_RATE}:cl=stereo",
+            "-filter_complex",
+            "[0:a]atrim=duration=2[s1];[1:a]anull[t];[2:a]atrim=duration=1[s2];"
+            "[s1][t][s2]concat=n=3:v=0:a=1[out]",
+            "-map", "[out]", "-c:a", "pcm_s16le", str(src),
+        ],
+        check=True,
+    )
+    span = TrackSpan(
+        number=1, title="Tone",
+        start_sample=2 * SAMPLE_RATE, end_sample=5 * SAMPLE_RATE,
+        filename="01-tone.mp3",
+    )
+    dst = tmp_path / "01-tone.mp3"
+    render_track(src, span, dst, album_title="Test", artist="Test", track_total=1)
+
+    detect = subprocess.run(
+        [
+            "ffmpeg", "-hide_banner", "-nostdin", "-i", str(dst),
+            "-af", "silencedetect=noise=-50dB:d=0.05", "-f", "null", "-",
+        ],
+        capture_output=True, text=True,
+    )
+    # A plain substring check on ffmpeg's own stderr, not silence.py -- this
+    # test only needs to know whether silencedetect fired at all.
+    assert "silence_start" not in detect.stderr, detect.stderr
