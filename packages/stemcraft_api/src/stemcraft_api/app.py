@@ -16,7 +16,7 @@ from stemcraft_lib.config import settings
 from stemcraft_lib.deps import assert_ready
 
 from . import ws
-from .routes import health, jobs, songs
+from .routes import albums, health, jobs, songs
 
 log = logging.getLogger("stemcraft.api")
 
@@ -34,6 +34,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Stemcraft", lifespan=lifespan)
     app.include_router(health.router)
     app.include_router(songs.router)
+    app.include_router(albums.router)
     app.include_router(jobs.router)
     app.include_router(ws.router)
 
