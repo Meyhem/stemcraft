@@ -2,8 +2,13 @@
 name = "stemcraft-worker"
 version = "0.1.0"
 requires-python = ">=3.12,<3.13"
-# Phase 4 adds torch here, pinned to the cu128 index by a constraints file (D-02).
-dependencies = ["stemcraft-lib"]
+# D-02: torch is pinned to the cu128 index at the workspace root
+# (pyproject.toml's [tool.uv.sources]/[tool.uv.index]) -- never here as a version
+# range, since the *index* is what a transitive dependency could otherwise bypass,
+# not the version. numpy is pinned explicitly because demucs imports it directly
+# but its own metadata doesn't declare it on Linux (verified against the real
+# package on PyPI -- a real gap, not a hypothetical).
+dependencies = ["stemcraft-lib", "torch", "demucs>=4.1", "numpy>=2"]
 
 [project.scripts]
 stemcraft-worker = "stemcraft_worker.main:main"

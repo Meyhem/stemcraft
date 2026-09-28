@@ -33,7 +33,7 @@ The browser talks only to the API. The API and worker never call each other; the
 | API | FastAPI + Uvicorn, WebSocket for job progress |
 | Worker | Plain Python process polling jobs.sqlite; models loaded once at boot |
 | Audio I/O | ffmpeg (assumed installed), soundfile, pyrubberband |
-| Separation | HTDemucs v4 via audio-separator; Mel-Band Roformer optional for vocals |
+| Separation | HTDemucs v4 via `demucs` (Meta's reference implementation; `audio-separator`'s unconditional ONNX deps cut against D-08 -- see Phase 4's plan); Mel-Band Roformer optional for vocals |
 | Analysis | Essentia (key), beat\_this or madmom (beats), autochord or BTC (chords) |
 | URL import | yt-dlp, updated often |
 | PyTorch | Pinned cu128 build via a constraints file or uv, so no dependency can swap it |
