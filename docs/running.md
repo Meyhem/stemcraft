@@ -508,6 +508,92 @@ both in the harness's own loop-control wiring, not the stretcher). Per the
 plan's own decision rule, SoundTouch is kept unless testing surfaces
 "genuinely unacceptable quality at the low end of N-04's range" — nothing did.
 
+## Verification 7 — Phase 4 separation, real htdemucs on the RTX 5080 (2026-09-28)
+
+Phase 4 added the `separate` job kind (worker-only torch/demucs) and a CUDA
+probe with CPU fallback. Everything below ran against the real worker, API,
+and hardware — not `demucs_unittest` (that's what the automated suite uses;
+this is the one place that isn't fictional-by-construction from static
+reading alone).
+
+**Boot on GPU.** `uv run stemcraft-worker`, real `htdemucs` weights fetched
+from Hugging Face on first boot (cached after):
+
+```
+INFO stemcraft.worker dependency ok: ffmpeg (/usr/bin/ffmpeg)
+INFO stemcraft.worker dependency ok: yt-dlp (/home/meyhem/.local/bin/yt-dlp (2026.08.19))
+INFO stemcraft.worker worker ready on device=cuda, polling .../data/jobs.sqlite
+```
+
+`curl localhost:8000/api/health` with the API also running:
+
+```json
+{"device": "cuda", "fallback_reason": null, "sample_rate": 48000, ...}
+```
+
+**Real separation, real song.** `Fortunate-Son.mp3` (2:22, 141.77 s), uploaded
+via `POST /api/songs/upload` — the same code path the Import screen calls.
+The `import` job finished, then auto-enqueued `separate` (Task 9), which ran
+immediately:
+
+```json
+{"kind": "separate", "state": "done", "device": "cuda", "progress": 1.0,
+ "result": {"near_silent": {"vocals": false, "drums": false, "bass": false, "other": false}}}
+```
+
+`finished_at - started_at` = **6.3 s** for a 141.77 s song — inside N-01's
+10–30 s GPU window (comfortably under it). All four stems landed at 48 kHz
+stereo (`ffprobe`: `sample_rate=48000, channels=2, duration=141.766542`,
+matching `audio.wav` exactly), with non-empty `.wav` and `.opus` copies for
+each of `vocals`, `drums`, `bass`, `other`. Eight-second clips of each stem
+were sent to the user for a listen (no interactive audio playback available
+in this session) — confirmed each clip matches its labeled instrument
+family.
+
+**Cancel mid-separation.** A single song is fast enough on this GPU (6.3 s)
+that a manually-timed `curl` cancel couldn't reliably land mid-run, so the
+same fixture was concatenated 10× (23.6 min) to widen the window. Baseline
+VRAM with the model loaded and idle: **3246 MiB**. Cancel requested while the
+job was `"running"` at `progress=0.685`:
+
+```json
+{"id": 10, "state": "cancelled", "cancel_requested": true, "progress": 0.685, "device": "cuda"}
+```
+
+VRAM immediately after: **3246 MiB** — unchanged, no orphaned allocation.
+`ls songs/<id>/stems/` after the cancel: directory doesn't exist at all — Task
+8's design (stems are only written after `separate_tensor` returns) held in
+practice, not just in the synthetic `test_cancel_mid_separation_...` test.
+
+**CPU fallback.** Worker restarted with `CUDA_VISIBLE_DEVICES=` (empty):
+
+```
+WARNING stemcraft.worker falling back to cpu: torch.cuda.is_available() is False
+INFO stemcraft.worker worker ready on device=cpu, polling .../data/jobs.sqlite
+```
+
+`/api/health` reported `{"device": "cpu", "fallback_reason": "torch.cuda.is_available() is False"}`
+— a real, specific reason, exactly what Task 10's banner renders (confirmed
+separately by `routes.test.tsx`'s new banner test, since no interactive
+browser was available in this session — same caveat as Verification 5).
+Re-running `separate` for the same 141.77 s song on CPU: `finished_at -
+started_at` = **24.5 s** — well inside N-01's 2–4 min CPU window (the design
+budgeted conservatively; this host's CPU is faster than that estimate
+assumed).
+
+**`NEAR_SILENT_THRESHOLD` tuning.** A 10 s pure 220 Hz sine tone (no real
+instrument, an out-of-distribution stress case) separated as
+`{"vocals": true, "drums": true, "bass": false, "other": false}` — the model
+correctly zeroed out the two categories a bare tone shares nothing with, and
+put the leftover energy in `bass`/`other` (plausible: 220 Hz sits in the
+fundamental range of both). Combined with the real song's all-`false` result
+above (no false positives on genuinely present instruments), `0.02` needed no
+adjustment — kept as-is.
+
+All test data (songs, jobs.sqlite) created during this verification was
+deleted afterward; `songs/` and `data/` are gitignored, so none of it was
+ever a candidate for commit.
+
 ## Summary
 
 | What | Port | Dev | Prod |
