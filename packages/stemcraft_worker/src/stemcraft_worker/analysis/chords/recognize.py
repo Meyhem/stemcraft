@@ -55,6 +55,52 @@ def _idx2voca_chord() -> dict[int, str]:
 _IDX2VOCA = _idx2voca_chord()
 
 
+def _predictions_to_segments(
+    predictions: list[int], total_frames: int, feature_per_second: float
+) -> list[tuple[float, float, str]]:
+    """Turns a flat, frame-indexed list of predicted chord-class indices into
+    run-length (start, end, label) segments.
+
+    `predictions` may be longer than `total_frames` -- BTC always predicts
+    across its whole fixed-size window, including any zero-padded tail frames
+    added just to fill that window (see recognize_frames). Frames at or past
+    `total_frames` are padding artifacts, not real chord content, and are
+    never attended to here: real frame indices are exactly [0, total_frames),
+    including the final real frame at index `total_frames - 1`.
+
+    Pulled out as its own pure function (no torch, no I/O) specifically so
+    this boundary behavior can be pinned with a synthetic `predictions` list
+    in a test, without depending on what the model actually predicts on real
+    audio -- see test_chords_recognize.py's boundary regression test (fix
+    round 2). Before this fix, the equivalent inline loop computed its
+    "total frames" bound only after already appending a segment for a
+    transition found inside the padding, which could emit a final segment
+    with start_time > end_time -- see task-5-report.md.
+    """
+    segments: list[tuple[float, float, str]] = []
+    start_time = 0.0
+    prev_chord: int | None = None
+    for global_i, idx in enumerate(predictions):
+        if global_i >= total_frames:
+            break
+        if prev_chord is None:
+            prev_chord = idx
+            continue
+        if idx != prev_chord:
+            end_time = feature_per_second * global_i
+            segments.append((start_time, end_time, _IDX2VOCA[prev_chord]))
+            start_time = end_time
+            prev_chord = idx
+
+    end_time = feature_per_second * total_frames
+    if end_time > start_time:
+        # Only emit the trailing segment if it has positive duration. If the
+        # last real frame was already consumed as the end of a prior segment
+        # (start_time == end_time), there is nothing left to append.
+        segments.append((start_time, end_time, _IDX2VOCA[prev_chord]))
+    return segments
+
+
 def _audio_file_to_features(audio_file: Path) -> tuple[np.ndarray, float]:
     # Ported from utils/mir_eval_modules.py's audio_file_to_features(), minus
     # the song_length_second return value this module doesn't need.
@@ -103,29 +149,26 @@ def recognize_frames(audio_wav: Path) -> list[tuple[float, float, str]]:
     feature = np.pad(feature, ((0, num_pad), (0, 0)), mode="constant", constant_values=0)
     num_instance = feature.shape[0] // n_timestep
 
-    segments: list[tuple[float, float, str]] = []
-    start_time = 0.0
-    prev_chord: int | None = None
+    # `num_pad` zero-pads the input up to a whole multiple of `n_timestep` so
+    # it fits BTC's fixed-size window; `total_frames` is the count of real
+    # (non-padded) frames, i.e. the boundary _predictions_to_segments must
+    # never attend past.
+    total_frames = num_instance * n_timestep - num_pad
+
+    predictions: list[int] = []
     with torch.no_grad():
         feature_t = torch.tensor(feature, dtype=torch.float32).unsqueeze(0).to(device)
         for t in range(num_instance):
+            if n_timestep * t >= total_frames:
+                # This whole window is zero-padding (only reachable when the
+                # real frame count divides n_timestep exactly, so num_pad
+                # pads on one entire extra window) -- nothing real left to
+                # run the model on.
+                break
             window = feature_t[:, n_timestep * t : n_timestep * (t + 1), :]
             self_attn_output, _ = model.self_attn_layers(window)
             prediction, _ = model.output_layer(self_attn_output)
             prediction = prediction.squeeze()
-            for i in range(n_timestep):
-                idx = int(prediction[i].item())
-                if prev_chord is None:
-                    prev_chord = idx
-                    continue
-                if idx != prev_chord:
-                    global_i = n_timestep * t + i
-                    end_time = feature_per_second * global_i
-                    segments.append((start_time, end_time, _IDX2VOCA[prev_chord]))
-                    start_time = end_time
-                    prev_chord = idx
+            predictions.extend(int(prediction[i].item()) for i in range(n_timestep))
 
-    total_frames = num_instance * n_timestep - num_pad
-    end_time = feature_per_second * total_frames
-    segments.append((start_time, end_time, _IDX2VOCA[prev_chord]))
-    return segments
+    return _predictions_to_segments(predictions, total_frames, feature_per_second)

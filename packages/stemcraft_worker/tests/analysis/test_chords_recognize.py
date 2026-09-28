@@ -3,7 +3,7 @@ import subprocess
 import numpy as np
 import soundfile as sf
 
-from stemcraft_worker.analysis.chords.recognize import recognize_frames
+from stemcraft_worker.analysis.chords.recognize import _predictions_to_segments, recognize_frames
 
 SAMPLE_RATE = 48000
 
@@ -67,20 +67,16 @@ def _chord_signal(notes: list[str], n_samples: int, sr: int) -> np.ndarray:
 
 def _make_chord_progression_wav(path, sr: int) -> None:
     # G minor -> C major -> D major, harmonically-rich synthetic triads.
-    # Total duration is 9.9s, not a round number: BTC processes audio through
-    # a fixed 108-frame window and zero-pads the tail to fill it (see
-    # recognize.py's `num_pad` line). At this duration the real audio fills
-    # 107 of those 108 frames, leaving only one padding frame -- picked
-    # deliberately small. A duration that leaves many zero-padded frames (as
-    # the plain 6s fixture above does, incidentally) lets BTC's own tail
-    # clamp in recognize.py produce a segment whose start exceeds its end,
-    # because a chord "transition" predicted inside the synthetic zero
-    # padding is not bounded by the real-audio frame count until after the
-    # loop. That's a real latent edge case in recognize.py's trailing-segment
-    # logic, not something this test works around by design -- this fixture
-    # sidesteps it by keeping the padding to a single frame, so it doesn't
-    # accidentally pin a corrupted golden value. See the fix-round-1 entry in
-    # task-5-report.md for the full writeup.
+    # Total duration is 9.9s, chosen (originally) so the real audio fills 107
+    # of BTC's 108-frame window, leaving only one padding frame -- a
+    # defensive sizing that avoided a since-fixed bug where a chord
+    # "transition" predicted inside a large zero-padded tail could emit a
+    # segment whose start exceeded its end (see the fix-round-1 entry in
+    # task-5-report.md). recognize.py's `_predictions_to_segments` now bounds
+    # itself by the real frame count directly (fix round 2), so this sizing
+    # is no longer load-bearing for correctness -- kept as-is anyway since it
+    # doesn't need to change, and the dedicated boundary regression test
+    # below now covers the many-padding-frames case explicitly.
     progression = [
         ["G3", "A#3", "D4"],  # G minor
         ["C4", "E4", "G4"],  # C major
@@ -137,3 +133,70 @@ def test_recognize_frames_golden_chord_progression(tmp_path):
 
     labels = [label for _, _, label in segments]
     assert labels == ["G:min", "C", "D"]
+
+
+def test_predictions_to_segments_ignores_padded_tail_transitions():
+    """Regression test for fix round 2: a chord "transition" predicted
+    inside BTC's zero-padded tail must never produce a malformed segment
+    (start > end), an out-of-range segment (beyond the real audio), or a
+    silently-dropped final chord.
+
+    Drives `_predictions_to_segments` directly with a synthetic predictions
+    array rather than a real audio fixture: this reproduces the coordinator's
+    independently-verified repro exactly (173 real frames, num_pad=43,
+    num_instance=2, so num_instance * n_timestep = 216 total predicted
+    frames with a transition landing at global index 200, inside the
+    padding) deterministically and fast, without depending on what a real
+    model happens to predict on any particular fixture.
+    """
+    n_timestep = 108
+    total_frames = 173  # real frames; num_pad = 2 * 108 - 173 = 43
+    num_instance = 2
+    total_predicted = num_instance * n_timestep  # 216
+
+    # Chord index 5 ("C:maj6") for every real frame, then a "transition" to
+    # chord index 9 at global index 200 -- inside the padded tail (>=
+    # total_frames=173), exactly reproducing the coordinator's repro.
+    predictions = [5] * total_predicted
+    predictions[200] = 9
+    feature_per_second = 10.0 / n_timestep
+
+    segments = _predictions_to_segments(predictions, total_frames, feature_per_second)
+
+    # The bogus mid-padding transition must not surface as its own segment,
+    # and the real chord (index 5) must not silently disappear: exactly one
+    # segment, covering the whole real file, labeled with the real chord.
+    assert len(segments) == 1
+    start, end, label = segments[0]
+    assert start == 0.0
+    assert end == feature_per_second * total_frames
+    assert label == "C:maj6"
+    # No segment ever extends past the real audio, and none is inverted or
+    # zero/negative-length.
+    real_duration = total_frames * feature_per_second
+    assert all(s < e for s, e, _ in segments)
+    assert all(s <= real_duration and e <= real_duration for s, e, _ in segments)
+
+
+def test_predictions_to_segments_handles_transition_at_the_exact_boundary():
+    """Boundary convention check: a genuine transition at the very last real
+    frame (global_i == total_frames - 1) must still be treated as real
+    content and produce two segments, not be truncated away as if it were
+    padding."""
+    n_timestep = 108
+    total_frames = 10
+    feature_per_second = 10.0 / n_timestep
+
+    # Real chord index 0 ("C:min") for frames [0, 9), chord index 1 ("C",
+    # i.e. C major) only at the very last real frame (index 9 ==
+    # total_frames - 1), then padding (index >= 10, never attended to,
+    # filled with a third chord that must not appear in the output at all).
+    predictions = [0] * 9 + [1] + [2] * (n_timestep - 10)
+
+    segments = _predictions_to_segments(predictions, total_frames, feature_per_second)
+
+    assert len(segments) == 2
+    assert segments[0] == (0.0, feature_per_second * 9, "C:min")
+    assert segments[1][0] == feature_per_second * 9
+    assert segments[1][1] == feature_per_second * total_frames
+    assert segments[1][2] == "C"
