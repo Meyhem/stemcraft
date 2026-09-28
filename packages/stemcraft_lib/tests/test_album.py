@@ -70,6 +70,19 @@ def test_find_album_dir_on_a_missing_tree_is_none_not_an_error(tmp_path):
     assert find_album_dir(tmp_path / "never-created", "whatever") is None
 
 
+def test_find_album_dir_ignores_a_dir_with_a_matching_prefix_but_no_album_json(tmp_path):
+    # The album.json check is the marker that a directory really is an album --
+    # not a recipe read. A directory whose name merely starts with a matching
+    # id (a half-finished delete, an interrupted upload, anything) must not be
+    # treated as found: callers (the API's single-album routes) turn None into
+    # a 404, and a directory without album.json should 404, not 500 out of
+    # read_album's AlbumUnreadable.
+    album = _album()
+    stray = tmp_path / f"{album.id}-not-actually-an-album"
+    stray.mkdir()
+    assert find_album_dir(tmp_path, album.id) is None
+
+
 def test_unreadable_album_json_names_the_file_and_the_reason(tmp_path):
     album_dir = create_album_dir(tmp_path, _album())
     (album_dir / "album.json").write_text("{not json")

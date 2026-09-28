@@ -4,7 +4,16 @@ import zipfile
 
 import pytest
 import stemcraft_worker.kinds.split_album  # noqa: F401  (registers on import)
-from stemcraft_lib.album import SplitRecipe, SplitTrack, create_album_dir, new_album, zip_path
+from stemcraft_lib.album import (
+    Album,
+    SplitRecipe,
+    SplitTrack,
+    Track,
+    create_album_dir,
+    new_album,
+    write_album,
+    zip_path,
+)
 from stemcraft_lib.ffmpeg import probe
 from stemcraft_lib.jobs import connect, enqueue, get_job, request_cancel
 from stemcraft_worker.main import run_one
@@ -92,16 +101,38 @@ def test_the_tracks_carry_album_and_track_number_tags(conn, albums_dir):
     assert tags.artist == "Tester"
 
 
-def test_split_never_reads_album_json(conn, albums_dir):
-    # D8-05, asserted directly: deleting album.json must not affect the render,
-    # because the recipe in the payload is the only input.
+def test_split_follows_the_payload_when_album_json_disagrees(conn, albums_dir):
+    # A stronger proof of D8-05 than deleting album.json: the document is left
+    # in place but its content actively disagrees with the payload -- a
+    # different boundary and different titles. If the job ever started
+    # reading album.json it would render at the *document's* boundary/titles
+    # instead of the payload's, silently -- a deletion test cannot catch that
+    # regression, because a job that reads the document works fine right up
+    # until the document is missing.
     album, album_dir = _ready_album(albums_dir)
-    (album_dir / "album.json").unlink()
-    job_id = _queue(conn, _recipe(album))
+    contradictory = Album(
+        **{
+            **album.model_dump(),
+            "split_points": [3 * SAMPLE_RATE],
+            "tracks": [Track(title="Wrong One"), Track(title="Wrong Two")],
+        }
+    )
+    write_album(album_dir, contradictory)
+
+    job_id = _queue(conn, _recipe(album))  # boundary_s=6, titles One/Two
     run_one(conn, device="cpu")
     done = get_job(conn, job_id)
     assert done.state == "done", done.error
-    assert len(done.result["tracks"]) == 2
+
+    one = probe(album_dir / "tracks" / "01-one.mp3")
+    two = probe(album_dir / "tracks" / "02-two.mp3")
+    assert one.duration_seconds == pytest.approx(6.0, abs=0.05)
+    assert two.duration_seconds == pytest.approx(6.0, abs=0.05)
+    assert one.title == "One"
+    assert two.title == "Two"
+    # The document's own derived filename for its (different) first track --
+    # proof the job never even computed it, let alone rendered from it.
+    assert not (album_dir / "tracks" / "03-wrong-one.mp3").exists()
 
 
 def test_rerunning_overwrites_its_own_output(conn, albums_dir):
