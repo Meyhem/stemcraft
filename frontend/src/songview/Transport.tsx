@@ -72,11 +72,17 @@ export function Transport({
       ) {
         return;
       }
+      // Never hijack an OS/browser chord (Ctrl/Cmd+A select-all, Ctrl/Cmd+B
+      // bookmark bar, etc.). Shift is left alone: the uppercase A/B/L/M
+      // entries below exist so a shift-held letter still works.
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
       const key = event.key;
       const actions: Record<string, () => void> = {
         ' ': onPlayPause,
-        l: onLoopArmToggle,
-        L: onLoopArmToggle,
+        l: () => hasLoop && onLoopArmToggle(),
+        L: () => hasLoop && onLoopArmToggle(),
         a: onSetLoopStart,
         A: onSetLoopStart,
         b: onSetLoopEnd,
@@ -103,6 +109,7 @@ export function Transport({
     return () => window.removeEventListener('keydown', handler);
   }, [
     tempo,
+    hasLoop,
     onPlayPause,
     onLoopArmToggle,
     onSetLoopStart,

@@ -61,7 +61,7 @@ describe('Transport', () => {
   });
 
   it('maps every performance key from UI spec §7', async () => {
-    const props = renderTransport();
+    const props = renderTransport({ hasLoop: true });
     await userEvent.keyboard(' ');
     expect(props.onPlayPause).toHaveBeenCalledOnce();
     await userEvent.keyboard('l');
@@ -94,5 +94,24 @@ describe('Transport', () => {
     await userEvent.click(screen.getByLabelText('somewhere else'));
     await userEvent.keyboard('a');
     expect(props.onSetLoopStart).not.toHaveBeenCalled();
+  });
+
+  it('does not hijack a modifier chord (Ctrl/Cmd+A) meant for the OS/browser', () => {
+    const props = renderTransport({ hasLoop: true });
+    const event = new KeyboardEvent('keydown', {
+      key: 'a',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+    expect(props.onSetLoopStart).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('does not arm the loop from the keyboard when there is no loop to arm', async () => {
+    const props = renderTransport({ hasLoop: false });
+    await userEvent.keyboard('l');
+    expect(props.onLoopArmToggle).not.toHaveBeenCalled();
   });
 });
