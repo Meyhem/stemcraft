@@ -11,12 +11,24 @@ describe('clickSample', () => {
     expect(clickSample(CLICK_LENGTH_FRAMES(SR) + 500, false, SR)).toBe(0);
   });
 
-  it('decays monotonically in envelope from the onset', () => {
+  it('decays in envelope from onset to the end of the burst', () => {
     const length = CLICK_LENGTH_FRAMES(SR);
-    // Sample the envelope at quarter-cycle boundaries of the tone so the
-    // comparison is of amplitude, not of where we happen to land on the sine.
-    const early = Math.abs(clickSample(1, false, SR));
-    const late = Math.abs(clickSample(length - 2, false, SR));
+    // Comparing two single frames conflates envelope decay with wherever those
+    // frames happen to land on the sine (a phase artifact, not decay). Compare
+    // peak magnitude over a window instead -- at least one full tone period
+    // wide (48 frames at 1000 Hz, 30 at 1600 Hz; 64 is a safe round number) so
+    // the window always captures a peak of the underlying tone, and what's left
+    // to explain a lower peak in the later window is the envelope, not phase.
+    const WINDOW = 64;
+    const peakOver = (start: number, count: number) => {
+      let max = 0;
+      for (let i = start; i < start + count; i++) {
+        max = Math.max(max, Math.abs(clickSample(i, false, SR)));
+      }
+      return max;
+    };
+    const early = peakOver(0, WINDOW);
+    const late = peakOver(length - WINDOW, WINDOW);
     expect(early).toBeGreaterThan(late);
   });
 

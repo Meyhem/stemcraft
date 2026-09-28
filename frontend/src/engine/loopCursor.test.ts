@@ -580,9 +580,17 @@ describe('metronome', () => {
     );
 
     expect(Math.max(...outL)).toBeGreaterThan(0); // the downbeat at 0 sounded
-    // ...and 200 frames later (past the click length at this fake rate is not
-    // guaranteed, so assert the shape instead): the click decays.
-    expect(Math.abs(outL[127]!)).toBeLessThan(Math.abs(outL[2]!));
+    // Comparing two single samples conflates envelope decay with wherever
+    // those frames happen to land on the click tone's sine (a phase artifact,
+    // not decay). Compare peak magnitude over two windows across the block
+    // instead: the click decays, so the first half of the block should peak
+    // higher than the second half.
+    const peakOver = (arr: Float32Array, start: number, end: number) => {
+      let max = 0;
+      for (let i = start; i < end; i++) max = Math.max(max, Math.abs(arr[i]!));
+      return max;
+    };
+    expect(peakOver(outL, 64, 128)).toBeLessThan(peakOver(outL, 0, 64));
   });
 
   it('is silent when the metronome is off', () => {

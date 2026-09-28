@@ -17,7 +17,6 @@ export interface EngineLoop {
 
 export class EngineController {
   private readonly endedListeners = new Set<() => void>();
-  private countInBarsDefault = 0;
 
   private constructor(
     private readonly context: AudioContext,
@@ -164,17 +163,6 @@ export class EngineController {
     this.cursorNode.parameters
       .get('metronomeGain')!
       .setValueAtTime(on ? 1 : 0, this.context.currentTime);
-  }
-
-  /**
-   * Stores the count-in length as a preference. `countInAndPlay` below takes
-   * `bars` explicitly per call rather than reading this field internally, so a
-   * single call site can override the default without a prior setter call;
-   * this setter exists for Task 13's settings UI to persist the user's choice
-   * across calls.
-   */
-  setCountInBars(bars: number): void {
-    this.countInBarsDefault = bars;
   }
 
   getPositionSamples(): SampleIndex {

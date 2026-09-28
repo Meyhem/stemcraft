@@ -28,14 +28,8 @@ export function clickSample(
   const length = CLICK_LENGTH_FRAMES(sampleRate);
   if (framesSinceOnset < 0 || framesSinceOnset >= length) return 0;
   const t = framesSinceOnset / sampleRate;
-  // Divisor 10, not the more obvious 5: at 5, the envelope's decay by frame 127
-  // is too shallow to beat the accented 1600 Hz tone's own sine value there
-  // (which can land near a peak while an early frame lands near a trough),
-  // making a raw-amplitude "it decayed" comparison at two arbitrary frames
-  // fail depending on where those frames land on the sine, not on whether the
-  // click actually decayed. 10 gives the envelope enough of a head start that
-  // amplitude decay dominates phase at any frame pair a caller might sample.
-  const envelope = Math.exp(-framesSinceOnset / (length / 10));
+  // length / 5: a ~5 ms time constant over the 25 ms burst.
+  const envelope = Math.exp(-framesSinceOnset / (length / 5));
   const hz = accented ? ACCENT_TONE_HZ : TONE_HZ;
   const gain = accented ? ACCENT_GAIN : PLAIN_GAIN;
   return Math.sin(2 * Math.PI * hz * t) * envelope * gain;
