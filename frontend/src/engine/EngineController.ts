@@ -17,6 +17,13 @@ export interface EngineLoop {
 
 export class EngineController {
   private readonly endedListeners = new Set<() => void>();
+  // A generation counter for count-in cancellation: pause(), seek(), or a
+  // superseding countInAndPlay() can all interrupt a pending count-in's poll
+  // loop. Bumping the generation is how the stale poll below learns someone
+  // else already ran (or is about to run) the restore, so it bails out
+  // without touching gains or resolving twice.
+  private countInGeneration = 0;
+  private pendingCountIn: { generation: number; restore: () => void } | null = null;
 
   private constructor(
     private readonly context: AudioContext,
@@ -142,6 +149,7 @@ export class EngineController {
   }
 
   seek(position: SampleIndex): void {
+    this.cancelCountIn();
     this.cursorNode.port.postMessage({ type: 'seek', position: toDeviceDomain(position, this.context.sampleRate) });
     this.clock.resync({ contextTime: this.context.currentTime, position, samplesPerSecond: SAMPLE_RATE * this.tempoState.ratio });
   }
@@ -180,7 +188,24 @@ export class EngineController {
   }
 
   pause(): void {
+    this.cancelCountIn();
     this.cursorNode.parameters.get('playing')!.setValueAtTime(0, this.context.currentTime);
+  }
+
+  /**
+   * Interrupts a pending count-in, if any: restores the stem gains it zeroed
+   * and clears it, so whoever interrupted it (pause, seek, a fresh
+   * countInAndPlay, or the stems ending) is entitled to normal audio rather
+   * than inheriting silenced stems. Bumping the generation also tells the
+   * interrupted count-in's own poll loop (below) that it has already been
+   * handled, so it can bail out without calling restore a second time.
+   */
+  private cancelCountIn(): void {
+    if (this.pendingCountIn) {
+      this.countInGeneration++;
+      this.pendingCountIn.restore();
+      this.pendingCountIn = null;
+    }
   }
 
   /**
@@ -188,6 +213,12 @@ export class EngineController {
    * that far back with the stems silenced. Resolves once the music has started.
    * `barStarts` is the grid's downbeats (48 kHz domain); `from` is where
    * playback should actually begin.
+   *
+   * Cancellable: pause(), seek(), or a second countInAndPlay() call can all
+   * interrupt the wait below. Each such interruption goes through
+   * cancelCountIn(), which restores gains itself and bumps the generation —
+   * so `restoreGains` runs exactly once on every path, never zero times
+   * (leaving stems stuck silent) and never twice.
    */
   async countInAndPlay(
     from: SampleIndex,
@@ -195,6 +226,7 @@ export class EngineController {
     barStarts: SampleIndex[],
     restoreGains: () => void,
   ): Promise<void> {
+    this.cancelCountIn();
     if (bars <= 0) {
       this.seek(from);
       await this.play();
@@ -206,12 +238,21 @@ export class EngineController {
     this.setMetronome(true);
     this.seek(countFrom);
     await this.play();
+    const generation = ++this.countInGeneration;
+    this.pendingCountIn = { generation, restore: restoreGains };
     // Polling the clock rather than setTimeout: the clock is the only thing
     // that knows the real rate after a tempo change (U-05's rule, applied to
     // an engine-internal decision rather than to the playhead).
     await new Promise<void>((resolve) => {
       const tick = () => {
+        if (this.countInGeneration !== generation) {
+          // Someone else (pause/seek/a new count-in) already cancelled this
+          // one and ran its restore via cancelCountIn(). Just stop polling.
+          resolve();
+          return;
+        }
         if (this.getPositionSamples() >= from) {
+          this.pendingCountIn = null;
           restoreGains();
           resolve();
           return;
