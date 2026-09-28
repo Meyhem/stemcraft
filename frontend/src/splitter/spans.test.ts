@@ -75,10 +75,32 @@ describe('slugify (cross-language mirror of stemcraft_lib.ids.slugify)', () => {
     // combining acute), so the base letters survive.
     ['accented Latin keeps its base letters', 'Café', 'cafe'],
     ['accented Latin keeps its base letters (2)', 'naïve', 'naive'],
-    // Mixed: exactly where a partial fix (stripping only combining marks,
-    // not all non-ASCII) would diverge from Python -- the CJK/accented run
-    // must vanish while the Latin letters around it survive.
-    ['mixed decomposable and non-decomposable non-ASCII', 'Café 日本語 Ñandú', 'cafe-nandu'],
+    // Mixed, but whitespace-separated. NOTE: this case does NOT distinguish
+    // the fixed implementation from the buggy diacritics-only strip -- under
+    // the bug the CJK run survives the strip but is not in [a-z0-9], so the
+    // next step collapses it to a hyphen anyway, landing on the same
+    // 'cafe-nandu' either way. Kept because it's a realistic title, not
+    // because it's load-bearing; see the adjacency cases below for the ones
+    // that actually pin the fix.
+    ['mixed decomposable and non-decomposable non-ASCII, whitespace-separated', 'Café 日本語 Ñandú', 'cafe-nandu'],
+    // Adjacency: non-ASCII glued directly to ASCII with no whitespace or
+    // punctuation between them. Confirmed by mutation-testing this exact
+    // table (see task-7-report.md): only the MIDDLE case is actually
+    // load-bearing. With the bug reinstated (strip combining marks only,
+    // leave other non-ASCII to be collapsed to a hyphen by the next step),
+    // 'abc日本語def' -> 'abc-def' under the bug vs 'abcdef' fixed -- an
+    // interior hyphen the leading/trailing trim can't remove, so this is
+    // the one case in the whole table that actually fails when the bug is
+    // reinstated. The start/end cases below do NOT distinguish the two
+    // implementations: the buggy version's artifact hyphen lands at the
+    // string boundary, where `.replace(/^-+|-+$/g, '')` strips it either
+    // way, so both implementations converge on 'abc'. They are kept for
+    // documentation of that non-obvious behaviour, not as regression guards
+    // -- do not rely on them to catch this bug, and do not delete the
+    // middle case as "redundant" with them.
+    ['non-ASCII glued to ASCII on both sides (middle) -- the load-bearing case', 'abc日本語def', 'abcdef'],
+    ['non-ASCII glued to ASCII with nothing before it (start)', '日本語abc', 'abc'],
+    ['non-ASCII glued to ASCII with nothing after it (end)', 'abc日本語', 'abc'],
     // 60-char cap.
     ['exactly 60 chars is untouched', 'a'.repeat(60), 'a'.repeat(60)],
     ['over 60 chars is truncated to 60', 'a'.repeat(65), 'a'.repeat(60)],
