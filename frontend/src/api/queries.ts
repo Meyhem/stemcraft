@@ -107,8 +107,16 @@ export function useUpdateSong(songId: string | undefined) {
 
   const mutation = useMutation({
     mutationFn: (song: Song) => api.put<SongEntry>(`/api/songs/${song.id}`, song),
+    // Cache key comes from the *response's* song id, never from the enclosing
+    // render's `songId`. `useMutation` re-runs `observer.setOptions` on every
+    // render, so this closure always carries whichever `songId` was current
+    // when the mutation happened to resolve -- which, across a debounce
+    // window, can be a different song than the one that was actually queued
+    // (e.g. the owning component re-renders under a new `:songId` route param
+    // instead of unmounting). The server takes the id from disk (Task 3), so
+    // `entry.song.id` is authoritative for which row this response belongs to.
     onSuccess: (entry) => {
-      client.setQueryData(['song', songId], entry);
+      if (entry.song) client.setQueryData(['song', entry.song.id], entry);
       client.invalidateQueries({ queryKey: queryKeys.songs });
     },
   });

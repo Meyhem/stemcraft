@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { songMedia } from './client';
-import type { Song } from './client';
+import type { Song, SongEntry } from './client';
 import { useUpdateSong } from './queries';
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -12,10 +12,10 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-const song = (tempo: number): Song =>
+const song = (tempo: number, id = 'abc123'): Song =>
   ({
     schema_version: 2,
-    id: 'abc123',
+    id,
     title: 'T',
     artist: '',
     source: { kind: 'upload', value: 'original.mp3' },
@@ -28,6 +28,15 @@ const song = (tempo: number): Song =>
     metronome: false,
     count_in_bars: 0,
   }) as Song;
+
+const songEntry = (s: Song): SongEntry =>
+  ({
+    dir: s.id,
+    song: s,
+    state: 'analyzed',
+    unreadable: null,
+    files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: true },
+  }) as SongEntry;
 
 describe('songMedia', () => {
   it('builds same-origin relative media paths', () => {
@@ -84,5 +93,67 @@ describe('useUpdateSong', () => {
       result.current.flush();
     });
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  });
+
+  it('flushes a queued edit on unmount, without an explicit flush() call', async () => {
+    const { result, unmount } = renderHook(() => useUpdateSong('abc123'), { wrapper });
+    act(() => {
+      result.current.save(song(0.42));
+    });
+    expect(fetch).not.toHaveBeenCalled(); // still inside the debounce window
+
+    unmount();
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(JSON.parse(init.body).playback.tempo).toBe(0.42);
+    expect(init.method).toBe('PUT');
+  });
+
+  it("does not let a slow response for one song overwrite another song's cache row", async () => {
+    // The server always echoes back whichever song it actually received --
+    // this stands in for that, so the response's id tracks the queued edit.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const sent = JSON.parse(init.body as string) as Song;
+        return new Response(JSON.stringify(songEntry(sent)), { status: 200 });
+      }),
+    );
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    function clientWrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    }
+    // Song B's row already exists in the cache, as it would after visiting it.
+    client.setQueryData(['song', 'songB'], songEntry(song(2, 'songB')));
+
+    const { result, rerender } = renderHook(
+      ({ songId }: { songId: string }) => useUpdateSong(songId),
+      { wrapper: clientWrapper, initialProps: { songId: 'songA' } },
+    );
+
+    act(() => {
+      result.current.save(song(0.9, 'songA'));
+    });
+
+    // Navigate to song B before the debounce fires: the route component
+    // re-renders under the new songId instead of unmounting.
+    rerender({ songId: 'songB' });
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+    });
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    // The queued document was still song A's, sent to song A's endpoint.
+    expect(JSON.parse(init.body).id).toBe('songA');
+
+    // Song B's cache row must be untouched by A's response.
+    const cachedB = client.getQueryData(['song', 'songB']) as SongEntry;
+    expect(cachedB.song?.playback.tempo).toBe(2);
+    const cachedA = client.getQueryData(['song', 'songA']) as SongEntry;
+    expect(cachedA.song?.playback.tempo).toBe(0.9);
   });
 });
