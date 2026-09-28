@@ -157,7 +157,11 @@ def derive_files(song_dir: Path) -> SongFiles:
     return SongFiles(
         has_audio=(song_dir / "audio.wav").is_file(),
         has_peaks=(song_dir / "peaks.json").is_file(),
-        # All four, or none: a partial set is a crashed job, not a separated song.
-        has_stems=all((stems / f"{name}.wav").is_file() for name in STEM_NAMES),
+        # All four .wav *and* .opus, or none (D-04): a partial set is a crashed or
+        # still-running job, not a separated song. .opus is the only thing ever served
+        # for playback, so a Song with WAVs but no Opus copies isn't playable yet.
+        has_stems=all(
+            (stems / f"{name}.{ext}").is_file() for name in STEM_NAMES for ext in ("wav", "opus")
+        ),
         has_analysis=(song_dir / "analysis.json").is_file(),
     )

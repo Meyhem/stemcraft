@@ -81,6 +81,7 @@ def test_state_is_derived_from_files_present(tmp_path):
     (tmp_path / "stems").mkdir()
     for name in STEM_NAMES:
         (tmp_path / "stems" / f"{name}.wav").write_bytes(b"")
+        (tmp_path / "stems" / f"{name}.opus").write_bytes(b"")
     assert derive_files(tmp_path).state == "separated"
 
     (tmp_path / "analysis.json").write_text("{}")
@@ -91,6 +92,16 @@ def test_partial_stems_do_not_count_as_separated(tmp_path):
     # A cancelled or crashed separation must not read as a finished one.
     (tmp_path / "stems").mkdir()
     (tmp_path / "stems" / "bass.wav").write_bytes(b"")
+    assert derive_files(tmp_path).has_stems is False
+
+
+def test_wav_without_opus_does_not_count_as_separated(tmp_path):
+    # D-04: .opus is the only thing ever served for playback -- a Song with WAV
+    # masters but no Opus copies isn't ready for Phase 6's playback yet.
+    stems = tmp_path / "stems"
+    stems.mkdir()
+    for name in STEM_NAMES:
+        (stems / f"{name}.wav").write_bytes(b"")
     assert derive_files(tmp_path).has_stems is False
 
 
