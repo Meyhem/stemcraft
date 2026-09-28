@@ -1,7 +1,7 @@
 // D-13: the server owns this state; the client only caches it. No store.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { api, type CreatedSong, type Health, type Job, type SongEntry } from './client';
+import { api, type Analysis, type CreatedSong, type Health, type Job, type SongEntry } from './client';
 
 export const queryKeys = {
   health: ['health'] as const,
@@ -64,6 +64,14 @@ export function useEnqueueProbe() {
   return useMutation({
     mutationFn: () => api.post<{ id: number }>('/api/jobs', { kind: 'probe', payload: {} }),
     onSuccess: () => client.invalidateQueries({ queryKey: ['jobs'] }),
+  });
+}
+
+export function useAnalysis(songId: string | undefined) {
+  return useQuery({
+    queryKey: ['analysis', songId],
+    queryFn: () => api.get<Analysis>(`/api/songs/${songId}/analysis`),
+    enabled: Boolean(songId),
   });
 }
 

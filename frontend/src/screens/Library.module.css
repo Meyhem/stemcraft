@@ -54,3 +54,8 @@
   margin-top: var(--ds-2);
   color: var(--ds-error);
 }
+
+.scale {
+  align-self: flex-start;
+  font-size: var(--ds-t-sm);
+}

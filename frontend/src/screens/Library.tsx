@@ -44,6 +44,11 @@ export function Library() {
                 <span className={styles.title}>{entry.song.title}</span>
                 <span className={styles.artist}>{entry.song.artist}</span>
                 <span className={styles.state}>{entry.state}</span>
+                {entry.state === 'analyzed' && (
+                  <Link className={styles.scale} to={`/songs/${entry.song.id}/scale`}>
+                    Scale &amp; fretboard
+                  </Link>
+                )}
               </>
             ) : (
               <>

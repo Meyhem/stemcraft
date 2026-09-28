@@ -123,3 +123,30 @@ export interface CreatedSong {
   song: Song;
   job_id: number;
 }
+
+// Mirrors packages/stemcraft_lib/src/stemcraft_lib/analysis.py.
+export interface KeyCandidate {
+  tonic: string;
+  mode: 'major' | 'minor';
+  confidence: number;
+}
+
+export interface BeatGrid {
+  bpm: number;
+  beats: number[];
+  downbeats: number[];
+}
+
+export interface ChordSegment {
+  bar: number;
+  start_sample: number;
+  end_sample: number;
+  chord: string;
+}
+
+export interface Analysis {
+  schema_version: number;
+  key_candidates: KeyCandidate[];
+  beat_grid: BeatGrid;
+  chords: ChordSegment[];
+}
