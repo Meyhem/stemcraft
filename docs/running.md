@@ -594,6 +594,105 @@ All test data (songs, jobs.sqlite) created during this verification was
 deleted afterward; `songs/` and `data/` are gitignored, so none of it was
 ever a candidate for commit.
 
+## Verification 8 — Phase 5 analysis, real key/beats/chords on the RTX 5080 (2026-09-28)
+
+Phase 5 added the `analyze` job kind (worker-only key/beat/chord detection,
+chained onto a successful `separate`) and the Scale & fretboard screen.
+Everything below ran against the real worker, API, and browser — the
+automated suite uses small synthetic fixtures and BTC's own tiny test
+checkpoint; this is the one place that checks the real models on real music.
+
+**Boot on GPU.** Worker restarted on the Phase 5 code, RTX 5080 (16303 MiB,
+driver 580.178.04) still the only GPU in the box:
+
+```
+INFO stemcraft.worker dependency ok: ffmpeg
+INFO stemcraft.worker dependency ok: data_dirs
+INFO stemcraft.worker dependency ok: sqlite_wal
+INFO stemcraft.worker dependency ok: yt-dlp (... (2026.08.19))
+INFO stemcraft.worker worker ready on device=cuda, polling .../data/jobs.sqlite
+```
+
+No CPU fallback; all four dependency checks passed.
+
+**Real analysis, real song.** Reused "Fortunate Son (Whatxp.com)"
+(`01M3KG53V18KDRT2GNW6X3S9RJ`, 141.77 s, 6,804,794 frames at 48 kHz), already
+imported and separated during Phase 4's Verification 7. `POST /api/jobs`
+enqueued `analyze` as job 3 through the real API:
+
+```json
+{"kind": "analyze", "state": "done", "device": "cuda",
+ "result": {"bpm": 130.43478260869742, "top_key": "G major", "bar_count": 76}}
+```
+
+`finished_at - started_at` = **2.39 s** (4.07 s wall clock including enqueue
+and polling) — comfortably inside N-02's "seconds, on CPU" budget, run here
+on the faster device.
+
+**`analysis.json` contents.** Schema version 1. Key candidates: G major
+40.5%, D major 31.8%, C major 27.7%. Beat grid: bpm 130.43, 301 beats, 76
+downbeats, 3.96 beats per bar (4/4). First beats as integer 48 kHz sample
+indices: `107520, 130560, 152640, 175680, 197760`; median beat interval
+0.4600 s → 130.43 BPM, consistent with the stored `bpm`. Chords across the 76
+bars: G×41, C×17, D×8, F×6, E:min6×2, G:7×1, N×1 — first twelve bars `G G G
+G C G G G C G G F`.
+
+**Musical correctness.** Fortunate Son is genuinely in G major at roughly
+130 BPM in 4/4, and its actual chords are G, C, D and F — all four appear,
+with G dominant as expected. The two runner-up key candidates, D major and C
+major, are the dominant (V) and subdominant (IV) of G major, so the model's
+uncertainty is musically coherent rather than random. This is a far stronger
+signal than any synthetic fixture could give.
+
+**Invariant checks on the real output**, all true:
+- every chord segment has `start < end`;
+- bars are contiguous (each bar's `end` equals the next bar's `start`);
+- the last chord ends at sample 6,804,794, exactly the audio's frame count —
+  this specifically confirms the padded-tail fix from Task 5 (before that
+  fix, a chord transition predicted inside BTC's zero-padded tail could emit
+  a segment whose start was after its end, which `align_to_bars` would then
+  silently drop, losing the final chord of a song);
+- all beat/downbeat values are Python `int`, not `float` (D-03).
+
+**API.** `GET /api/songs/01M3KG53V18KDRT2GNW6X3S9RJ/analysis` → `200` with
+the analysis above; `GET /api/songs/NOSUCHSONG/analysis` → `404`.
+
+**Scale & fretboard screen**, checked in a real browser against the
+production bundle served by FastAPI (D-15):
+- Heading "Fortunate Son (Whatxp.com)" with "Scale & fretboard" as subtitle.
+- All three key candidates rendered with confidence — "G major 40%", "D
+  major 32%", "C major 28%" — R-05's requirement that candidates are always
+  plural, never presented as a single fact.
+- G major scale rendered `G A B C D E F#` (one sharp — correct).
+- Clicking the D major candidate re-rendered to `D E F# G A B C#` (two
+  sharps — correct) and the fretboard's `aria-label` became "D major
+  fretboard".
+- Pentatonic toggle on D major gave `D E F# A B` (scale degrees 1 2 3 5 6 —
+  correct).
+- Guitar · 6 string renders 6 string lines and 13 fret lines (nut + 12
+  frets); Bass · 4 string renders 4.
+
+The browser initially served the stale pre-Phase-5 bundle, because FastAPI
+serves `frontend/dist` and that directory is gitignored build output — the
+new screen only appeared after `npm --prefix frontend run build`. This is
+D-15's production path behaving as designed, not a bug, but it's exactly the
+kind of thing to forget on a deploy; see "The three processes" above for the
+build-then-serve steps this entry relied on.
+
+**Full suite, one more time.** `uv run pytest packages/`: 151 passed (4
+warnings, all the deliberate NaN-divide from the key detector's
+no-positive-correlation guard test — benign, confirmation that path is
+exercised). `cd frontend && npm test`: 62 passed across 12 files; `npm run
+typecheck` clean. `uv run ruff check .`: 3 errors, all pre-existing in
+`jobs.py`/`registry.py` and predating this phase — the two vendored BTC
+model files are deliberately excluded from ruff (see the comment in
+`pyproject.toml`) so they stay byte-comparable against upstream at the
+pinned commit.
+
+All test data (songs, jobs.sqlite) created during this verification was
+reused from Phase 4's fixtures or deleted afterward; `songs/` and `data/`
+are gitignored, so none of it was ever a candidate for commit.
+
 ## Summary
 
 | What | Port | Dev | Prod |
