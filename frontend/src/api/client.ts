@@ -208,3 +208,81 @@ export interface Analysis {
   beat_grid: BeatGrid;
   chords: ChordSegment[];
 }
+
+// Mirrors packages/stemcraft_lib/src/stemcraft_lib/album.py. Q-04: an album is
+// a standalone document, not a Song — these types share nothing with Song.
+export interface AlbumTrack {
+  title: string;
+}
+
+export interface Album {
+  schema_version: number;
+  id: string;
+  title: string;
+  artist: string;
+  source_value: string;
+  created_at: string;
+  total_samples: number;
+  // Invariant 4: sample indices at 48 kHz, never float seconds.
+  split_points: number[];
+  tracks: AlbumTrack[];
+}
+
+export type AlbumState = 'uploaded' | 'ready' | 'split';
+
+export interface AlbumFiles {
+  has_audio: boolean;
+  has_peaks: boolean;
+  has_proposals: boolean;
+  has_tracks: boolean;
+  has_zip: boolean;
+}
+
+export interface AlbumEntry {
+  dir: string;
+  album: Album | null;
+  state: AlbumState | null;
+  files: AlbumFiles | null;
+  unreadable: string | null;
+}
+
+// Worker-owned, served separately from album.json (D8-04) so that applying a
+// proposal is an explicit action and re-detecting cannot overwrite a drag.
+export interface Proposals {
+  total_samples: number;
+  split_points: number[];
+  noise_db: number;
+  min_silence_seconds: number;
+}
+
+export interface CreatedAlbum {
+  album: Album;
+  job_id: number;
+}
+
+export interface QueuedSplit {
+  job_id: number;
+  tracks: number;
+}
+
+export interface AlbumTrackFile {
+  name: string;
+  file: string;
+  bytes: number;
+}
+
+// Same-origin relative paths, like every other path in this module (D-15).
+export function albumMedia(albumId: string) {
+  return {
+    peaks: `/api/albums/${albumId}/peaks`,
+    audio: `/api/albums/${albumId}/audio.wav`,
+  };
+}
+
+export function albumZipUrl(albumId: string): string {
+  return `/api/albums/${albumId}/album.zip`;
+}
+
+export function albumTrackUrl(albumId: string, filename: string): string {
+  return `/api/albums/${albumId}/tracks/${filename}`;
+}

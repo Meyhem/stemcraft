@@ -4,13 +4,19 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import {
   api,
+  type Album,
+  type AlbumEntry,
+  type AlbumTrackFile,
   type Analysis,
+  type CreatedAlbum,
   type CreatedSong,
   type ExportEntry,
   type ExportRequest,
   type Health,
   type Job,
+  type Proposals,
   type QueuedExport,
+  type QueuedSplit,
   type Song,
   type SongEntry,
 } from './client';
@@ -180,5 +186,118 @@ export function useQueueExport(songId: string | undefined) {
     // The render itself is a job; the file appears when it finishes, which the
     // screen learns from the jobs query the WebSocket already invalidates.
     onSuccess: () => client.invalidateQueries({ queryKey: ['jobs'] }),
+  });
+}
+
+// Q-04: an album is a standalone tool's document, not a Song. These hooks
+// share nothing with the song ones above beyond the `api` helper and the
+// autosave shape.
+
+export function useAlbums() {
+  return useQuery({
+    queryKey: ['albums'],
+    queryFn: () => api.get<{ albums: AlbumEntry[] }>('/api/albums'),
+    select: (data) => data.albums,
+  });
+}
+
+export function useAlbum(albumId: string | undefined) {
+  return useQuery({
+    queryKey: ['album', albumId],
+    queryFn: () => api.get<AlbumEntry>(`/api/albums/${albumId}`),
+    enabled: Boolean(albumId),
+  });
+}
+
+export function useProposals(albumId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['album-proposals', albumId],
+    queryFn: () => api.get<Proposals>(`/api/albums/${albumId}/proposals`),
+    enabled: Boolean(albumId) && enabled,
+    // A 404 here means "the import job has not finished", which is a state, not
+    // a failure — retrying on it would just hammer the route.
+    retry: false,
+  });
+}
+
+export function useUploadAlbum() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (form: FormData) => api.upload<CreatedAlbum>('/api/albums/upload', form),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['albums'] });
+      client.invalidateQueries({ queryKey: ['jobs'] });
+    },
+  });
+}
+
+/**
+ * Whole-document autosave for the split recipe (D8-05), mirroring
+ * useUpdateSong above. Trailing debounce for the same reason: a dragged split
+ * marker fires dozens of changes a second, each one a complete album.json.
+ */
+export function useUpdateAlbum(albumId: string | undefined) {
+  const client = useQueryClient();
+  const timer = useRef<number | null>(null);
+  const pending = useRef<Album | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (album: Album) => api.put<AlbumEntry>(`/api/albums/${album.id}`, album),
+    // Cache key comes from the *response's* album id, never from the enclosing
+    // render's `albumId` — see useUpdateSong's comment above for why the
+    // closure over `albumId` can't be trusted across a debounce window.
+    onSuccess: (entry) => {
+      if (entry.album) client.setQueryData(['album', entry.album.id], entry);
+      client.invalidateQueries({ queryKey: ['albums'] });
+    },
+  });
+
+  const { mutate } = mutation;
+  const flush = useCallback(() => {
+    if (timer.current !== null) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
+    const album = pending.current;
+    pending.current = null;
+    if (album) mutate(album);
+  }, [mutate]);
+
+  const save = useCallback(
+    (album: Album) => {
+      pending.current = album;
+      if (timer.current !== null) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(flush, AUTOSAVE_DEBOUNCE_MS);
+    },
+    [flush],
+  );
+
+  useEffect(() => () => flush(), [flush]);
+
+  return { save, flush, error: mutation.error };
+}
+
+export function useQueueSplit() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (albumId: string) => api.post<QueuedSplit>(`/api/albums/${albumId}/split`),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['jobs'] }),
+  });
+}
+
+export function useAlbumTracks(albumId: string | undefined) {
+  return useQuery({
+    queryKey: ['album-tracks', albumId],
+    queryFn: () => api.get<{ tracks: AlbumTrackFile[] }>(`/api/albums/${albumId}/tracks`),
+    enabled: Boolean(albumId),
+    select: (data) => data.tracks,
+  });
+}
+
+export function useDeleteAlbum() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (albumId: string) => api.del(`/api/albums/${albumId}`),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['albums'] }),
   });
 }
