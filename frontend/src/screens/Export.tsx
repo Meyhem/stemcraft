@@ -81,6 +81,18 @@ export function Export() {
       ? 'Pick at least one stem to export.'
       : null;
 
+  // N-08: a genuine fetch failure (404, dropped connection, malformed
+  // response) is not "this song has not been separated" -- that would be a
+  // fabricated diagnosis. Say what actually happened, the way SongView.tsx
+  // does for the same query.
+  if (songQuery.isError) {
+    return (
+      <p role="alert" className={styles.error}>
+        {String(songQuery.error)}
+      </p>
+    );
+  }
+
   // The picker is prefilled from song.mix, so it must not render (unchecked,
   // wrongly) before that data -- and the proposed name -- actually exist. A
   // song that failed to parse (song === null, §9/U-09) has no mix to wait for.
@@ -221,7 +233,11 @@ export function Export() {
         {(exportsQuery.data ?? []).map((item) => (
           <li className={styles.exportRow} key={item.name}>
             {/* D7-10: a link, never an automatic download. */}
-            <a className={styles.link} href={exportUrl(songId ?? '', item.name)} download>
+            <a
+              className={styles.link}
+              href={exportUrl(songId ?? '', item.name)}
+              download={`${item.name}.mp3`}
+            >
               {item.name}.mp3
             </a>
             <span className={styles.meta}>{formatBytes(item.bytes)}</span>

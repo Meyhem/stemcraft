@@ -39,6 +39,8 @@ const entry = {
 
 interface MockOptions {
   songEntry?: unknown;
+  songStatus?: number;
+  songBody?: string;
   exports?: unknown[];
   jobs?: unknown[];
   queueStatus?: number;
@@ -61,6 +63,9 @@ function renderExport(options: MockOptions = {}) {
     }
     if (url.startsWith('/api/jobs')) {
       return new Response(JSON.stringify({ jobs: options.jobs ?? [] }));
+    }
+    if (options.songStatus) {
+      return new Response(options.songBody ?? 'song not found', { status: options.songStatus });
     }
     return new Response(JSON.stringify(options.songEntry ?? entry));
   });
@@ -156,6 +161,12 @@ test('no stems ticked disables the button and says why', async () => {
   }
   expect(screen.getByRole('button', { name: /queue export/i })).toBeDisabled();
   expect(screen.getByText(/at least one stem/i)).toBeInTheDocument();
+});
+
+test('a genuine fetch failure shows the real error, not a fabricated "not separated" message', async () => {
+  renderExport({ songStatus: 404, songBody: 'song not found' });
+  expect(await screen.findByText(/song not found/)).toBeInTheDocument();
+  expect(screen.queryByText(/not been separated/i)).not.toBeInTheDocument();
 });
 
 test('a song without stems cannot be exported and says so', async () => {
