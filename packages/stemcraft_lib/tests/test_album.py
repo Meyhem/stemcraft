@@ -111,6 +111,15 @@ def test_track_count_must_be_one_more_than_split_points():
         _album(split_points=[100, 200], tracks=[Track(), Track()])
 
 
+def test_split_point_at_or_past_total_samples_is_rejected():
+    # Boundary case: a point exactly equal to total_samples would make a
+    # zero-length final track, not just one past the end.
+    with pytest.raises(ValidationError, match="at or past the end"):
+        _album(total_samples=1000, split_points=[1000], tracks=[Track(), Track()])
+    with pytest.raises(ValidationError, match="at or past the end"):
+        _album(total_samples=1000, split_points=[1001], tracks=[Track(), Track()])
+
+
 # --- derivation ---------------------------------------------------------
 
 def test_track_spans_are_contiguous_and_cover_the_whole_album():
