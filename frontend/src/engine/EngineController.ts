@@ -16,6 +16,8 @@ export interface EngineLoop {
 }
 
 export class EngineController {
+  private readonly endedListeners = new Set<() => void>();
+
   private constructor(
     private readonly context: AudioContext,
     private readonly cursorNode: AudioWorkletNode,
@@ -25,7 +27,22 @@ export class EngineController {
     // closure it sets up can't see instance fields through `this`. Both the closure
     // and the instance methods below share this one object instead.
     private readonly tempoState: { ratio: number },
-  ) {}
+    // Same pattern as tempoState: create()'s port.onmessage closure fires this box,
+    // and the constructor below wires the box to the real instance-level handling
+    // (pause the transport, notify subscribers) that only the instance can do.
+    private readonly endedBox: { fire: () => void },
+    private readonly durationFrames: number,
+  ) {
+    this.endedBox.fire = () => {
+      this.pause();
+      this.endedListeners.forEach((cb) => cb());
+    };
+  }
+
+  /** Length of the stems, 48 kHz domain. The transport's right-hand edge. */
+  get durationSamples(): SampleIndex {
+    return toStemDomain(this.durationFrames, this.context.sampleRate);
+  }
 
   static async create(stemUrls: Record<StemName, string>): Promise<EngineController> {
     const context = new AudioContext({ sampleRate: SAMPLE_RATE });
@@ -67,6 +84,7 @@ export class EngineController {
     stNode.connect(context.destination);
 
     const tempoState = { ratio: 1.0 };
+    const endedBox: { fire: () => void } = { fire: () => {} };
     const clock = new EngineClock({ contextTime: context.currentTime, position: sampleIndex(0), samplesPerSecond: SAMPLE_RATE });
     cursorNode.port.onmessage = (event: MessageEvent) => {
       if (event.data.type === 'position') {
@@ -80,10 +98,16 @@ export class EngineController {
           // (Task 2's clock test asserts exactly this), not the raw sample rate.
           samplesPerSecond: SAMPLE_RATE * tempoState.ratio,
         });
+      } else if (event.data.type === 'ended') {
+        endedBox.fire();
       }
     };
 
-    return new EngineController(context, cursorNode, stNode, clock, tempoState);
+    // Device-domain frame count; all four stems are decoded from the same source
+    // and are the same length. Exposed in the stem domain via durationSamples.
+    const durationFrames = buffers[0]!.length;
+
+    return new EngineController(context, cursorNode, stNode, clock, tempoState, endedBox, durationFrames);
   }
 
   setStemGain(stem: StemName, linearGain: number): void {
@@ -124,6 +148,26 @@ export class EngineController {
 
   getPositionSamples(): SampleIndex {
     return this.clock.positionAt(this.context.currentTime);
+  }
+
+  /**
+   * Starts the cursor. The AudioContext is resumed here rather than in
+   * create(): browsers require a user gesture, and create() runs before the
+   * user has pressed anything.
+   */
+  async play(): Promise<void> {
+    if (this.context.state === 'suspended') await this.context.resume();
+    this.cursorNode.parameters.get('playing')!.setValueAtTime(1, this.context.currentTime);
+  }
+
+  pause(): void {
+    this.cursorNode.parameters.get('playing')!.setValueAtTime(0, this.context.currentTime);
+  }
+
+  /** Returns an unsubscribe function, so a React effect can clean up. */
+  onEnded(cb: () => void): () => void {
+    this.endedListeners.add(cb);
+    return () => this.endedListeners.delete(cb);
   }
 
   /**

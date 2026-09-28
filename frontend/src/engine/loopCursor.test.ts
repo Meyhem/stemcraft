@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 
 import { renderBlock } from './loopCursor';
 import type { CursorState, FourStems, MixParams, StemChannels } from './loopCursor';
@@ -39,6 +39,10 @@ function fourStems(builder: (i: number) => StemChannels): FourStems {
   return [builder(0), builder(1), builder(2), builder(3)];
 }
 
+function makeStems(length: number, value: number): FourStems {
+  return fourStems(() => constantStem(length, value));
+}
+
 // ---------------------------------------------------------------------------
 // 1. Interpolation sanity
 // ---------------------------------------------------------------------------
@@ -46,8 +50,15 @@ function fourStems(builder: (i: number) => StemChannels): FourStems {
 test('readRate 1 with no loop reproduces the ramp exactly', () => {
   const length = 20;
   const stems = fourStems(() => rampStem(length));
-  const params: MixParams = { gains: [1, 0, 0, 0], readRate: 1, loop: null, crossfadeFrames: 0 };
-  const cursor: CursorState = { position: 0 };
+  const params: MixParams = {
+    gains: [1, 0, 0, 0],
+    readRate: 1,
+    loop: null,
+    crossfadeFrames: 0,
+    playing: true,
+    lengthFrames: length,
+  };
+  const cursor: CursorState = { position: 0, ended: false };
   const outLeft = new Float32Array(10);
   const outRight = new Float32Array(10);
 
@@ -63,8 +74,15 @@ test('readRate 1 with no loop reproduces the ramp exactly', () => {
 test('readRate 0.5 with no loop yields the linear midpoint between ramp samples', () => {
   const length = 20;
   const stems = fourStems(() => rampStem(length));
-  const params: MixParams = { gains: [1, 0, 0, 0], readRate: 0.5, loop: null, crossfadeFrames: 0 };
-  const cursor: CursorState = { position: 0 };
+  const params: MixParams = {
+    gains: [1, 0, 0, 0],
+    readRate: 0.5,
+    loop: null,
+    crossfadeFrames: 0,
+    playing: true,
+    lengthFrames: length,
+  };
+  const cursor: CursorState = { position: 0, ended: false };
   const outLeft = new Float32Array(10);
   const outRight = new Float32Array(10);
 
@@ -91,8 +109,15 @@ test('gains mix stems with plain multiplication, mute is just gain 0', () => {
     constantStem(length, 4),
     constantStem(length, 8),
   ];
-  const params: MixParams = { gains: [1, 0, 0.5, 0], readRate: 1, loop: null, crossfadeFrames: 0 };
-  const cursor: CursorState = { position: 0 };
+  const params: MixParams = {
+    gains: [1, 0, 0.5, 0],
+    readRate: 1,
+    loop: null,
+    crossfadeFrames: 0,
+    playing: true,
+    lengthFrames: length,
+  };
+  const cursor: CursorState = { position: 0, ended: false };
   const outLeft = new Float32Array(5);
   const outRight = new Float32Array(5);
 
@@ -179,8 +204,10 @@ test('sensitivity self-check: a hard cut (crossfadeFrames 0) produces a large cl
     readRate: 1,
     loop: { startFrame: CLICK_START, endFrame: CLICK_END },
     crossfadeFrames: 0,
+    playing: true,
+    lengthFrames: CLICK_END + 2,
   };
-  const cursor: CursorState = { position: CLICK_START };
+  const cursor: CursorState = { position: CLICK_START, ended: false };
   const frameCount = CLICK_REPETITIONS * CLICK_LOOP_LENGTH;
   const outLeft = new Float32Array(frameCount);
   const outRight = new Float32Array(frameCount);
@@ -204,8 +231,10 @@ test('crossfaded loop never clicks across 2000 repetitions', () => {
     readRate: 1,
     loop: { startFrame: CLICK_START, endFrame: CLICK_END },
     crossfadeFrames: CLICK_CROSSFADE,
+    playing: true,
+    lengthFrames: CLICK_END + 2,
   };
-  const cursor: CursorState = { position: CLICK_START };
+  const cursor: CursorState = { position: CLICK_START, ended: false };
   const frameCount = CLICK_REPETITIONS * CLICK_LOOP_LENGTH;
   const outLeft = new Float32Array(frameCount);
   const outRight = new Float32Array(frameCount);
@@ -303,8 +332,10 @@ test('no drift across many loop repetitions at readRate 1', () => {
     readRate: 1,
     loop: { startFrame: DRIFT_START, endFrame: DRIFT_END },
     crossfadeFrames: DRIFT_CROSSFADE,
+    playing: true,
+    lengthFrames: length,
   };
-  const cursor: CursorState = { position: DRIFT_START };
+  const cursor: CursorState = { position: DRIFT_START, ended: false };
   const outLeft = new Float32Array(DRIFT_TOTAL_FRAMES);
   const outRight = new Float32Array(DRIFT_TOTAL_FRAMES);
 
@@ -330,8 +361,10 @@ test('no drift across many loop repetitions at a non-integer readRate (0.7)', ()
     readRate,
     loop: { startFrame: DRIFT_START, endFrame: DRIFT_END },
     crossfadeFrames: DRIFT_CROSSFADE,
+    playing: true,
+    lengthFrames: length,
   };
-  const cursor: CursorState = { position: DRIFT_START };
+  const cursor: CursorState = { position: DRIFT_START, ended: false };
   const outLeft = new Float32Array(DRIFT_TOTAL_FRAMES);
   const outRight = new Float32Array(DRIFT_TOTAL_FRAMES);
 
@@ -364,8 +397,10 @@ test('the crossfade is monotonic and strictly between tail-only and head-only va
     readRate: 1,
     loop: { startFrame, endFrame },
     crossfadeFrames,
+    playing: true,
+    lengthFrames: length,
   };
-  const cursor: CursorState = { position: startFrame };
+  const cursor: CursorState = { position: startFrame, ended: false };
   const outLeft = new Float32Array(loopLength);
   const outRight = new Float32Array(loopLength);
 
@@ -408,4 +443,95 @@ test('the crossfade is monotonic and strictly between tail-only and head-only va
   // the crossfade left off — the content already delivered as the fade-in is
   // not replayed.
   expect(cursor.position).toBe(startFrame + crossfadeFrames);
+});
+
+// ---------------------------------------------------------------------------
+// 7. Transport: play/pause gate and end-of-stem stop
+// ---------------------------------------------------------------------------
+
+describe('transport', () => {
+  it('renders silence and does not advance the cursor while paused', () => {
+    const stems = makeStems(1000, 0.5);
+    const cursor: CursorState = { position: 100, ended: false };
+    const outL = new Float32Array(128);
+    const outR = new Float32Array(128);
+
+    renderBlock(
+      stems,
+      { gains: [1, 1, 1, 1], readRate: 1, loop: null, crossfadeFrames: 0, playing: false, lengthFrames: 1000 },
+      cursor,
+      outL,
+      outR,
+    );
+
+    expect(cursor.position).toBe(100);
+    expect(outL.every((s) => s === 0)).toBe(true);
+    expect(outR.every((s) => s === 0)).toBe(true);
+  });
+
+  it('advances and sounds while playing', () => {
+    const stems = makeStems(1000, 0.5);
+    const cursor: CursorState = { position: 0, ended: false };
+    const outL = new Float32Array(128);
+    const outR = new Float32Array(128);
+
+    renderBlock(
+      stems,
+      { gains: [1, 1, 1, 1], readRate: 1, loop: null, crossfadeFrames: 0, playing: true, lengthFrames: 1000 },
+      cursor,
+      outL,
+      outR,
+    );
+
+    expect(cursor.position).toBe(128);
+    expect(outL[0]).toBeCloseTo(2.0); // four stems at 0.5, unity gain
+  });
+
+  it('stops at the end of the stems instead of reading past them', () => {
+    const stems = makeStems(200, 0.5);
+    const cursor: CursorState = { position: 150, ended: false };
+    const outL = new Float32Array(128);
+    const outR = new Float32Array(128);
+
+    renderBlock(
+      stems,
+      { gains: [1, 1, 1, 1], readRate: 1, loop: null, crossfadeFrames: 0, playing: true, lengthFrames: 200 },
+      cursor,
+      outL,
+      outR,
+    );
+
+    expect(cursor.ended).toBe(true);
+    expect(cursor.position).toBe(200);
+    // Frames past the end are silent, not garbage or a repeat of the last sample.
+    expect(outL[100]).toBe(0);
+  });
+
+  it('never ends while a loop is armed, however long it plays', () => {
+    const stems = makeStems(1000, 0.5);
+    const cursor: CursorState = { position: 900, ended: false };
+    const outL = new Float32Array(128);
+    const outR = new Float32Array(128);
+
+    for (let block = 0; block < 100; block++) {
+      renderBlock(
+        stems,
+        {
+          gains: [1, 1, 1, 1],
+          readRate: 1,
+          loop: { startFrame: 100, endFrame: 500 },
+          crossfadeFrames: 24,
+          playing: true,
+          lengthFrames: 1000,
+        },
+        cursor,
+        outL,
+        outR,
+      );
+    }
+
+    expect(cursor.ended).toBe(false);
+    expect(cursor.position).toBeGreaterThanOrEqual(100);
+    expect(cursor.position).toBeLessThan(500);
+  });
 });

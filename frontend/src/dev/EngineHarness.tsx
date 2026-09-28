@@ -97,6 +97,7 @@ export default function EngineHarness() {
         audio.volume = CLICK_TRACK_VOLUME;
         clickAudioRef.current = audio;
       }
+      await controllerRef.current.play();
       await clickAudioRef.current.play();
       setPlaying(true);
     } catch (err) {
@@ -107,6 +108,7 @@ export default function EngineHarness() {
   }
 
   async function handleStop() {
+    controllerRef.current?.pause();
     clickAudioRef.current?.pause();
     if (clickAudioRef.current) clickAudioRef.current.currentTime = 0;
     if (metricsIntervalRef.current !== null) {

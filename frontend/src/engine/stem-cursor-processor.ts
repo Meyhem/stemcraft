@@ -46,14 +46,17 @@ class StemCursorProcessor extends AudioWorkletProcessor {
     return [
       ...gainParams,
       { name: 'readRate', defaultValue: 1, minValue: 0.25, maxValue: 2, automationRate: 'k-rate' },
+      { name: 'playing', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
     ];
   }
 
   private stems: FourStems | null = null;
-  private cursor: CursorState = { position: 0 };
+  private cursor: CursorState = { position: 0, ended: false };
   private loop: MixParams['loop'] = null;
   private crossfadeFrames = 0;
+  private lengthFrames = 0;
   private blockCount = 0;
+  private endedReported = false;
 
   constructor() {
     super();
@@ -64,11 +67,13 @@ class StemCursorProcessor extends AudioWorkletProcessor {
           left: new Float32Array(s.left),
           right: new Float32Array(s.right),
         })) as unknown as FourStems;
+        this.lengthFrames = this.stems[0]!.left.length;
       } else if (msg.type === 'set-loop') {
         this.loop = msg.loop;
         this.crossfadeFrames = msg.crossfadeFrames;
       } else if (msg.type === 'seek') {
         this.cursor.position = msg.position;
+        this.cursor.ended = false;
       }
     };
   }
@@ -79,10 +84,18 @@ class StemCursorProcessor extends AudioWorkletProcessor {
 
     const gains = [0, 1, 2, 3].map((i) => parameters[`gain${i}`]![0]!) as unknown as MixParams['gains'];
     const readRate = parameters.readRate![0]!;
+    const playing = parameters.playing![0]! >= 0.5;
 
     renderBlock(
       this.stems,
-      { gains, readRate, loop: this.loop, crossfadeFrames: this.crossfadeFrames },
+      {
+        gains,
+        readRate,
+        loop: this.loop,
+        crossfadeFrames: this.crossfadeFrames,
+        playing,
+        lengthFrames: this.lengthFrames,
+      },
       this.cursor,
       output[0]!,
       output[1]!,
@@ -92,6 +105,12 @@ class StemCursorProcessor extends AudioWorkletProcessor {
     if (this.blockCount % POSITION_REPORT_INTERVAL_BLOCKS === 0) {
       this.port.postMessage({ type: 'position', position: this.cursor.position, contextTime: currentTime });
     }
+
+    if (this.cursor.ended && !this.endedReported) {
+      this.endedReported = true;
+      this.port.postMessage({ type: 'ended', position: this.cursor.position, contextTime: currentTime });
+    }
+    if (!this.cursor.ended) this.endedReported = false;
 
     return true;
   }

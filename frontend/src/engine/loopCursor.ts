@@ -17,10 +17,21 @@ export interface MixParams {
   readRate: number;
   loop: LoopBounds | null;
   crossfadeFrames: number;
+  /**
+   * Transport gate. Pausing stops the *cursor*, never the AudioContext and never
+   * the stretcher: D-06 forbids seeking SoundTouch, and suspending the context
+   * would tear down the worklet's own timebase. A paused engine keeps rendering
+   * silence into a running graph, which is also why resuming is click-free.
+   */
+  playing: boolean;
+  /** Frames in the stems. The cursor stops here rather than reading past them. */
+  lengthFrames: number;
 }
 
 export interface CursorState {
   position: number;
+  /** Set when the cursor reaches lengthFrames with no loop armed. */
+  ended: boolean;
 }
 
 function readAt(channel: Float32Array, position: number): number {
@@ -60,10 +71,23 @@ export function renderBlock(
   const frameCount = outLeft.length;
   const loop = params.loop;
 
+  if (!params.playing) {
+    outLeft.fill(0);
+    outRight.fill(0);
+    return;
+  }
+
   for (let i = 0; i < frameCount; i++) {
     let pos = cursor.position;
 
     if (!loop) {
+      if (pos >= params.lengthFrames) {
+        cursor.position = params.lengthFrames;
+        cursor.ended = true;
+        outLeft[i] = 0;
+        outRight[i] = 0;
+        continue;
+      }
       const [l, r] = readStereoMix(stems, params.gains, pos);
       outLeft[i] = l;
       outRight[i] = r;
