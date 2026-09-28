@@ -290,3 +290,26 @@ def test_render_export_overwrites_a_previous_export_of_the_same_name(tmp_path):
     render_export(paths, _recipe(tempo=0.6), dst, source_seconds=2.0)
 
     assert dst.read_bytes() != first  # §6: a re-run overwrites its own output
+
+
+def test_render_export_watchdog_kills_ffmpeg_that_outlives_the_timeout(tmp_path, monkeypatch):
+    # The deadline can't be checked only between progress lines -- `for line in
+    # stdout` blocks in readline(), so a hung ffmpeg that stops emitting
+    # progress would never let an in-loop check run again. A watchdog timer
+    # enforces the timeout independently of whether ffmpeg is still writing
+    # anything. 90s of amix+rubberband+libmp3lame reliably takes several real
+    # seconds (measured ~2s on this host), so a 0.5s timeout cannot be beaten
+    # by a render that legitimately finishes in time -- this is a genuinely
+    # slow render, not a simulated hang.
+    import stemcraft_lib.ffmpeg as ffmpeg_mod
+    from stemcraft_lib.ffmpeg import FfmpegError, render_export
+
+    monkeypatch.setattr(ffmpeg_mod, "_TIMEOUT_SECONDS", 0.5)
+    paths = _stem_wavs(tmp_path, ["vocals", "drums"], seconds=90.0)
+    dst = tmp_path / "exports" / "mix.mp3"
+
+    with pytest.raises(FfmpegError) as err:
+        render_export(paths, _recipe(), dst, source_seconds=90.0)
+    assert "timed out" in str(err.value)
+    assert not dst.exists()
+    assert list((tmp_path / "exports").iterdir()) == []

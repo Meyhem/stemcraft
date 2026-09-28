@@ -13,7 +13,7 @@ import json
 import shutil
 import subprocess
 import tempfile
-import time
+import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -206,9 +206,23 @@ def render_export(
             # stderr pipe blocks ffmpeg is the classic deadlock, and N-08 needs
             # all of stderr afterwards anyway.
             proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=stderr_file, text=True)
-            deadline = time.monotonic() + _TIMEOUT_SECONDS
             stdout = proc.stdout
             assert stdout is not None  # stdout=PIPE above
+            # The deadline can't be enforced by checking it between progress
+            # lines: `for line in stdout` blocks in readline(), so a hung
+            # ffmpeg that stops emitting progress (stuck filter, I/O
+            # starvation) would never let that check run again, and this
+            # would block forever -- contradicting _TIMEOUT_SECONDS' own
+            # contract. A watchdog timer enforces it independently of
+            # whether ffmpeg is still writing anything.
+            timed_out = threading.Event()
+
+            def _on_timeout() -> None:
+                timed_out.set()
+                proc.kill()
+
+            watchdog = threading.Timer(_TIMEOUT_SECONDS, _on_timeout)
+            watchdog.start()
             try:
                 for line in stdout:
                     key, _, value = line.strip().partition("=")
@@ -224,15 +238,20 @@ def render_export(
                         proc.terminate()
                         proc.wait(timeout=10)
                         raise FfmpegCancelled(f"export of {dst.name} cancelled")
-                    if time.monotonic() > deadline:
-                        proc.kill()
-                        proc.wait(timeout=10)
-                        raise FfmpegError(f"ffmpeg timed out after {_TIMEOUT_SECONDS}s")
             finally:
+                watchdog.cancel()
                 stdout.close()
-                if proc.poll() is None:
+                # A grace wait before kill: stdout hitting EOF means the child
+                # closed the pipe, but poll() can still read None for a
+                # just-exited process that hasn't been reaped yet -- killing
+                # on that would turn a clean render into a spurious failure.
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
                     proc.kill()
                     proc.wait(timeout=10)
+            if timed_out.is_set():
+                raise FfmpegError(f"ffmpeg timed out after {_TIMEOUT_SECONDS}s")
             returncode = proc.wait()
             stderr_file.seek(0)
             stderr = stderr_file.read()
