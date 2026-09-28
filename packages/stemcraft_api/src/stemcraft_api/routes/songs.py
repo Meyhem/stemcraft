@@ -15,7 +15,9 @@ from stemcraft_lib.config import settings
 from stemcraft_lib.ffmpeg import FfmpegError
 from stemcraft_lib.ffmpeg import probe as ffprobe
 from stemcraft_lib.song import (
+    SCHEMA_VERSION,
     STEM_NAMES,
+    Song,
     SongUnreadable,
     create_song_dir,
     derive_files,
@@ -131,6 +133,35 @@ def get_audio(song_id: str) -> FileResponse:
     if not path.is_file():
         raise HTTPException(status_code=404, detail=f"song {song_id} has no audio.wav yet")
     return FileResponse(path, media_type="audio/wav")
+
+
+@router.put("/api/songs/{song_id}")
+def update_song(song_id: str, body: Song) -> dict:
+    """Whole-document write of the practice recipe (§6: Song mutations are
+    whole-document song.json writes). There is deliberately no ETag and no
+    version check: §5/C-01 assume one active session and accept last-write-wins,
+    and the seam for changing that later is an ETag on this resource.
+    """
+    song_dir = _find_dir(song_id)
+    if body.id != song_id:
+        raise HTTPException(
+            status_code=409,
+            detail=f"body id {body.id!r} does not match path id {song_id!r}",
+        )
+    current = read_song(song_dir)
+    # Provenance is not part of the recipe and is not the client's to rewrite:
+    # `created_at` and `source` are facts about the import, and `id` names the
+    # folder. Everything else in the body wins wholesale.
+    updated = body.model_copy(
+        update={
+            "schema_version": SCHEMA_VERSION,
+            "id": current.id,
+            "created_at": current.created_at,
+            "source": current.source,
+        }
+    )
+    write_song(song_dir, updated)
+    return _entry(song_dir)
 
 
 @router.post("/api/songs/upload", status_code=201)
