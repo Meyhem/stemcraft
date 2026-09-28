@@ -37,7 +37,10 @@
 }
 
 .buttons button {
-  min-width: 56px;
+  /* UI spec §5, Stem strip: "M/S are 56x44" -- width maps to --ds-hit-perform,
+     but tokens.css has no 44px token and inventing one just for this would be
+     worse than the literal, so the height stays a literal on purpose. */
+  min-width: var(--ds-hit-perform);
   min-height: 44px;
   font: 600 var(--ds-t-sm) / 1 var(--ds-mono);
   background: var(--ds-raised);
@@ -61,9 +64,14 @@
   gap: var(--ds-2);
 }
 
+/* UI spec §5, Slider row: gain is the "setup" tier (--ds-hit-setup, 40px), not
+   the floor -- and "Gain fill takes the stem hue" (tempo fill takes the accent,
+   Task 11's problem). accent-color colours a native range input's filled track
+   and thumb in every browser this app targets, no custom track markup needed. */
 .gain input[type='range'] {
   flex: 1;
-  min-height: var(--ds-hit-min);
+  min-height: var(--ds-hit-setup);
+  accent-color: var(--lane-hue);
 }
 
 .readout {

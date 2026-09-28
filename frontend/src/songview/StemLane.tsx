@@ -6,13 +6,15 @@
 // peaks and an explicit duration, so it has no URL to fetch and no media element
 // to start, and its own cursor is switched off -- the playhead belongs to
 // Timeline, driven by the engine clock (U-05).
+import type { CSSProperties } from 'react';
 import { useEffect, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 
+import type { StemName } from '../engine/EngineController';
 import type { StemSummary } from '../engine/stemPeaks';
 import styles from './StemLane.module.css';
 
-const STEM_COLOR: Record<string, string> = {
+const STEM_COLOR: Record<StemName, string> = {
   vocals: 'var(--ds-vocals)',
   drums: 'var(--ds-drums)',
   bass: 'var(--ds-bass)',
@@ -54,8 +56,8 @@ export function StemLane({
       cursorWidth: 0, // U-05: the playhead is ours, drawn from the engine clock
       interact: false, // scrubbing is Timeline's job, and U-06 governs it
       normalize: false,
-      waveColor: STEM_COLOR[name] ?? 'var(--ds-text-2)',
-      progressColor: STEM_COLOR[name] ?? 'var(--ds-text-2)',
+      waveColor: STEM_COLOR[name],
+      progressColor: STEM_COLOR[name],
       peaks: [envelope],
       duration: durationSeconds,
     });
@@ -69,6 +71,10 @@ export function StemLane({
       className={styles.lane}
       data-silenced={silenced ? 'true' : 'false'}
       data-near-silent={nearSilent ? 'true' : 'false'}
+      // UI spec §5, Slider row: "Gain fill takes the stem hue" -- exposed as a
+      // custom property so the CSS module can drive accent-color on the native
+      // range input without a stem-conditional class per lane.
+      style={{ '--lane-hue': STEM_COLOR[name] } as CSSProperties}
     >
       <div className={styles.controls}>
         <span className={styles.name}>{name}</span>

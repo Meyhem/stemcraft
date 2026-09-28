@@ -1,15 +1,26 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { StemSummary } from '../engine/stemPeaks';
 import { StemLane } from './StemLane';
 
 // wavesurfer needs a real canvas and ResizeObserver; jsdom has neither, and the
 // waveform pixels are not what these tests are about. The lane's controls,
-// labels and states are.
+// labels and states are. `create` is a spyable vi.fn() (not just an inert
+// arrow function) so a regression test below can pin exactly what it was
+// constructed with -- invariant #7 ("wavesurfer.js never plays audio") is a
+// non-negotiable project rule, and nothing else here would catch a future
+// edit that passed `url`/`media` instead of precomputed `peaks`.
+const { createWaveSurfer } = vi.hoisted(() => ({
+  createWaveSurfer: vi.fn((_options: Record<string, unknown>) => ({
+    destroy: vi.fn(),
+    setOptions: vi.fn(),
+    on: () => () => {},
+  })),
+}));
 vi.mock('wavesurfer.js', () => ({
-  default: { create: () => ({ destroy: vi.fn(), setOptions: vi.fn(), on: () => () => {} }) },
+  default: { create: createWaveSurfer },
 }));
 
 const summary = (over: Partial<StemSummary> = {}): StemSummary => ({
@@ -38,6 +49,10 @@ function renderLane(over: Partial<Parameters<typeof StemLane>[0]> = {}) {
 }
 
 describe('StemLane', () => {
+  beforeEach(() => {
+    createWaveSurfer.mockClear();
+  });
+
   it('always names the stem in text, never by colour alone', () => {
     renderLane();
     expect(screen.getByText('bass')).toBeInTheDocument();
@@ -66,6 +81,16 @@ describe('StemLane', () => {
   it('reports itself as silenced-by-solo when another lane is soloed', () => {
     renderLane({ anySoloed: true, soloed: false });
     expect(screen.getByRole('group', { name: /bass/i })).toHaveAttribute('data-silenced', 'true');
+  });
+
+  it('constructs wavesurfer from precomputed peaks and duration, never a URL or media element (invariant #7)', () => {
+    renderLane({ durationSeconds: 42.5 });
+    expect(createWaveSurfer).toHaveBeenCalledOnce();
+    const options = createWaveSurfer.mock.calls[0]![0];
+    expect(options).toMatchObject({ peaks: [expect.any(Float32Array)], duration: 42.5, cursorWidth: 0 });
+    expect(typeof options.duration).toBe('number');
+    expect(options).not.toHaveProperty('url');
+    expect(options).not.toHaveProperty('media');
   });
 
   it('emits gain changes in dB', async () => {
