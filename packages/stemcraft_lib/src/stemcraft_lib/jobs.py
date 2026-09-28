@@ -149,15 +149,17 @@ def list_jobs(
     conn: sqlite3.Connection,
     *,
     states: tuple[str, ...] | None = None,
-    limit: int = 200,
+    limit: int | None = 200,
 ) -> list[Job]:
     sql = "SELECT * FROM jobs"
     params: list[object] = []
     if states:
         sql += f" WHERE state IN ({','.join('?' * len(states))})"
         params.extend(states)
-    sql += " ORDER BY id DESC LIMIT ?"
-    params.append(limit)
+    sql += " ORDER BY id DESC"
+    if limit is not None:
+        sql += " LIMIT ?"
+        params.append(limit)
     return [_row_to_job(r) for r in conn.execute(sql, params)]
 
 

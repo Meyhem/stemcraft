@@ -252,9 +252,17 @@ def delete_album(album_id: str, conn: Conn) -> Response:
     album_dir = _find_dir(album_id)
     # D8-07: an album's jobs carry song_id = NULL, so a live job for this
     # album is found by its payload, not the song_id column.
+    #
+    # limit=None: this is a correctness gate, not a UI listing. list_jobs
+    # defaults to the newest 200 rows, and the worker is strictly serial, so
+    # an album's RUNNING job -- if the queue is deep -- is the OLDEST
+    # queued-or-running row, not among the newest 200. A page-limited scan
+    # would miss it, `live` would come back empty, and rmtree would delete a
+    # directory the worker is actively writing into. A gate that exists to
+    # prevent a race must see the whole table.
     live = [
         j
-        for j in jobs_db.list_jobs(conn, states=("queued", "running"))
+        for j in jobs_db.list_jobs(conn, states=("queued", "running"), limit=None)
         if j.payload.get("album_id") == album_id
     ]
     if live:

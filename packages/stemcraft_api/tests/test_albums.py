@@ -248,12 +248,26 @@ def test_zip_before_a_split_is_404(client, albums_dir):
 @pytest.mark.parametrize(
     "name",
     [
+        # NOTE: these two never reach TRACK_FILENAME_PATTERN at all -- Starlette's
+        # own routing rejects a raw "../" or an encoded "..%2F" before the request
+        # gets to download_track. They stay in this list as a routing-level
+        # regression pin, but they do not exercise the pattern check itself.
         "../album.json",
         "..%2F..%2Falbum.json",
         "01-ONE.mp3",        # uppercase is outside the pattern the app writes
         "1-one.mp3",         # unpadded number
         "01-one.wav",        # wrong extension
         "missing.mp3",
+        # These two DO reach TRACK_FILENAME_PATTERN, and are the actual reason
+        # it is anchored with \Z rather than $: `$` matches just before a
+        # trailing newline, so "01-one.mp3\n" would satisfy a `$`-anchored
+        # pattern while still being a different, attacker-chosen string handed
+        # to the filesystem layer below. \Z has no such exception. Do not
+        # "simplify" these away -- they are what actually pins the \Z choice;
+        # without them the traversal test suite would pass just as well with
+        # `$` in TRACK_FILENAME_PATTERN.
+        "01-one.mp3%0A",     # trailing newline -- what \Z (not $) defends against
+        "01-one.mp3%00",     # embedded null byte
     ],
 )
 def test_track_download_rejects_anything_the_app_never_wrote(client, albums_dir, name):
@@ -274,6 +288,32 @@ def test_delete_removes_the_whole_album(client, albums_dir):
 def test_delete_is_blocked_by_a_live_job(client, albums_dir, conn):
     album_id, _ = _ready(client, albums_dir)
     client.post(f"/api/albums/{album_id}/split")
+    response = client.delete(f"/api/albums/{album_id}")
+    assert response.status_code == 409
+    assert "job" in response.json()["detail"].lower()
+
+
+def test_delete_is_blocked_by_the_uploads_own_still_queued_import_job(client, albums_dir):
+    # Only the split_album path was covered above. An upload's import_album
+    # job is just as live and must block delete on its own, with nothing else
+    # queued behind it.
+    album_id = _upload(client).json()["album"]["id"]
+    response = client.delete(f"/api/albums/{album_id}")
+    assert response.status_code == 409
+    assert "job" in response.json()["detail"].lower()
+
+
+def test_delete_gate_sees_past_the_first_200_jobs(client, albums_dir, conn):
+    # jobs_db.list_jobs defaults to the newest 200 rows, ordered id DESC. The
+    # worker is strictly serial, so an album's RUNNING job is always the
+    # OLDEST row among queued-or-running jobs. Enqueue the album's own job
+    # first, then bury it under 200 newer unrelated jobs, and delete must
+    # still see it and refuse -- a page-limited scan of the live set would
+    # find `live` empty here and let rmtree race the worker.
+    album_id, _ = _ready(client, albums_dir)
+    client.post(f"/api/albums/{album_id}/split")
+    for _ in range(200):
+        jobs_db.enqueue(conn, kind="probe", payload={})
     response = client.delete(f"/api/albums/{album_id}")
     assert response.status_code == 409
     assert "job" in response.json()["detail"].lower()
