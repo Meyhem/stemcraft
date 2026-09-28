@@ -114,4 +114,14 @@ describe('Transport', () => {
     await userEvent.keyboard('l');
     expect(props.onLoopArmToggle).not.toHaveBeenCalled();
   });
+
+  it('withholds Set A/Set B when there is no grid to snap them to', async () => {
+    const props = renderTransport({ grid: null, barsAvailable: false });
+    const setA = screen.getByRole('button', { name: /set a/i });
+    expect(setA).toBeDisabled();
+    expect(setA).toHaveAttribute('title', expect.stringMatching(/analysis/i));
+    expect(screen.getByRole('button', { name: /set b/i })).toBeDisabled();
+    await userEvent.keyboard('a');
+    expect(props.onSetLoopStart).not.toHaveBeenCalled();
+  });
 });

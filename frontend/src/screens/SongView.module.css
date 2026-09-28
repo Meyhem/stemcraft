@@ -1,0 +1,96 @@
+/* UI spec §6, screen 3: the performing surface on the left -- timeline, chord
+   strip, four full-height stem lanes, transport -- and a 320 px setup-tier rail
+   on the right. Tokens only; the rail width is the one literal the layout owns. */
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--ds-5);
+  align-items: start;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-4);
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-4);
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.titles h1 {
+  margin: 0;
+  font: 600 var(--ds-t-xl) / var(--ds-lh-xl) var(--ds-font);
+}
+
+.artist {
+  margin: 0;
+  font-size: var(--ds-t-sm);
+  color: var(--ds-text-2);
+}
+
+.link {
+  color: var(--ds-accent);
+  min-height: var(--ds-hit-setup);
+  display: inline-flex;
+  align-items: center;
+}
+
+.lanes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+}
+
+/* The transport stays reachable while the lanes scroll: it is the one control
+   surface touched with an instrument in hand. */
+.transport {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-top: var(--ds-2);
+  background: var(--ds-ground);
+}
+
+.note {
+  color: var(--ds-text-2);
+  font-size: var(--ds-t-sm);
+}
+
+.alert {
+  margin: 0;
+  padding: var(--ds-3) var(--ds-4);
+  border: 1px solid var(--ds-error);
+  border-radius: var(--ds-r-panel);
+  background: color-mix(in srgb, var(--ds-error) 12%, transparent);
+  color: var(--ds-text);
+  font-family: var(--ds-mono);
+  font-size: var(--ds-t-sm);
+  white-space: pre-wrap;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-3);
+  padding: var(--ds-6);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+}
+
+.empty h1 {
+  margin: 0;
+  font: 600 var(--ds-t-lg) / var(--ds-lh-lg) var(--ds-font);
+}

@@ -5,13 +5,44 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import { AppRoutes } from './routes';
 
+// The Song view builds a real playback engine, which needs Web Audio: jsdom has
+// none, and @soundtouchjs' `class SoundTouchNode extends AudioWorkletNode` throws
+// on import alone. This is a routing smoke test -- that each path renders its
+// screen -- so the engine is replaced with the smallest stub the screen reads.
+vi.mock('../engine/EngineController', () => ({
+  STEM_ORDER: ['vocals', 'drums', 'bass', 'other'],
+  EngineController: {
+    create: async () => ({
+      play: vi.fn(),
+      pause: vi.fn(),
+      seek: vi.fn(),
+      setLoop: vi.fn(),
+      setTempo: vi.fn(),
+      setPitchSemitones: vi.fn(),
+      setStemGain: vi.fn(),
+      setMetronome: vi.fn(),
+      setGrid: vi.fn(),
+      countInAndPlay: vi.fn(),
+      onEnded: () => () => {},
+      getPositionSamples: () => 0,
+      dispose: vi.fn(),
+      durationSamples: 48_000,
+      durationSeconds: 1,
+      stemSummaries: [],
+    }),
+  },
+}));
+vi.mock('wavesurfer.js', () => ({
+  default: { create: () => ({ destroy: vi.fn(), setOptions: vi.fn(), on: () => () => {} }) },
+}));
+
 // A realistic song entry for the song-scoped routes (/songs/01ABC, .../scale,
 // .../export), the same way ScaleSheet.test.tsx and Library.test.tsx mock
 // /api/songs -- a generic "same JSON for every URL" mock left the song lookup
 // inside those screens resolving to nothing, which masked how they actually
 // render with real data.
 const song = {
-  schema_version: 1,
+  schema_version: 2,
   id: '01ABC',
   title: 'Tightrope',
   artist: 'Someone',
@@ -21,6 +52,9 @@ const song = {
   mix: {},
   playback: { tempo: 1, pitch_semitones: 0 },
   loops: [],
+  active_loop: null,
+  metronome: false,
+  count_in_bars: 0,
 };
 
 const songEntry = {
@@ -49,6 +83,7 @@ beforeEach(() => {
     'fetch',
     vi.fn(async (url: string) => {
       if (url === '/api/songs') return new Response(JSON.stringify({ songs: [songEntry] }));
+      if (url === '/api/songs/01ABC') return new Response(JSON.stringify(songEntry));
       // Not analyzed in this fixture's sense that matters here -- the smoke
       // test only checks that each route renders its screen, not analysis
       // content, so a 404 (the "not analyzed yet" case) is a fine default.
@@ -69,7 +104,8 @@ test.each([
   ['/import', /import/i],
   ['/jobs', /job queue/i],
   ['/splitter', /album splitter/i],
-  ['/songs/01ABC', /song/i],
+  // The Song view's heading is the song's own title (UI spec §6, screen 3).
+  ['/songs/01ABC', /tightrope/i],
   ['/songs/01ABC/scale', /scale/i],
   ['/songs/01ABC/export', /export/i],
 ])('%s renders its screen', async (path, heading) => {

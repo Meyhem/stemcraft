@@ -19,6 +19,8 @@ export interface TransportProps {
   metronome: boolean;
   loopArmed: boolean;
   hasLoop: boolean;
+  /** False when analysis has not run: without a grid there are no bars to snap A/B to. */
+  barsAvailable?: boolean;
   onPlayPause(): void;
   onTempoChange(tempo: number): void;
   onPitchChange(semitones: number): void;
@@ -39,6 +41,7 @@ export function Transport({
   metronome,
   loopArmed,
   hasLoop,
+  barsAvailable = true,
   onPlayPause,
   onTempoChange,
   onPitchChange,
@@ -83,10 +86,10 @@ export function Transport({
         ' ': onPlayPause,
         l: () => hasLoop && onLoopArmToggle(),
         L: () => hasLoop && onLoopArmToggle(),
-        a: onSetLoopStart,
-        A: onSetLoopStart,
-        b: onSetLoopEnd,
-        B: onSetLoopEnd,
+        a: () => barsAvailable && onSetLoopStart(),
+        A: () => barsAvailable && onSetLoopStart(),
+        b: () => barsAvailable && onSetLoopEnd(),
+        B: () => barsAvailable && onSetLoopEnd(),
         m: onMetronomeToggle,
         M: onMetronomeToggle,
         ArrowUp: () => onTempoChange(Math.min(1, Number((tempo + TEMPO_STEP).toFixed(2)))),
@@ -110,6 +113,7 @@ export function Transport({
   }, [
     tempo,
     hasLoop,
+    barsAvailable,
     onPlayPause,
     onLoopArmToggle,
     onSetLoopStart,
@@ -183,10 +187,22 @@ export function Transport({
       >
         Loop
       </button>
-      <button type="button" onClick={onSetLoopStart}>
+      {/* Bars come from analysis; without a grid there is nothing to snap to,
+          so the control is withheld and says why rather than no-opping. */}
+      <button
+        type="button"
+        disabled={!barsAvailable}
+        title={barsAvailable ? undefined : 'Bars need analysis to have run'}
+        onClick={onSetLoopStart}
+      >
         Set A
       </button>
-      <button type="button" onClick={onSetLoopEnd}>
+      <button
+        type="button"
+        disabled={!barsAvailable}
+        title={barsAvailable ? undefined : 'Bars need analysis to have run'}
+        onClick={onSetLoopEnd}
+      >
         Set B
       </button>
     </div>
