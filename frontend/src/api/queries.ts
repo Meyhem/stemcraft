@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 
 import {
+  albumMedia,
   api,
   type Album,
   type AlbumEntry,
@@ -14,6 +15,7 @@ import {
   type ExportRequest,
   type Health,
   type Job,
+  type PeaksDoc,
   type Proposals,
   type QueuedExport,
   type QueuedSplit,
@@ -216,6 +218,17 @@ export function useProposals(albumId: string | undefined, enabled = true) {
     enabled: Boolean(albumId) && enabled,
     // A 404 here means "the import job has not finished", which is a state, not
     // a failure — retrying on it would just hammer the route.
+    retry: false,
+  });
+}
+
+// The album waveform. Like the proposals above, a 404 means "the import job
+// has not finished" -- a state, not a failure, so it is not retried.
+export function useAlbumPeaks(albumId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['album-peaks', albumId],
+    queryFn: () => api.get<PeaksDoc>(albumMedia(albumId!).peaks),
+    enabled: Boolean(albumId) && enabled,
     retry: false,
   });
 }

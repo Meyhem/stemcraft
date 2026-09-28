@@ -39,6 +39,10 @@ export function AppRoutes() {
         <Route index element={<Library />} />
         <Route path="import" element={<Import />} />
         <Route path="splitter" element={<AlbumSplitter />} />
+        {/* D-14: the album id lives in the path, like every other document
+            this app edits. /splitter is the picker; /splitter/:albumId is the
+            editor. */}
+        <Route path="splitter/:albumId" element={<AlbumSplitter />} />
         <Route path="jobs" element={<JobQueue />} />
         <Route path="songs/:songId" element={<SongView />} />
         <Route path="songs/:songId/scale" element={<ScaleSheet />} />

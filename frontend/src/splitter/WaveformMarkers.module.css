@@ -1,0 +1,79 @@
+.frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+}
+
+.track {
+  position: relative;
+  min-height: 96px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.wave {
+  position: absolute;
+  inset: 0;
+}
+
+/* D-07: the playhead is never animated by CSS -- it is redrawn from the
+   <audio> element's own clock. */
+.playhead {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 2px;
+  margin-inline-start: -1px;
+  background: var(--ds-accent);
+  pointer-events: none;
+}
+
+.grip {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 12px;
+  margin-inline-start: -6px;
+  border-inline: 1px solid var(--ds-warn);
+  background: color-mix(in srgb, var(--ds-warn) 25%, transparent);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.grip:focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}
+
+.remove {
+  position: absolute;
+  inset-block-start: 0;
+  min-inline-size: var(--ds-hit-min);
+  min-block-size: var(--ds-hit-min);
+  margin-inline-start: calc(var(--ds-hit-min) / -2);
+  padding: 0;
+  background: var(--ds-overlay);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  color: var(--ds-text);
+  line-height: 1;
+}
+
+.scrub {
+  position: relative;
+  min-block-size: var(--ds-hit-setup);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-btn);
+  cursor: pointer;
+}
+
+.scrubHint {
+  font: 400 var(--ds-t-xs) / 1 var(--ds-mono);
+  color: var(--ds-text-3);
+  text-transform: uppercase;
+}

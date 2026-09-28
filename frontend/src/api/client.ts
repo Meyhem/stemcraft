@@ -255,6 +255,18 @@ export interface Proposals {
   min_silence_seconds: number;
 }
 
+// Mirrors stemcraft_worker.peaks.compute_peaks: min/max pairs per channel at a
+// fixed bucket rate. Internal and unversioned by design (tech spec §6) -- this
+// worker and this frontend are the only consumers.
+export interface PeaksDoc {
+  version: number;
+  sample_rate: number;
+  length: number;
+  channels: number;
+  buckets_per_second: number;
+  peaks: number[][];
+}
+
 export interface CreatedAlbum {
   album: Album;
   job_id: number;
