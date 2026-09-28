@@ -8,7 +8,9 @@ from stemcraft_lib.jobs import (
     data_version,
     enqueue,
     get_job,
+    get_worker_status,
     list_jobs,
+    set_worker_status,
 )
 
 
@@ -67,6 +69,30 @@ def test_a_newer_schema_version_is_refused_rather_than_guessed_at(tmp_path):
     with pytest.raises(JobsSchemaError) as err:
         connect(path)
     assert "99" in str(err.value)
+
+
+def test_worker_status_is_none_before_any_worker_boots(tmp_path):
+    conn = connect(tmp_path / "jobs.sqlite")
+    assert get_worker_status(conn) is None
+
+
+def test_worker_status_round_trips(tmp_path):
+    conn = connect(tmp_path / "jobs.sqlite")
+    set_worker_status(conn, device="cuda", fallback_reason=None)
+    status = get_worker_status(conn)
+    assert status.device == "cuda"
+    assert status.fallback_reason is None
+    assert status.updated_at > 0
+
+
+def test_worker_status_upserts_a_single_row(tmp_path):
+    conn = connect(tmp_path / "jobs.sqlite")
+    set_worker_status(conn, device="cuda", fallback_reason=None)
+    set_worker_status(conn, device="cpu", fallback_reason="no cuda device found")
+    status = get_worker_status(conn)
+    assert status.device == "cpu"
+    assert status.fallback_reason == "no cuda device found"
+    assert conn.execute("SELECT COUNT(*) FROM worker_status").fetchone()[0] == 1
 
 
 def test_data_version_changes_when_a_different_connection_writes(tmp_path):

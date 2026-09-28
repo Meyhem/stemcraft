@@ -31,6 +31,12 @@ CREATE TABLE IF NOT EXISTS jobs (
 );
 CREATE INDEX IF NOT EXISTS jobs_state_id ON jobs (state, id);
 CREATE INDEX IF NOT EXISTS jobs_song ON jobs (song_id);
+CREATE TABLE IF NOT EXISTS worker_status (
+  id               INTEGER PRIMARY KEY CHECK (id = 1),
+  device           TEXT NOT NULL,
+  fallback_reason  TEXT,
+  updated_at       REAL NOT NULL
+);
 """
 
 # jobs.sqlite's schema version, stored in PRAGMA user_version (SQLite's own
@@ -258,6 +264,38 @@ def cancelled(conn: sqlite3.Connection, job_id: int) -> None:
         "UPDATE jobs SET state = 'cancelled', finished_at = ?, lease_until = NULL "
         "WHERE id = ? AND state = 'running'",
         (time.time(), job_id),
+    )
+
+
+@dataclass(frozen=True)
+class WorkerStatus:
+    device: str
+    fallback_reason: str | None
+    updated_at: float
+
+
+def set_worker_status(conn: sqlite3.Connection, *, device: str, fallback_reason: str | None) -> None:
+    """Written once, at worker boot (§4: the device decision doesn't change during the
+    process's life). Single row by construction (id=1's CHECK constraint) -- this is how
+    the API learns the worker's device without importing anything torch-touching (§4)."""
+    conn.execute(
+        "INSERT INTO worker_status (id, device, fallback_reason, updated_at) "
+        "VALUES (1, ?, ?, ?) "
+        "ON CONFLICT(id) DO UPDATE SET device=excluded.device, "
+        "fallback_reason=excluded.fallback_reason, updated_at=excluded.updated_at",
+        (device, fallback_reason, time.time()),
+    )
+
+
+def get_worker_status(conn: sqlite3.Connection) -> WorkerStatus | None:
+    """None until a worker has booted at least once against this database."""
+    row = conn.execute(
+        "SELECT device, fallback_reason, updated_at FROM worker_status WHERE id = 1"
+    ).fetchone()
+    return (
+        WorkerStatus(device=row["device"], fallback_reason=row["fallback_reason"], updated_at=row["updated_at"])
+        if row
+        else None
     )
 
 
