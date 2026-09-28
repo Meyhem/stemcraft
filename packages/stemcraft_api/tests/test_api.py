@@ -1,8 +1,13 @@
+import os
+import subprocess
 import sys
+import textwrap
 
 import pytest
 from fastapi.testclient import TestClient
 from stemcraft_api.app import create_app
+from stemcraft_lib import jobs as jobs_db
+from stemcraft_lib.config import settings
 from stemcraft_lib.song import new_song, write_song
 
 
@@ -15,19 +20,56 @@ def client(tmp_path, monkeypatch):
     return TestClient(create_app())
 
 
-def test_the_api_never_imports_torch(client):
+def test_the_api_never_imports_torch(tmp_path):
     # Invariant §4: a broken CUDA install must not take the UI down. Enforced by
     # the dependency graph (stemcraft-api does not depend on torch) and asserted
     # here so an accidental import cannot slip in.
-    client.get("/api/health")
-    assert "torch" not in sys.modules
+    #
+    # Runs in a fresh subprocess, not the pytest-in-flight process: stemcraft_worker's
+    # own tests import torch at collection time, and pytest collects every test module
+    # in one process before running any of them, so sys.modules is already polluted by
+    # the time this test's own body would run in-process. That pollution isn't a real
+    # invariant violation -- the API and worker are separate OS processes in
+    # production -- so this test has to open its own process to mean anything.
+    script = textwrap.dedent(
+        """
+        import sys
+        from fastapi.testclient import TestClient
+        from stemcraft_api.app import create_app
+
+        client = TestClient(create_app())
+        client.get("/api/health")
+        assert "torch" not in sys.modules, sorted(m for m in sys.modules if "torch" in m)
+        """
+    )
+    env = {
+        **os.environ,
+        "STEMCRAFT_DATA_DIR": str(tmp_path / "data"),
+        "STEMCRAFT_SONGS_DIR": str(tmp_path / "songs"),
+        "STEMCRAFT_DIST_DIR": str(tmp_path / "nodist"),
+        "STEMCRAFT_SKIP_BOOT_CHECKS": "1",
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, env=env, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_health_reports_every_dependency_and_the_sample_rate(client):
     body = client.get("/api/health").json()
     assert {c["name"] for c in body["deps"]} == {"ffmpeg", "yt-dlp", "data_dirs", "sqlite_wal"}
     assert body["sample_rate"] == 48000
-    assert "device" in body
+    assert body["device"] is None
+    assert body["fallback_reason"] is None
+
+
+def test_health_reports_the_workers_recorded_device(client):
+    jobs_db.set_worker_status(
+        jobs_db.connect(settings().jobs_db), device="cpu", fallback_reason="no cuda device found"
+    )
+    body = client.get("/api/health").json()
+    assert body["device"] == "cpu"
+    assert body["fallback_reason"] == "no cuda device found"
 
 
 def test_songs_is_empty_before_anything_is_imported(client):
