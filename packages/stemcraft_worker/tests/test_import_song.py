@@ -6,6 +6,7 @@ import wave
 
 import pytest
 import stemcraft_worker.kinds.import_song  # noqa: F401  (registers on import)
+from stemcraft_lib import jobs as jobs_db
 from stemcraft_lib.jobs import connect, enqueue, get_job
 from stemcraft_lib.song import create_song_dir, new_song
 from stemcraft_worker.main import run_one
@@ -59,6 +60,33 @@ def test_upload_source_decodes_and_computes_peaks(conn, songs_dir):
     assert (song_dir / "original.mp3").is_file()
 
 
+def test_import_enqueues_a_separate_job_on_success(conn, songs_dir):
+    song = new_song(title="T", artist="A", source_kind="upload", source_value="original.mp3")
+    song_dir = create_song_dir(songs_dir, song)
+    _fixture_mp3(song_dir / "original.mp3")
+
+    job_id = enqueue(conn, kind="import", song_id=song.id, payload={"song_id": song.id})
+    run_one(conn, device="cpu")
+    assert get_job(conn, job_id).state == "done"
+
+    queued = jobs_db.list_jobs(conn, states=("queued",))
+    assert len(queued) == 1
+    assert queued[0].kind == "separate"
+    assert queued[0].payload == {"song_id": song.id}
+
+
+def test_a_failed_import_does_not_enqueue_separation(conn, songs_dir):
+    song = new_song(title="T", artist="A", source_kind="upload", source_value="original.mp3")
+    song_dir = create_song_dir(songs_dir, song)
+    (song_dir / "original.mp3").write_bytes(b"not actually audio")
+
+    job_id = enqueue(conn, kind="import", song_id=song.id, payload={"song_id": song.id})
+    run_one(conn, device="cpu")
+    assert get_job(conn, job_id).state == "failed"
+
+    assert jobs_db.list_jobs(conn, states=("queued",)) == []
+
+
 def test_upload_source_with_no_original_fails_loudly(conn, songs_dir):
     song = new_song(title="T", artist="A", source_kind="upload", source_value="original.mp3")
     create_song_dir(songs_dir, song)
@@ -94,6 +122,10 @@ def test_rerunning_import_is_idempotent(conn, songs_dir):
 
     job_a = enqueue(conn, kind="import", song_id=song.id, payload={"song_id": song.id})
     run_one(conn, device="cpu")
+    # Drain the "separate" job import auto-enqueues on success, so it doesn't jump
+    # ahead of job_b below (claim_next is FIFO across kinds).
+    while run_one(conn, device="cpu") is not None:
+        pass
     first_bytes = (song_dir / "audio.wav").read_bytes()
 
     job_b = enqueue(conn, kind="import", song_id=song.id, payload={"song_id": song.id})

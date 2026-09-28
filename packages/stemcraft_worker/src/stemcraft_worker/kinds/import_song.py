@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from stemcraft_lib import ffmpeg, ytdlp
+from stemcraft_lib import jobs as jobs_db
 from stemcraft_lib.atomic import atomic_write_json
 from stemcraft_lib.config import SAMPLE_RATE, settings
 from stemcraft_lib.song import find_song_dir, read_song
@@ -55,6 +56,8 @@ def run(ctx: JobContext) -> dict:
 
     atomic_write_json(song_dir / "peaks.json", peaks_module.compute_peaks(audio_wav))
     ctx.progress(1.0)
+
+    jobs_db.enqueue(ctx.conn, kind="separate", song_id=song.id, payload={"song_id": song.id})
 
     return {"duration_seconds": ffmpeg.probe(audio_wav).duration_seconds}
 
