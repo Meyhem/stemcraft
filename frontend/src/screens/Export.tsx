@@ -200,7 +200,16 @@ export function Export() {
         onClick={() =>
           queueExport.mutate(
             { stems: [...stems], apply_recipe: applyRecipe, name },
-            { onSuccess: (queued) => setJobId(queued.job_id) },
+            {
+              onSuccess: (queued) => {
+                setJobId(queued.job_id);
+                // The server slugifies (and caps the length of) the typed
+                // name; the 201 carries the name it actually used, and that
+                // is what the note under the field and the exports list
+                // below should agree with.
+                setTypedName(queued.name);
+              },
+            },
           )
         }
       >
@@ -228,6 +237,8 @@ export function Export() {
       {job?.state === 'failed' && <p className={styles.error}>{job.error}</p>}
 
       <h2>Exports</h2>
+      {/* N-08: the failed listing itself, not a silently empty list. */}
+      {exportsQuery.isError && <p className={styles.error}>{String(exportsQuery.error)}</p>}
       {exportsQuery.data?.length === 0 && <p className={styles.note}>Nothing exported yet.</p>}
       <ul className={styles.exports}>
         {(exportsQuery.data ?? []).map((item) => (

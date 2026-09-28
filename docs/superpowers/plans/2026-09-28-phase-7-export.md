@@ -263,7 +263,18 @@ def test_out_of_range_tempo_or_pitch_is_rejected_not_clamped():
     with pytest.raises(ValidationError):
         _recipe(tempo=0.0)
     with pytest.raises(ValidationError):
+        _recipe(tempo=0.01)
+    with pytest.raises(ValidationError):
         _recipe(pitch_semitones=25)
+
+
+def test_name_pattern_has_a_hard_anchor_not_a_soft_one():
+    # A soft `$` also matches just before a trailing newline; NAME_PATTERN is
+    # the boundary between a user-controlled path segment and the filesystem,
+    # so it must behave like one.
+    from stemcraft_lib.export import NAME_PATTERN
+
+    assert NAME_PATTERN.match("tightrope\n") is None
 
 
 def test_export_name_slugifies_and_falls_back():
@@ -350,7 +361,7 @@ EXPORT_BITRATE = "320k"
 # route will accept. `name` is user-typed and lands in a filesystem path, so the
 # route matches it against this instead of sanitizing -- a name that does not
 # match is a name this app never wrote (see the API task's traversal test).
-NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*\Z")
 
 
 class ExportStem(BaseModel):
@@ -375,7 +386,7 @@ class ExportRecipe(BaseModel):
     # Domain spec: tempo 50-100%, pitch in semitones. Out of range is rejected,
     # never clamped (N-08) -- a recipe the Song view could not have produced
     # means the caller is wrong, and a clamp would hide that behind audio.
-    tempo: float = Field(default=1.0, gt=0.0, le=1.0)
+    tempo: float = Field(default=1.0, ge=0.5, le=1.0)
     pitch_semitones: int = Field(default=0, ge=-12, le=12)
     # D7-06: ID3, snapshotted with everything else.
     title: str = ""
@@ -451,7 +462,7 @@ nothing, which is why that value is treated as "empty" here rather than kept.
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run pytest packages/stemcraft_lib/tests/test_export.py -q`
-Expected: 12 passed.
+Expected: 13 passed.
 
 - [ ] **Step 5: Lint and commit**
 
@@ -841,7 +852,14 @@ def render_export(
                         # checkpoint. atomic_output unlinks the temp file on the
                         # way out of this `with`.
                         proc.terminate()
-                        proc.wait(timeout=10)
+                        try:
+                            proc.wait(timeout=10)
+                        except subprocess.TimeoutExpired:
+                            # A cancel is not a failure even when terminate()
+                            # itself needs escalating -- the caller still gets
+                            # FfmpegCancelled, never a bare TimeoutExpired.
+                            proc.kill()
+                            proc.wait(timeout=10)
                         raise FfmpegCancelled(f"export of {dst.name} cancelled")
             finally:
                 watchdog.cancel()
@@ -1918,6 +1936,8 @@ const entry = {
 interface MockOptions {
   songEntry?: unknown;
   exports?: unknown[];
+  exportsStatus?: number;
+  exportsBody?: string;
   jobs?: unknown[];
   queueStatus?: number;
   queueBody?: unknown;
@@ -1935,6 +1955,11 @@ function renderExport(options: MockOptions = {}) {
       });
     }
     if (url.endsWith('/exports')) {
+      if (options.exportsStatus) {
+        return new Response(options.exportsBody ?? 'exports listing failed', {
+          status: options.exportsStatus,
+        });
+      }
       return new Response(JSON.stringify({ exports: options.exports ?? [] }));
     }
     if (url.startsWith('/api/jobs')) {
@@ -2090,6 +2115,23 @@ test('a rejected queue shows the API message, not a generic failure', async () =
   await userEvent.click(screen.getByRole('button', { name: /queue export/i }));
 
   expect(await screen.findByText(/no separated stems to export yet/)).toBeInTheDocument();
+});
+
+test('a failed exports listing shows the real error under the Exports heading', async () => {
+  renderExport({ exportsStatus: 500, exportsBody: 'exports listing failed' });
+  expect(await screen.findByText(/exports listing failed/)).toBeInTheDocument();
+});
+
+test('a successful queue adopts the server-slugified name, not the typed text', async () => {
+  renderExport({ queueBody: { job_id: 7, name: 'my-mix', file: 'exports/my-mix.mp3' } });
+  const name = await screen.findByLabelText(/file name/i);
+  await userEvent.clear(name);
+  await userEvent.type(name, 'My Mix!');
+
+  await userEvent.click(screen.getByRole('button', { name: /queue export/i }));
+  await waitFor(() => expect(posted).toHaveLength(1));
+
+  expect(name).toHaveValue('my-mix');
 });
 ```
 
@@ -2289,7 +2331,16 @@ export function Export() {
         onClick={() =>
           queueExport.mutate(
             { stems: [...stems], apply_recipe: applyRecipe, name },
-            { onSuccess: (queued) => setJobId(queued.job_id) },
+            {
+              onSuccess: (queued) => {
+                setJobId(queued.job_id);
+                // The server slugifies (and caps the length of) the typed
+                // name; the 201 carries the name it actually used, and that
+                // is what the note under the field and the exports list
+                // below should agree with.
+                setTypedName(queued.name);
+              },
+            },
           )
         }
       >
@@ -2317,6 +2368,8 @@ export function Export() {
       {job?.state === 'failed' && <p className={styles.error}>{job.error}</p>}
 
       <h2>Exports</h2>
+      {/* N-08: the failed listing itself, not a silently empty list. */}
+      {exportsQuery.isError && <p className={styles.error}>{String(exportsQuery.error)}</p>}
       {exportsQuery.data?.length === 0 && <p className={styles.note}>Nothing exported yet.</p>}
       <ul className={styles.exports}>
         {(exportsQuery.data ?? []).map((item) => (

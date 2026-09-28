@@ -236,7 +236,14 @@ def render_export(
                         # checkpoint. atomic_output unlinks the temp file on the
                         # way out of this `with`.
                         proc.terminate()
-                        proc.wait(timeout=10)
+                        try:
+                            proc.wait(timeout=10)
+                        except subprocess.TimeoutExpired:
+                            # A cancel is not a failure even when terminate()
+                            # itself needs escalating -- the caller still gets
+                            # FfmpegCancelled, never a bare TimeoutExpired.
+                            proc.kill()
+                            proc.wait(timeout=10)
                         raise FfmpegCancelled(f"export of {dst.name} cancelled")
             finally:
                 watchdog.cancel()

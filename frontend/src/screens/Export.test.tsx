@@ -42,6 +42,8 @@ interface MockOptions {
   songStatus?: number;
   songBody?: string;
   exports?: unknown[];
+  exportsStatus?: number;
+  exportsBody?: string;
   jobs?: unknown[];
   queueStatus?: number;
   queueBody?: unknown;
@@ -59,6 +61,11 @@ function renderExport(options: MockOptions = {}) {
       });
     }
     if (url.endsWith('/exports')) {
+      if (options.exportsStatus) {
+        return new Response(options.exportsBody ?? 'exports listing failed', {
+          status: options.exportsStatus,
+        });
+      }
       return new Response(JSON.stringify({ exports: options.exports ?? [] }));
     }
     if (url.startsWith('/api/jobs')) {
@@ -223,4 +230,21 @@ test('a rejected queue shows the API message, not a generic failure', async () =
   await userEvent.click(screen.getByRole('button', { name: /queue export/i }));
 
   expect(await screen.findByText(/no separated stems to export yet/)).toBeInTheDocument();
+});
+
+test('a failed exports listing shows the real error under the Exports heading', async () => {
+  renderExport({ exportsStatus: 500, exportsBody: 'exports listing failed' });
+  expect(await screen.findByText(/exports listing failed/)).toBeInTheDocument();
+});
+
+test('a successful queue adopts the server-slugified name, not the typed text', async () => {
+  renderExport({ queueBody: { job_id: 7, name: 'my-mix', file: 'exports/my-mix.mp3' } });
+  const name = await screen.findByLabelText(/file name/i);
+  await userEvent.clear(name);
+  await userEvent.type(name, 'My Mix!');
+
+  await userEvent.click(screen.getByRole('button', { name: /queue export/i }));
+  await waitFor(() => expect(posted).toHaveLength(1));
+
+  expect(name).toHaveValue('my-mix');
 });

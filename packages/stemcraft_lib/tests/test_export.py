@@ -71,7 +71,18 @@ def test_out_of_range_tempo_or_pitch_is_rejected_not_clamped():
     with pytest.raises(ValidationError):
         _recipe(tempo=0.0)
     with pytest.raises(ValidationError):
+        _recipe(tempo=0.01)
+    with pytest.raises(ValidationError):
         _recipe(pitch_semitones=25)
+
+
+def test_name_pattern_has_a_hard_anchor_not_a_soft_one():
+    # A soft `$` also matches just before a trailing newline; NAME_PATTERN is
+    # the boundary between a user-controlled path segment and the filesystem,
+    # so it must behave like one.
+    from stemcraft_lib.export import NAME_PATTERN
+
+    assert NAME_PATTERN.match("tightrope\n") is None
 
 
 def test_export_name_slugifies_and_falls_back():

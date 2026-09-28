@@ -30,7 +30,7 @@ EXPORT_BITRATE = "320k"
 # route will accept. `name` is user-typed and lands in a filesystem path, so the
 # route matches it against this instead of sanitizing -- a name that does not
 # match is a name this app never wrote (see the API task's traversal test).
-NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*\Z")
 
 
 class ExportStem(BaseModel):
@@ -55,7 +55,7 @@ class ExportRecipe(BaseModel):
     # Domain spec: tempo 50-100%, pitch in semitones. Out of range is rejected,
     # never clamped (N-08) -- a recipe the Song view could not have produced
     # means the caller is wrong, and a clamp would hide that behind audio.
-    tempo: float = Field(default=1.0, gt=0.0, le=1.0)
+    tempo: float = Field(default=1.0, ge=0.5, le=1.0)
     pitch_semitones: int = Field(default=0, ge=-12, le=12)
     # D7-06: ID3, snapshotted with everything else.
     title: str = ""
