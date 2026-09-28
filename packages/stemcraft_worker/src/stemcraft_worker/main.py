@@ -16,6 +16,7 @@ from stemcraft_lib.config import settings
 from stemcraft_lib.deps import DependencyError, assert_ready
 
 from . import kinds  # noqa: F401  (importing registers the built-in kinds)
+from .device import DeviceProbeError, WorkerState, probe_and_select
 from .registry import JobCancelled, JobContext, get_kind
 
 log = logging.getLogger("stemcraft.worker")
@@ -33,7 +34,9 @@ def _renew_until(stop: threading.Event, db_path, job_id: int) -> None:
         conn.close()
 
 
-def run_one(conn: sqlite3.Connection, *, device: str) -> int | None:
+def run_one(
+    conn: sqlite3.Connection, *, device: str, worker_state: WorkerState | None = None
+) -> int | None:
     reclaimed = jobs_db.reclaim_expired(conn)
     if reclaimed:
         log.info("reclaimed expired lease(s) for job(s): %s", reclaimed)
@@ -49,7 +52,15 @@ def run_one(conn: sqlite3.Connection, *, device: str) -> int | None:
     renewer.start()
     try:
         fn = get_kind(job.kind)
-        result = fn(JobContext(conn=conn, job_id=job.id, payload=job.payload, device=device))
+        result = fn(
+            JobContext(
+                conn=conn,
+                job_id=job.id,
+                payload=job.payload,
+                device=device,
+                worker_state=worker_state,
+            )
+        )
         jobs_db.finish(conn, job.id, result)
         log.info("job %s (%s) done", job.id, job.kind)
     except JobCancelled:
@@ -65,12 +76,6 @@ def run_one(conn: sqlite3.Connection, *, device: str) -> int | None:
     return job.id
 
 
-def select_device() -> str:
-    """Phase 4 replaces this with a CUDA attempt plus a proof-of-work op. The
-    API must never learn how this is decided — it only reads the job row."""
-    return "cpu"
-
-
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     try:
@@ -81,9 +86,17 @@ def main() -> None:
     for check in checks:
         log.info("dependency ok: %s (%s)", check.name, check.detail)
 
-    device = select_device()
+    try:
+        state = probe_and_select()
+    except DeviceProbeError as exc:
+        log.error("%s", exc)
+        raise SystemExit(1) from exc
+    if state.fallback_reason:
+        log.warning("falling back to cpu: %s", state.fallback_reason)
+
     conn = jobs_db.connect(settings().jobs_db)
-    log.info("worker ready on device=%s, polling %s", device, settings().jobs_db)
+    jobs_db.set_worker_status(conn, device=state.device, fallback_reason=state.fallback_reason)
+    log.info("worker ready on device=%s, polling %s", state.device, settings().jobs_db)
     while True:
-        if run_one(conn, device=device) is None:
+        if run_one(conn, device=state.device, worker_state=state) is None:
             time.sleep(POLL_SECONDS)

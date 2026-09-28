@@ -11,8 +11,12 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from stemcraft_lib import jobs as jobs_db
+
+if TYPE_CHECKING:
+    from .device import WorkerState  # noqa: F401 -- typing only, never imported at runtime here
 
 
 class JobCancelled(Exception):
@@ -25,6 +29,7 @@ class JobContext:
     job_id: int
     payload: dict
     device: str
+    worker_state: "WorkerState | None" = None
 
     def progress(self, fraction: float) -> None:
         jobs_db.set_progress(self.conn, self.job_id, fraction)
