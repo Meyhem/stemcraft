@@ -1577,7 +1577,14 @@ In `frontend/src/engine/EngineController.ts`:
 ```
 
 **Count-in** (`countInBars`) is implemented entirely in the controller as a *rewind*, not
-as a new engine mode: playing `n` bars of count-in means starting the cursor `n` bars
+as a new engine mode. The snippet below is incomplete in one way that matters, corrected
+during review: the poll **must be cancellable**. `pause()` stops the clock, so an
+uncancelled poll never reaches `from`, never resolves, and leaves every stem at gain 0 —
+press play afterwards and you get a metronome over silence. The shipped version carries a
+`countInGeneration` counter and a `pendingCountIn` record, with a `cancelCountIn()`
+invoked from `pause()`, `seek()` and the top of `countInAndPlay` itself; the property it
+guarantees is that `restoreGains` runs exactly once on every path. See
+`EngineController.ts` and `EngineController.test.ts` as built. playing `n` bars of count-in means starting the cursor `n` bars
 earlier with every stem gain at zero, then restoring the gains when the cursor reaches the
 intended start. That reuses the metronome that is already running and needs no new state in
 the worklet. Add:
