@@ -1,0 +1,78 @@
+/* UI spec §5, "Timeline": bar ruler, beat grid (faint), downbeat grid (bright),
+   A-B region, playhead. Token-only -- no hex, no raw px outside the 1px/2px
+   hairlines the spec calls for explicitly. */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+}
+
+.note {
+  margin: 0;
+  font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-font);
+  color: var(--ds-text-2);
+}
+
+.track {
+  position: relative;
+  height: var(--ds-hit-perform);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+}
+
+.beat {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--ds-border);
+}
+
+.bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--ds-border-strong);
+}
+
+.barLabel {
+  position: absolute;
+  top: var(--ds-1);
+  left: var(--ds-1);
+  font: 400 var(--ds-t-xs) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text-2);
+  white-space: nowrap;
+}
+
+/* U-06: the A-B region is the armed/disarmed signal. Scrubbing disarms the
+   loop rather than let the UI offer an action the engine cannot honour, and
+   the region must visibly grey so the user sees the change they caused. */
+.region {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(79, 163, 255, 0.18);
+  border-left: 2px solid var(--ds-accent);
+  border-right: 2px solid var(--ds-accent);
+}
+
+.region[data-armed='false'] {
+  background: rgba(98, 106, 118, 0.18);
+  border-left-color: var(--ds-text-3);
+  border-right-color: var(--ds-text-3);
+}
+
+/* U-05: positioned only by usePlayhead's rAF loop writing to this element's
+   style.left via a ref. No transition, no animation, ever -- a CSS-eased
+   playhead would smooth over the loop wrap that R-01 exists to make visible. */
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--ds-text);
+  will-change: left;
+}
