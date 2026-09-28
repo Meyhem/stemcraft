@@ -3660,3 +3660,72 @@ git commit -m "docs: Phase 6 real-hardware verification and roadmap update"
 - [ ] N-03 under ~3 s to first playback over LAN; N-05 on real music; N-06 on mix changes;
       settings survive a reload; two tabs clobbering each other is observed and accepted —
       Task 14.
+
+---
+
+## Real-hardware verification (Task 14)
+
+**Status: half done.** Everything mechanically checkable was measured on 2026-09-28 and is
+recorded below. Everything *audible* is still open, because it needs a human with ears at a
+music stand — and a phase that claims N-05 without anyone having listened to a loop wrap
+would be exactly the silent degradation N-08 exists to prevent.
+
+Song under test: `Fortunate Son` (CCR), `01M3KG53V18KDRT2GNW6X3S9RJ` — imported, separated
+and analyzed by the earlier phases. 138 s, 130.4 BPM, 4/4, key candidates G major 40 % /
+D major 32 % / C major 28 %.
+
+### Measured — 2026-09-28
+
+| Check | Result |
+| --- | --- |
+| Stems served over HTTP | all four `200`; 2.08–2.26 MB each, **8.67 MB total** |
+| Range requests (§6) | `206` on `Range: bytes=0-1023` |
+| Unknown stem name | `404` with the real message; `.opus` only, never `.wav` (D-04) |
+| `peaks.json`, `analysis.json` | `200`, 1.31 MB / 8.1 kB |
+| Recipe round-trip through `PUT`/`GET` | mute, gain −6 dB, tempo 0.70, pitch −2, A–B loop as **bar numbers**, metronome, count-in, saved loops — all survive |
+| `created_at` / `source` immutable | a body rewriting both is ignored; disk values win |
+| Two competing writes (§5, C-01) | last write wins, no conflict machinery — **observed, not assumed** |
+| Beat grid, from the consumer side | 301 beats, 76 bars, **all integer sample indices at 48 kHz**, downbeats a strict subset of beats, both ascending |
+| `beatsPerBar` derived from spacing | 4 — no stored time signature anywhere |
+| Bar ↔ sample round trip | **exact for every one of the 76 bars** (Phase 5's exit criterion, re-confirmed by its consumer) |
+| Median bar | 86 400 samples = 1.800 s (vs 1.840 s nominal at 130.4 BPM — the grid follows the performance, not the metronome) |
+| Automated suites | frontend 156 tests / 25 files, silent; pytest 169; `tsc --noEmit`, `vite build` and `ruff check packages/` all clean |
+| Dev harness excluded from the bundle | confirmed absent from both JS chunks |
+
+### Still open — needs a human at the practice machine
+
+Run these with `uv run stemcraft-api`, `uv run stemcraft-worker` and `npm run dev`, from a
+browser on another LAN machine (not localhost — N-03 is a LAN number).
+
+- [ ] **N-03 — under ~3 s from opening the Song view to first sound, over the LAN.** Record
+      the measured time and the four `.opus` transfer times. Loopback says the server side
+      is ~2 ms; what is unmeasured is transfer plus four `decodeAudioData` calls.
+- [ ] **N-05 — the loop wrap.** Set an A–B loop over a four-bar phrase and let it run **10+
+      minutes**. Listen at the seam. Then repeat on `/dev/engine-harness` against the click
+      track, where a seam is unmissable — Phase 3's guarantee has to survive the transport
+      and metronome changes Tasks 5 and 6 made to `renderBlock`.
+- [ ] **N-06 — mute/solo/gain latency.** Toggle drums mute mid-playback; judge against the
+      50–100 ms window. Repeat for solo and a gain drag.
+- [ ] **Metronome alignment (D6-03).** Click on over real music at 100 % — does it land *on*
+      the drums or beside them? Drop to 60 % and confirm it still does. That is the whole
+      claim behind mixing the click in pre-stretcher.
+- [ ] **Count-in.** Set 2 bars and start from partway into the song: two bars of click
+      before the music, at the current tempo. **Starting from bar 1 plays no count-in** —
+      known and documented in the rail; confirm the UI says so rather than looking broken.
+- [ ] **Persistence and the accepted clobber.** Change everything, reload, confirm it all
+      came back. Then open the same song in two tabs, change tempo in each, reload both:
+      last write wins and nothing else breaks.
+- [ ] **`playingState` in the worklet resync.** `EngineController.ts`'s
+      `playingState.playing ? rate : 0` in `create()`'s `port.onmessage` has **no automated
+      coverage** — `create()` needs a real `AudioContext` and cannot run under jsdom. Pause
+      mid-song, wait several seconds, and confirm the bar readout does not creep.
+- [ ] **Seek/report race.** A worklet position report can land up to ~107 ms after a
+      `seek()` and resync the clock backwards. Scrub, then immediately press `A`, and check
+      the loop point is where you clicked and not where you were. Pre-existing, not
+      introduced by this phase.
+- [ ] **Read it from 1.5 m.** Bar number, tempo and stem labels legible at a music stand;
+      the sliders' native track thickness judged there (deferred deliberately — see the
+      ruling in the phase ledger).
+
+Record measured numbers, not "works". A number that misses its target gets recorded as a
+miss and opens a question; it does not get rounded into a pass.
