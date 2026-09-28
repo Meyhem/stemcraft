@@ -89,6 +89,10 @@ def test_rerunning_separate_is_idempotent(conn, songs_dir, worker_state):
 
     job_a = enqueue(conn, kind="separate", song_id=song.id, payload={"song_id": song.id})
     run_one(conn, device="cpu", worker_state=worker_state)
+    # Drain the "analyze" job separate auto-enqueues on success, so it doesn't jump
+    # ahead of job_b below (claim_next is FIFO across kinds).
+    while run_one(conn, device="cpu", worker_state=worker_state) is not None:
+        pass
     first_bytes = (song_dir / "stems" / "vocals.wav").read_bytes()
 
     job_b = enqueue(conn, kind="separate", song_id=song.id, payload={"song_id": song.id})
@@ -111,6 +115,19 @@ def test_missing_audio_wav_fails_loudly(conn, songs_dir, worker_state):
     failed = get_job(conn, job_id)
     assert failed.state == "failed"
     assert song.id in failed.error
+
+
+def test_separate_chains_into_analyze(conn, songs_dir, worker_state):
+    song, _ = _make_song(songs_dir)
+
+    job_id = enqueue(conn, kind="separate", song_id=song.id, payload={"song_id": song.id})
+    run_one(conn, device="cpu", worker_state=worker_state)
+
+    assert get_job(conn, job_id).state == "done"
+    jobs = jobs_db.list_jobs(conn)
+    analyze_jobs = [j for j in jobs if j.kind == "analyze"]
+    assert len(analyze_jobs) == 1
+    assert analyze_jobs[0].song_id == song.id
 
 
 def test_cancel_mid_separation_lands_as_cancelled_not_failed(conn, songs_dir, worker_state, monkeypatch):

@@ -20,8 +20,8 @@ import wave
 from pathlib import Path
 
 import torch
-
 from stemcraft_lib import ffmpeg
+from stemcraft_lib import jobs as jobs_db
 from stemcraft_lib.config import SAMPLE_RATE, settings
 from stemcraft_lib.song import STEM_NAMES, find_song_dir, read_song
 
@@ -97,6 +97,7 @@ def run(ctx: JobContext) -> dict:
         ffmpeg.encode_opus(wav_path, stems_dir / f"{name}.opus")
 
     ctx.progress(1.0)
+    jobs_db.enqueue(ctx.conn, kind="analyze", song_id=song_id, payload={"song_id": song_id})
     return {"near_silent": near_silent}
 
 
