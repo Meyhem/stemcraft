@@ -17,7 +17,9 @@ build/
 # Stemcraft runtime data — never commit audio or job state
 data/
 songs/
+albums/
 models/
+.logs/
 *.wav
 *.mp3
 *.opus
