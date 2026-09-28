@@ -44,6 +44,8 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body ?? {}) }),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   upload: <T>(path: string, form: FormData) => upload<T>(path, form),
   del: (path: string) => request<void>(path, { method: 'DELETE' }),
 };
@@ -114,6 +116,20 @@ export interface Song {
   mix: Record<string, StemMix>;
   playback: Playback;
   loops: Loop[];
+  // v2 (Phase 6): the loop currently being practised, the metronome toggle and
+  // the count-in length. See stemcraft_lib/song.py.
+  active_loop: Loop | null;
+  metronome: boolean;
+  count_in_bars: number;
+}
+
+// Same-origin relative paths, like every other path in this module (D-15).
+export function songMedia(songId: string) {
+  return {
+    stem: (name: string) => `/api/songs/${songId}/stems/${name}.opus`,
+    peaks: `/api/songs/${songId}/peaks`,
+    audio: `/api/songs/${songId}/audio.wav`,
+  };
 }
 
 export type SongState = 'imported' | 'separated' | 'analyzed';

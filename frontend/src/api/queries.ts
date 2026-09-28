@@ -1,7 +1,16 @@
 // D-13: the server owns this state; the client only caches it. No store.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef } from 'react';
 
-import { api, type Analysis, type CreatedSong, type Health, type Job, type SongEntry } from './client';
+import {
+  api,
+  type Analysis,
+  type CreatedSong,
+  type Health,
+  type Job,
+  type Song,
+  type SongEntry,
+} from './client';
 
 export const queryKeys = {
   health: ['health'] as const,
@@ -73,6 +82,65 @@ export function useAnalysis(songId: string | undefined) {
     queryFn: () => api.get<Analysis>(`/api/songs/${songId}/analysis`),
     enabled: Boolean(songId),
   });
+}
+
+export function useSong(songId: string | undefined) {
+  return useQuery({
+    queryKey: ['song', songId],
+    queryFn: () => api.get<SongEntry>(`/api/songs/${songId}`),
+    enabled: Boolean(songId),
+  });
+}
+
+const AUTOSAVE_DEBOUNCE_MS = 600;
+
+/**
+ * Whole-document autosave for the practice recipe (§6). Trailing debounce: a
+ * dragged tempo slider fires dozens of changes a second and every one of them
+ * is a complete song.json -- sending the trail would be pointless writes, and
+ * §5's last-write-wins means only the final one could ever matter anyway.
+ */
+export function useUpdateSong(songId: string | undefined) {
+  const client = useQueryClient();
+  const timer = useRef<number | null>(null);
+  const pending = useRef<Song | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (song: Song) => api.put<SongEntry>(`/api/songs/${song.id}`, song),
+    onSuccess: (entry) => {
+      client.setQueryData(['song', songId], entry);
+      client.invalidateQueries({ queryKey: queryKeys.songs });
+    },
+  });
+
+  // Depend on `mutation.mutate` (stable per TanStack Query's own useCallback),
+  // not the `mutation` result object (a fresh object every render): the
+  // latter would recreate `flush` on every render, and since flush is
+  // registered as the unmount cleanup below, that would fire a save on every
+  // re-render rather than only on unmount.
+  const { mutate } = mutation;
+  const flush = useCallback(() => {
+    if (timer.current !== null) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
+    const song = pending.current;
+    pending.current = null;
+    if (song) mutate(song);
+  }, [mutate]);
+
+  const save = useCallback(
+    (song: Song) => {
+      pending.current = song;
+      if (timer.current !== null) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(flush, AUTOSAVE_DEBOUNCE_MS);
+    },
+    [flush],
+  );
+
+  useEffect(() => () => flush(), [flush]);
+
+  return { save, flush, error: mutation.error };
 }
 
 export function useCancelJob() {
