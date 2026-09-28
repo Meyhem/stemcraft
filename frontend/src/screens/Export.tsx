@@ -203,11 +203,16 @@ export function Export() {
             {
               onSuccess: (queued) => {
                 setJobId(queued.job_id);
-                // The server slugifies (and caps the length of) the typed
-                // name; the 201 carries the name it actually used, and that
-                // is what the note under the field and the exports list
-                // below should agree with.
-                setTypedName(queued.name);
+                // The server slugifies (and caps the length of) a typed name,
+                // so a user who typed one should see the corrected version.
+                // But adopting it unconditionally would flip a
+                // still-on-the-proposal user's `typedName` out of null,
+                // permanently stopping the field from tracking later picker
+                // changes -- and the next export would then silently
+                // overwrite this one instead of proposing a new name.
+                // Functional form to read the current value at resolution
+                // time rather than the one captured in this closure.
+                setTypedName((current) => (current === null ? null : queued.name));
               },
             },
           )
