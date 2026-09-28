@@ -4,6 +4,8 @@ import { ProcessorMetrics, SoundTouchNode } from '@soundtouchjs/audio-worklet';
 import { computeSoundTouchParams } from './soundtouch';
 import { EngineClock } from './clock';
 import { SAMPLE_RATE, SampleIndex, sampleIndex, toDeviceDomain, toStemDomain } from './types';
+import { summariseStem } from './stemPeaks';
+import type { StemSummary } from './stemPeaks';
 
 export const STEM_ORDER = ['vocals', 'drums', 'bass', 'other'] as const;
 export type StemName = (typeof STEM_ORDER)[number];
@@ -39,6 +41,7 @@ export class EngineController {
     // (pause the transport, notify subscribers) that only the instance can do.
     private readonly endedBox: { fire: () => void },
     private readonly durationFrames: number,
+    private readonly summaries: readonly StemSummary[],
   ) {
     this.endedBox.fire = () => {
       this.pause();
@@ -49,6 +52,15 @@ export class EngineController {
   /** Length of the stems, 48 kHz domain. The transport's right-hand edge. */
   get durationSamples(): SampleIndex {
     return toStemDomain(this.durationFrames, this.context.sampleRate);
+  }
+
+  /** One per stem in STEM_ORDER. Waveform data and U-10's near-silent flag. */
+  get stemSummaries(): readonly StemSummary[] {
+    return this.summaries;
+  }
+
+  get durationSeconds(): number {
+    return this.durationFrames / this.context.sampleRate;
   }
 
   static async create(stemUrls: Record<StemName, string>): Promise<EngineController> {
@@ -114,7 +126,9 @@ export class EngineController {
     // and are the same length. Exposed in the stem domain via durationSamples.
     const durationFrames = buffers[0]!.length;
 
-    return new EngineController(context, cursorNode, stNode, clock, tempoState, endedBox, durationFrames);
+    const summaries = STEM_ORDER.map((name, i) => summariseStem(buffers[i]!, name));
+
+    return new EngineController(context, cursorNode, stNode, clock, tempoState, endedBox, durationFrames, summaries);
   }
 
   setStemGain(stem: StemName, linearGain: number): void {
