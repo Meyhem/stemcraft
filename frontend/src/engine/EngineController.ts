@@ -3,7 +3,7 @@ import processorUrl from '@soundtouchjs/audio-worklet/processor?url';
 import { SoundTouchNode } from '@soundtouchjs/audio-worklet';
 import { computeSoundTouchParams } from './soundtouch';
 import { EngineClock } from './clock';
-import { SAMPLE_RATE, SampleIndex, sampleIndex, toDeviceDomain } from './types';
+import { SAMPLE_RATE, SampleIndex, sampleIndex, toDeviceDomain, toStemDomain } from './types';
 
 export const STEM_ORDER = ['vocals', 'drums', 'bass', 'other'] as const;
 export type StemName = (typeof STEM_ORDER)[number];
@@ -72,7 +72,10 @@ export class EngineController {
       if (event.data.type === 'position') {
         clock.resync({
           contextTime: event.data.contextTime,
-          position: sampleIndex(event.data.position),
+          // The worklet indexes directly into buffers decoded at context.sampleRate,
+          // so its reported position is device-domain, not stem-domain (48 kHz) —
+          // convert it back before handing it to the clock (D-03).
+          position: toStemDomain(event.data.position, context.sampleRate),
           // Stem-domain samples advanced per real second is the tempo-scaled rate
           // (Task 2's clock test asserts exactly this), not the raw sample rate.
           samplesPerSecond: SAMPLE_RATE * tempoState.ratio,

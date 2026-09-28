@@ -31,3 +31,13 @@ export function secondsToSamples(n: Seconds, sampleRate: number = SAMPLE_RATE): 
 export function toDeviceDomain(n: SampleIndex, deviceSampleRate: number): number {
   return (n as number) * (deviceSampleRate / SAMPLE_RATE);
 }
+
+/**
+ * Converts an index on a buffer decoded at a different AudioContext sample rate
+ * back into a 48 kHz-domain sample index. Inverse of `toDeviceDomain`. 1.0 whenever
+ * the context runs at 48 kHz, which is the requested rate (Task 6) and the expected
+ * case on desktop browsers.
+ */
+export function toStemDomain(n: number, deviceSampleRate: number): SampleIndex {
+  return sampleIndex(n * (SAMPLE_RATE / deviceSampleRate));
+}
