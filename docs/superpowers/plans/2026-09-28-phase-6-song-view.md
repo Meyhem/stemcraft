@@ -2924,6 +2924,10 @@ export function Transport({ /* ...props... */ }: TransportProps) {
       if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) {
         return;
       }
+      // Nor from the OS: without this, Ctrl/Cmd+A sets a loop point and
+      // preventDefault()s select-all. shiftKey is deliberately not excluded --
+      // the uppercase entries below exist so a shift-held letter still works.
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
       const key = event.key;
       const actions: Record<string, () => void> = {
         ' ': onPlayPause,
