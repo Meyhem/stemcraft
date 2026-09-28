@@ -1,5 +1,9 @@
 # Stemcraft Phase 3: The Playback Engine (R-01) — Implementation Plan
 
+**Status: done.** All 9 tasks implemented, reviewed, and merged into `main`
+(2026-09-28). **Q-03 decided: keep SoundTouch** (see Task 9 below and
+[docs/running.md](../../running.md) "Verification 6").
+
 **Goal:** a browser engine that mixes four decoded stems live, time-stretches and
 pitch-shifts the mix through one shared stretcher, and loops a region seamlessly
 against sample-accurate bounds — proven against a click track with no UI around it,

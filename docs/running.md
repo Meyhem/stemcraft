@@ -422,6 +422,92 @@ error rendering, delete-with-confirm — is covered instead by
 mock `fetch` rather than a real backend. Both layers were exercised; neither
 alone would have caught everything the other does.
 
+## Verification 6 — Phase 3 engine, R-01 (2026-09-28)
+
+Phase 3 built a custom `AudioWorkletProcessor` (`stem-cursor-processor.ts`) that
+mixes four stems, wraps a loop region with a crossfade entirely by manipulating
+its own read cursor (D-06 — never seeking the downstream stretcher), and feeds
+exactly one `SoundTouchNode` (D-05). Task 3's offline test suite
+(`loopCursor.test.ts`) is the rigorous proof of the no-click/no-drift property —
+2000 simulated loop repetitions with click-detection sensitive enough to fail on
+an uncrossfaded seam, plus a boundedness check against an independently-coded
+reference model. This entry covers what Task 9 added on top: real-browser and
+real-human verification of the parts that offline tests can't reach.
+
+```
+$ npm --prefix frontend run typecheck && npm --prefix frontend test -- --run
+...
+ Test Files  9 passed (9)
+      Tests  43 passed (43)
+
+$ npm --prefix frontend run build
+...
+dist/assets/index-Bxsbmr_i.js   313.03 kB
+
+$ grep -r "EngineHarness" frontend/dist/assets/*.js
+(no output)
+$ ls frontend/dist/assets | grep -i stem
+(no output)
+```
+
+The dev-only harness (`/dev/engine-harness`, Task 8) is confirmed excluded
+from the production bundle — the dynamic-`import()` pattern gated on
+`import.meta.env.DEV` (`app/routes.tsx`) drops the harness, `EngineController`,
+and every fixture asset entirely under Rollup's dead-code elimination.
+
+**Real-human listening pass.** The harness was temporarily pointed at a real
+song (not one of the committed synthetic fixtures) so tempo, pitch, and loop
+quality could be judged against actual music rather than sine tones. This
+surfaced two real defects that no offline test caught, because both are about
+the harness's own UI wiring, not the DSP core Task 3 already proved:
+
+1. Setting a loop region *before* pressing Play was a silent no-op — the
+   control handler had nothing to send to yet, and nothing re-applied the
+   loop once playback started. Fixed by re-applying whatever is in the loop
+   fields at the point the engine is created, matching how gain/tempo/pitch
+   already worked.
+2. `EngineController.setLoop()` only ever defined the wrap boundaries; it
+   never moved the playback cursor. A loop set anywhere ahead of the current
+   position looked like a no-op, because playback would keep going from
+   wherever it already was until it happened to reach the loop's own end
+   naturally. Fixed by seeking to the loop's start immediately after setting
+   it, in both the live and pre-Play paths.
+
+Both fixes were verified two ways: objectively, via the harness's own
+underrun/RMS/peak metrics panel (an out-of-range loop start now produces
+*immediate* silence, proving the seek actually executed, instead of playing
+valid content from position 0 for several seconds first; an in-range loop
+sustains non-zero output well past the source fixture's natural length); and
+by the person actually listening afterward, who confirmed both the loop wrap
+and the tempo/pitch controls sound correct on real music ("works great now").
+Stem gain control (mute/unmute live during playback, values set before Play,
+and values driven past the nominal declared range) was independently
+re-verified via the same RMS-metrics method and found to already work
+correctly with no code change needed.
+
+**What this entry does *not* claim.** The roadmap's literal Task 9 exit
+criterion is a continuous 30+ minute real-time listen for a click at the loop
+wrap, repeated at 50%/70%/100% tempo (N-04's range) with a ±3 semitone pitch
+shift layered on top. That full matrix was not run — verification here was
+deliberately scoped down to a shorter real-music spot check plus the two bug
+fixes above, at the person's explicit request to conclude the phase rather
+than run the full soak. Task 3's automated test remains the actual proof of
+the no-drift/no-click property at the algorithm level; this entry's real-human
+pass confirms the wiring around it doesn't undermine that on a real device,
+but does not by itself certify 30+ minutes of glitch-free playback the way the
+roadmap originally specified. If a real click or drift issue turns up later
+(e.g. once Phase 6 wires this engine into an actual Song screen), re-running
+the full soak against `/dev/engine-harness` is the first thing to try.
+
+**Q-03 — SoundTouch vs. Rubber Band: keep SoundTouch.** `@soundtouchjs/audio-worklet`
+is MPL-2.0 (permissive, no licensing blocker unlike Rubber Band's GPL/commercial
+split), was already installed and integrated in Task 4, and nothing in this
+phase's testing — automated or human — surfaced a quality or correctness
+problem attributable to the stretcher itself (the two bugs found above were
+both in the harness's own loop-control wiring, not the stretcher). Per the
+plan's own decision rule, SoundTouch is kept unless testing surfaces
+"genuinely unacceptable quality at the low end of N-04's range" — nothing did.
+
 ## Summary
 
 | What | Port | Dev | Prod |
