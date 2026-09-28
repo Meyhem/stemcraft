@@ -41,6 +41,7 @@ export interface DepCheck {
 export interface Health {
   deps: DepCheck[];
   device: string | null;
+  fallback_reason: string | null;
   sample_rate: number;
 }
 

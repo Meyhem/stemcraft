@@ -39,6 +39,14 @@
   font: 400 var(--ds-t-sm) / 1.5 var(--ds-mono);
 }
 
+.bannerWarn {
+  padding: var(--ds-3) var(--ds-4);
+  background: var(--ds-raised);
+  border-bottom: 1px solid var(--ds-warn);
+  color: var(--ds-warn);
+  font: 400 var(--ds-t-sm) / 1.5 var(--ds-mono);
+}
+
 .main {
   padding: var(--ds-4);
 }

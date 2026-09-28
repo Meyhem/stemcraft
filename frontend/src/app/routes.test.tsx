@@ -19,7 +19,12 @@ function renderAt(path: string) {
 beforeEach(() => {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => new Response(JSON.stringify({ deps: [], device: null, sample_rate: 48000 }))),
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ deps: [], device: null, fallback_reason: null, sample_rate: 48000 }),
+        ),
+    ),
   );
 });
 
@@ -43,4 +48,24 @@ test.each([
 test('an unknown path shows a not-found screen rather than a blank page', async () => {
   renderAt('/nope');
   expect(await screen.findByText(/not found/i)).toBeInTheDocument();
+});
+
+test('running separation on cpu shows a fallback banner naming the reason', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            deps: [],
+            device: 'cpu',
+            fallback_reason: 'no cuda device found',
+            sample_rate: 48000,
+          }),
+        ),
+    ),
+  );
+  renderAt('/');
+  const banner = await screen.findByText(/running separation on cpu/i);
+  expect(banner.textContent).toMatch(/no cuda device found/i);
 });

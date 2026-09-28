@@ -42,6 +42,15 @@ export function AppShell() {
         </div>
       )}
 
+      {broken.length === 0 && health.data?.device === 'cpu' && (
+        <div className={styles.bannerWarn} role="status">
+          Running separation on CPU
+          {health.data.fallback_reason ? ` (${health.data.fallback_reason})` : ''}
+          {' '}
+          — this is slower than GPU (N-01).
+        </div>
+      )}
+
       <main className={styles.main}>
         <Outlet />
       </main>
