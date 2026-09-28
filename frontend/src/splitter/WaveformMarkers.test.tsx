@@ -91,11 +91,72 @@ describe('WaveformMarkers', () => {
     expect(props.onMove).toHaveBeenCalledWith(0, 192000);
   });
 
-  it('will not push a boundary past the end of the album', () => {
+  // Album's validator rejects a point at 0 or at total_samples: both describe a
+  // zero-length track. The screen autosaves every move, so a boundary allowed
+  // to reach either end is a 422 on an ordinary drag to the edge.
+  it('will not push a boundary onto the end of the album, which the server rejects', () => {
     render(<WaveformMarkers {...props} splitPoints={[479000]} />);
     const marker = screen.getByRole('slider', { name: /split point/i });
     fireEvent.keyDown(marker, { key: 'ArrowRight', shiftKey: true });
-    expect(props.onMove).toHaveBeenCalledWith(0, 480000);
+    expect(props.onMove).toHaveBeenCalledWith(0, 479999);
+  });
+
+  it('will not push a boundary onto the start of the album, which the server rejects', () => {
+    render(<WaveformMarkers {...props} splitPoints={[1000]} />);
+    const marker = screen.getByRole('slider', { name: /split point/i });
+    fireEvent.keyDown(marker, { key: 'ArrowLeft', shiftKey: true });
+    expect(props.onMove).toHaveBeenCalledWith(0, 1);
+  });
+
+  it('keeps End and Home inside the album too, not only the arrow keys', () => {
+    render(<WaveformMarkers {...props} />);
+    const marker = screen.getByRole('slider', { name: /split point/i });
+    fireEvent.keyDown(marker, { key: 'End' });
+    expect(props.onMove).toHaveBeenCalledWith(0, 479999);
+    fireEvent.keyDown(marker, { key: 'Home' });
+    expect(props.onMove).toHaveBeenCalledWith(0, 1);
+  });
+
+  it('clamps a drag to the edge inside the album', () => {
+    // jsdom implements no part of the pointer-capture API, so the two calls
+    // the drag makes have to exist before the real handler can run at all.
+    const captured = new Set<number>();
+    const element = Element.prototype as unknown as {
+      setPointerCapture?: (id: number) => void;
+      hasPointerCapture?: (id: number) => boolean;
+      releasePointerCapture?: (id: number) => void;
+    };
+    element.setPointerCapture = (id) => void captured.add(id);
+    element.hasPointerCapture = (id) => captured.has(id);
+    element.releasePointerCapture = (id) => void captured.delete(id);
+
+    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      width: 100,
+      right: 100,
+      top: 0,
+      bottom: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+    try {
+      render(<WaveformMarkers {...props} />);
+      const marker = screen.getByRole('slider', { name: /split point/i });
+      // jsdom has no PointerEvent, and the Event testing-library synthesises
+      // for one drops clientX. A MouseEvent named `pointermove` is what React
+      // is listening for and carries the coordinate.
+      fireEvent(marker, new MouseEvent('pointerdown', { bubbles: true, clientX: 50 }));
+      // Dragged off the left edge of the container entirely.
+      fireEvent(marker, new MouseEvent('pointermove', { bubbles: true, clientX: -400 }));
+      expect(props.onMove).toHaveBeenCalledWith(0, 1);
+    } finally {
+      rect.mockRestore();
+      delete element.setPointerCapture;
+      delete element.hasPointerCapture;
+      delete element.releasePointerCapture;
+    }
   });
 
   it('will not drag a boundary across its neighbour', () => {

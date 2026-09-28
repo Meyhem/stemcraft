@@ -85,11 +85,19 @@ export function WaveformMarkers({
   }
 
   // A boundary may not cross its neighbours -- doing so would silently
-  // reorder the track list under the user's titles.
+  // reorder the track list under the user's titles -- and it may not sit on
+  // either end of the album. The outer bounds are 1 and totalSamples - 1
+  // because Album's own validator rejects a point at 0 or at total_samples
+  // (both would mean a zero-length track); allowing them here would turn one
+  // ordinary drag-to-the-edge, or a single Home/End press, into a 422 on the
+  // autosave PUT.
   function bounds(index: number): [number, number] {
     const previous = splitPoints[index - 1];
     const next = splitPoints[index + 1];
-    return [previous === undefined ? 0 : previous + 1, next === undefined ? totalSamples : next - 1];
+    return [
+      previous === undefined ? 1 : previous + 1,
+      next === undefined ? totalSamples - 1 : next - 1,
+    ];
   }
 
   function moveTo(index: number, sample: number) {

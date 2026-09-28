@@ -62,6 +62,8 @@ interface Extras {
   proposalsStatus?: number;
   jobs?: unknown[];
   tracks?: unknown[];
+  putStatus?: number;
+  putDetail?: string;
 }
 
 const puts: unknown[] = [];
@@ -84,6 +86,9 @@ function renderWith(entry: unknown, extras: Extras = {}) {
     if (init?.method === 'PUT') {
       const body = JSON.parse(String(init.body));
       puts.push(body);
+      if (extras.putStatus) {
+        return new Response(extras.putDetail ?? 'rejected', { status: extras.putStatus });
+      }
       return new Response(JSON.stringify({ ...(entry as object), album: body }));
     }
     if (init?.method === 'POST') {
@@ -230,6 +235,21 @@ describe('AlbumSplitter', () => {
     expect(putBody().tracks).toHaveLength(putBody().split_points.length + 1);
   });
 
+  it('surfaces a failed autosave verbatim, rather than editing into the void (N-08)', async () => {
+    // Without this the screen edits silently: every later keystroke would also
+    // fail, and a whole album of typed titles would vanish on reload.
+    renderWith(readyAlbum, {
+      putStatus: 422,
+      putDetail: 'split_points: point 0 is not inside the album',
+    });
+    const titleInputs = await screen.findAllByRole('textbox', { name: /track title/i });
+    fireEvent.change(titleInputs[0]!, { target: { value: 'So What' } });
+    const alert = await screen.findByRole('alert', {}, { timeout: 3000 });
+    // The server's own words, carried by ApiError, not a paraphrase.
+    expect(alert).toHaveTextContent('point 0 is not inside the album');
+    expect(alert).toHaveTextContent('422');
+  });
+
   it('offers the zip only once the split has finished, from derived state', async () => {
     renderWith({
       ...readyAlbum,
@@ -246,6 +266,17 @@ describe('AlbumSplitter', () => {
   it('does not offer the zip before a split has run', async () => {
     renderWith(readyAlbum);
     await screen.findByRole('slider', { name: /split point 1/i });
+    expect(screen.queryByRole('link', { name: /download/i })).toBeNull();
+  });
+
+  it('does not offer the zip just because Split was pressed -- only files.has_zip does', async () => {
+    // The gate is derived state. Pressing Split queues a job; the file does not
+    // exist until the worker writes it, and the server is what says so. A local
+    // "I clicked split" flag would light the link up here, against an entry
+    // whose has_zip is still false.
+    renderWith(readyAlbum);
+    fireEvent.click(await screen.findByRole('button', { name: /split into/i }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /split into/i })).toBeEnabled());
     expect(screen.queryByRole('link', { name: /download/i })).toBeNull();
   });
 

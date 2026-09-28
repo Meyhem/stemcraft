@@ -212,7 +212,12 @@ function AlbumEditor({ albumId }: { albumId: string }) {
   const tracksQuery = useAlbumTracks(albumId);
   const jobsQuery = useJobs();
   const queueSplit = useQueueSplit();
-  const { save } = useUpdateAlbum(albumId);
+  // `error` is not optional chrome (N-08): every control on this screen edits
+  // the document silently, so an autosave that keeps failing -- a 422 from an
+  // out-of-range boundary, a full disk -- would otherwise let the user type a
+  // whole album of titles into nothing and find it gone after a reload.
+  // Same reasoning, same treatment as SongView.
+  const { save, error: saveError } = useUpdateAlbum(albumId);
 
   const fetched = albumQuery.data?.album ?? null;
   const files = albumQuery.data?.files ?? null;
@@ -397,6 +402,14 @@ function AlbumEditor({ albumId }: { albumId: string }) {
           Back to albums
         </Link>
       </header>
+
+      {/* ApiError's message already carries the server's own detail, so it is
+          shown as it came rather than paraphrased into reassurance. */}
+      {saveError && (
+        <p role="alert" className={styles.error}>
+          {saveError.message}
+        </p>
+      )}
 
       {/* Typed once, filled down by construction: these are fields on the
           album, so every rendered track carries them through SplitRecipe. */}
