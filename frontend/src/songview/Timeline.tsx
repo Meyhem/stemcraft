@@ -88,7 +88,12 @@ export function Timeline({
             className={styles.region}
             style={{
               left: `${pct(barStart(grid, loop.startBar))}%`,
-              width: `${pct(barStart(grid, loop.endBar)) - pct(barStart(grid, loop.startBar))}%`,
+              // A caller bug upstream (an inverted loop) must not render as a
+              // silently clamped-to-zero-width, invisible region.
+              width: `${Math.max(
+                0,
+                pct(barStart(grid, loop.endBar)) - pct(barStart(grid, loop.startBar)),
+              )}%`,
             }}
           >
             <b>{loop.startBar + 1}</b>

@@ -54,13 +54,13 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  background: rgba(79, 163, 255, 0.18);
+  background: color-mix(in srgb, var(--ds-accent) 18%, transparent);
   border-left: 2px solid var(--ds-accent);
   border-right: 2px solid var(--ds-accent);
 }
 
 .region[data-armed='false'] {
-  background: rgba(98, 106, 118, 0.18);
+  background: color-mix(in srgb, var(--ds-text-3) 18%, transparent);
   border-left-color: var(--ds-text-3);
   border-right-color: var(--ds-text-3);
 }
