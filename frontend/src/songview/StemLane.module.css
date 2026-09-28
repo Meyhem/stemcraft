@@ -1,0 +1,101 @@
+.lane {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: var(--ds-3);
+  align-items: center;
+  padding: var(--ds-2);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+  background: var(--ds-surface);
+}
+
+/* U-01/U-03: a muted lane drops to 28% so the mute is visible across a room. */
+.lane[data-silenced='true'] .waveWrap {
+  opacity: 0.28;
+}
+
+/* U-10: a near-silent lane dims further and explains itself. */
+.lane[data-near-silent='true'] .waveWrap {
+  opacity: 0.16;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+}
+
+.name {
+  font: 600 var(--ds-t-sm) / 1 var(--ds-font);
+  color: var(--ds-text);
+  text-transform: capitalize;
+}
+
+.buttons {
+  display: flex;
+  gap: var(--ds-1);
+}
+
+.buttons button {
+  min-width: 56px;
+  min-height: 44px;
+  font: 600 var(--ds-t-sm) / 1 var(--ds-mono);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  color: var(--ds-text);
+}
+
+.buttons button[aria-pressed='true'] {
+  background: var(--ds-accent); /* a lit control is chrome, never a stem hue */
+  color: var(--ds-ground);
+}
+
+.buttons button:disabled {
+  opacity: 0.5;
+}
+
+.gain {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-2);
+}
+
+.gain input[type='range'] {
+  flex: 1;
+  min-height: var(--ds-hit-min);
+}
+
+.readout {
+  font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text-2);
+  min-width: 5ch;
+  text-align: right;
+}
+
+.pill {
+  position: absolute;
+  left: var(--ds-3);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: var(--ds-1) var(--ds-3);
+  border-radius: var(--ds-r-pill);
+  background: var(--ds-overlay);
+  color: var(--ds-text-2);
+  font: 400 var(--ds-t-sm) / 1 var(--ds-font);
+}
+
+.waveWrap {
+  position: relative;
+}
+
+.wave {
+  min-height: 64px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden; clip-path: inset(50%);
+}
