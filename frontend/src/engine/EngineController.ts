@@ -1,6 +1,6 @@
 import stemCursorProcessorUrl from './stem-cursor-processor.ts?url';
 import processorUrl from '@soundtouchjs/audio-worklet/processor?url';
-import { SoundTouchNode } from '@soundtouchjs/audio-worklet';
+import { ProcessorMetrics, SoundTouchNode } from '@soundtouchjs/audio-worklet';
 import { computeSoundTouchParams } from './soundtouch';
 import { EngineClock } from './clock';
 import { SAMPLE_RATE, SampleIndex, sampleIndex, toDeviceDomain, toStemDomain } from './types';
@@ -124,6 +124,16 @@ export class EngineController {
 
   getPositionSamples(): SampleIndex {
     return this.clock.positionAt(this.context.currentTime);
+  }
+
+  /**
+   * Latest render-thread metrics snapshot from the time-stretcher (underrun
+   * count, buffered frames, RMS/peak), or `null` before the first snapshot
+   * arrives. Exposed for the dev harness (Task 8) so an underrun is visible
+   * on screen, not just audible; not used by production playback code.
+   */
+  getMetrics(): ProcessorMetrics | null {
+    return this.stNode.metrics;
   }
 
   async dispose(): Promise<void> {
