@@ -132,6 +132,32 @@ export function songMedia(songId: string) {
   };
 }
 
+// Mirrors stemcraft_lib.export.list_exports and the three export routes in
+// stemcraft_api routes/songs.py.
+export interface ExportEntry {
+  name: string;
+  file: string;
+  bytes: number;
+  modified_at: number;
+}
+
+export interface QueuedExport {
+  job_id: number;
+  name: string;
+  file: string;
+}
+
+export interface ExportRequest {
+  stems: string[];
+  // Tempo and pitch only (D7-03): stem gains are the mix and apply either way.
+  apply_recipe?: boolean;
+  name?: string;
+}
+
+export function exportUrl(songId: string, name: string): string {
+  return `/api/songs/${songId}/exports/${name}.mp3`;
+}
+
 export type SongState = 'imported' | 'separated' | 'analyzed';
 
 // Mirrors Task 9's GET /api/songs entry shape (see stemcraft_api routes/songs.py:_entry):

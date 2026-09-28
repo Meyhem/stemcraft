@@ -6,8 +6,11 @@ import {
   api,
   type Analysis,
   type CreatedSong,
+  type ExportEntry,
+  type ExportRequest,
   type Health,
   type Job,
+  type QueuedExport,
   type Song,
   type SongEntry,
 } from './client';
@@ -16,6 +19,7 @@ export const queryKeys = {
   health: ['health'] as const,
   songs: ['songs'] as const,
   jobs: (active: boolean) => ['jobs', active] as const,
+  exports: (songId: string | undefined) => ['exports', songId] as const,
 };
 
 export function useHealth() {
@@ -155,6 +159,26 @@ export function useCancelJob() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (jobId: number) => api.post(`/api/jobs/${jobId}/cancel`),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['jobs'] }),
+  });
+}
+
+export function useExports(songId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.exports(songId),
+    queryFn: () => api.get<{ exports: ExportEntry[] }>(`/api/songs/${songId}/exports`),
+    select: (data) => data.exports,
+    enabled: Boolean(songId),
+  });
+}
+
+export function useQueueExport(songId: string | undefined) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ExportRequest) =>
+      api.post<QueuedExport>(`/api/songs/${songId}/export`, body),
+    // The render itself is a job; the file appears when it finishes, which the
+    // screen learns from the jobs query the WebSocket already invalidates.
     onSuccess: () => client.invalidateQueries({ queryKey: ['jobs'] }),
   });
 }
