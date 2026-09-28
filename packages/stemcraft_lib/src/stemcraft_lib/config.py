@@ -17,6 +17,7 @@ SAMPLE_RATE = 48000
 class Settings:
     data_dir: Path
     songs_dir: Path
+    albums_dir: Path
     jobs_db: Path
     host: str
     port: int
@@ -34,6 +35,9 @@ def settings() -> Settings:
     return Settings(
         data_dir=data_dir,
         songs_dir=_path("STEMCRAFT_SONGS_DIR", "songs"),
+        # D8-01: a sibling of songs/, not a subdirectory of it -- an album is
+        # not a Song and never becomes one (Q-04).
+        albums_dir=_path("STEMCRAFT_ALBUMS_DIR", "albums"),
         jobs_db=data_dir / "jobs.sqlite",
         # C-05: served over the home LAN, not just loopback.
         host=os.environ.get("STEMCRAFT_HOST", "0.0.0.0"),

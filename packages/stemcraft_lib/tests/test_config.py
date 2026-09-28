@@ -26,3 +26,13 @@ def test_env_overrides_data_dir(monkeypatch, tmp_path):
 def test_binds_lan_by_default(monkeypatch):
     monkeypatch.delenv("STEMCRAFT_HOST", raising=False)
     assert settings().host == "0.0.0.0"
+
+
+def test_albums_dir_defaults_beside_songs(monkeypatch):
+    monkeypatch.delenv("STEMCRAFT_ALBUMS_DIR", raising=False)
+    assert settings().albums_dir.name == "albums"
+
+
+def test_albums_dir_is_overridable(monkeypatch, tmp_path):
+    monkeypatch.setenv("STEMCRAFT_ALBUMS_DIR", str(tmp_path / "elsewhere"))
+    assert settings().albums_dir == (tmp_path / "elsewhere").resolve()
