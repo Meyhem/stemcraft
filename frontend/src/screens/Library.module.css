@@ -29,8 +29,15 @@
 }
 
 .title {
+  align-self: flex-start;
   font-size: var(--ds-t-md);
   color: var(--ds-text);
+  text-decoration: none;
+}
+
+.title:hover,
+.title:focus-visible {
+  text-decoration: underline;
 }
 
 .artist {

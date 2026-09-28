@@ -41,7 +41,12 @@ export function Library() {
           <li key={entry.dir} className={styles.card}>
             {entry.song ? (
               <>
-                <span className={styles.title}>{entry.song.title}</span>
+                {/* The Song view is one click from the card. It renders its
+                    own explanation for a song that has no stems yet, so the
+                    link is not gated on state. */}
+                <Link className={styles.title} to={`/songs/${entry.song.id}`}>
+                  {entry.song.title}
+                </Link>
                 <span className={styles.artist}>{entry.song.artist}</span>
                 <span className={styles.state}>{entry.state}</span>
                 {entry.state === 'analyzed' && (

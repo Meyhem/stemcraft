@@ -52,6 +52,15 @@ test('renders a card per song with its state', async () => {
   expect(screen.getByText('imported')).toBeInTheDocument();
 });
 
+test('the card title links to the Song view', async () => {
+  renderLibrary([entry]);
+  // The Song view is the screen the product exists for, so it is reachable in
+  // one click from the card -- including for an imported-but-not-separated
+  // song, which SongView itself explains rather than the Library hiding.
+  const link = await screen.findByRole('link', { name: 'My Song' });
+  expect(link).toHaveAttribute('href', `/songs/${song.id}`);
+});
+
 test('an unreadable entry shows its error instead of a title', async () => {
   renderLibrary([
     { dir: '01BROKEN-bad', song: null, state: null, unreadable: 'invalid JSON', files: null },
