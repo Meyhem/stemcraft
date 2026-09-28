@@ -67,6 +67,25 @@ export default function EngineHarness() {
         for (const stem of STEM_ORDER) controllerRef.current.setStemGain(stem, gains[stem]);
         controllerRef.current.setTempo(tempo);
         controllerRef.current.setPitchSemitones(pitch);
+        // A loop region entered before the first Play has nowhere to go: the
+        // worklet doesn't exist yet, so handleSetLoop's postMessage would be a
+        // silent no-op with no controller to send it to. Re-apply whatever is
+        // currently in the form here, mirroring the gains/tempo/pitch re-apply
+        // above, so "configure everything, then hit Play" — the natural order —
+        // actually works instead of quietly dropping the loop.
+        const startSec = Number(loopStart);
+        const endSec = Number(loopEnd);
+        if (loopStart !== '' && loopEnd !== '' && Number.isFinite(startSec) && Number.isFinite(endSec)) {
+          const pendingStart = secondsToSamples(seconds(startSec));
+          controllerRef.current.setLoop({
+            startFrame: pendingStart,
+            endFrame: secondsToSamples(seconds(endSec)),
+          });
+          // See handleSetLoop: setLoop alone doesn't move the cursor, so without
+          // this the freshly-created engine would still start at 0 and only
+          // start looping once it played all the way to `endFrame` on its own.
+          controllerRef.current.seek(pendingStart);
+        }
 
         metricsIntervalRef.current = window.setInterval(() => {
           setMetrics(controllerRef.current?.getMetrics() ?? null);
@@ -129,6 +148,11 @@ export default function EngineHarness() {
       endFrame: secondsToSamples(seconds(endSec)),
     };
     controllerRef.current.setLoop(loop);
+    // setLoop only defines the wrap boundaries; it doesn't move the cursor.
+    // Without this the loop wouldn't engage until playback naturally reached
+    // `endFrame` on its own, which looks exactly like "the loop does nothing"
+    // if start/end are set anywhere past the current position.
+    controllerRef.current.seek(loop.startFrame);
   }
 
   function handleClearLoop() {
