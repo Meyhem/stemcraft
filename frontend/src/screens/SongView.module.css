@@ -1,6 +1,6 @@
 /* UI spec §6, screen 3: the performing surface on the left -- one scrolling
-   time axis (bar ruler, chord row directly beneath it, four full-height stem
-   lanes), then the transport -- and a 320 px setup-tier rail on the right. Tokens only; the rail width is the one literal the layout owns. */
+   transport on top, then one scrolling time axis (bar ruler, chord row directly
+   beneath it, four full-height stem lanes) -- and a 320 px setup-tier rail on the right. Tokens only; the rail width is the one literal the layout owns. */
 .page {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -105,13 +105,14 @@
   flex: 1 0 auto;
 }
 
-/* The transport stays reachable while the lanes scroll: it is the one control
-   surface touched with an instrument in hand. */
+/* The transport sits at the top, above the time axis, and stays pinned there while
+   the page scrolls: it is the one control surface touched with an instrument in hand,
+   so it is always in the same place. Above the axis's sticky head column (z 2). */
 .transport {
   position: sticky;
-  bottom: 0;
-  z-index: 1;
-  padding-top: var(--ds-2);
+  top: 0;
+  z-index: 4;
+  padding-bottom: var(--ds-2);
   background: var(--ds-ground);
 }
 

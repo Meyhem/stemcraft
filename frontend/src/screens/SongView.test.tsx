@@ -312,6 +312,17 @@ describe('SongView', () => {
     for (const el of [ruler, chords, vocals, other]) expect(scroller).toContainElement(el);
   });
 
+  it('puts the playback controls above the time axis, at the top of the page', async () => {
+    renderSongView();
+    await screen.findByRole('group', { name: 'vocals stem' });
+    const play = screen.getByRole('button', { name: /^(play|pause)$/i });
+    const scroller = screen.getByTestId('time-axis-scroller');
+    // The transport comes before the ruler, chords and lanes in reading order...
+    expect(Boolean(play.compareDocumentPosition(scroller) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    // ...and is not inside the horizontally scrolling canvas.
+    expect(scroller).not.toContainElement(play);
+  });
+
   it('zoom changes the time axis content width, and every waveform with it', async () => {
     renderSongView();
     await screen.findByRole('group', { name: 'vocals stem' });

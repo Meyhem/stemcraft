@@ -111,11 +111,15 @@ export function Transport({
     const handler = (event: KeyboardEvent) => {
       // Never steal a key from a text field: the right rail renames loops.
       const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
-      ) {
+      if (target && (target.isContentEditable || /^(TEXTAREA|SELECT)$/.test(target.tagName))) {
         return;
+      }
+      if (target instanceof HTMLInputElement) {
+        // A slider (tempo, pitch, lane gain) keeps focus after it is used. It is not text
+        // entry, so Space must still reach play/pause -- but its arrow keys are its own,
+        // and every other key stays with it as before.
+        const isSlider = target.type === 'range';
+        if (!(isSlider && event.key === ' ')) return;
       }
       // Never hijack an OS/browser chord (Ctrl/Cmd+A select-all, Ctrl/Cmd+B
       // bookmark bar, etc.). Shift is left alone: the uppercase A/B/L/M

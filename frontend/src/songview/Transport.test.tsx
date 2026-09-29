@@ -102,6 +102,35 @@ describe('Transport', () => {
     expect(props.onSetLoopStart).not.toHaveBeenCalled();
   });
 
+  it('Space still plays and pauses after a slider has been used', async () => {
+    // Load-bearing: the key handler used to ignore every <input>, and a range slider is an
+    // <input> -- so after nudging tempo, pitch or a lane gain, focus stayed on the slider
+    // and Space silently did nothing. The user noticed. Space is not text entry on a
+    // slider, so it must reach play/pause.
+    const props = renderTransport();
+    const tempo = screen.getByRole('slider', { name: /tempo/i });
+    tempo.focus();
+    await userEvent.keyboard(' ');
+    expect(props.onPlayPause).toHaveBeenCalledOnce();
+  });
+
+  it('a slider keeps its own arrow keys: they move the slider, not the song', async () => {
+    const props = renderTransport({ tempo: 0.8 });
+    screen.getByRole('slider', { name: /pitch/i }).focus();
+    await userEvent.keyboard('{ArrowRight}{ArrowUp}');
+    expect(props.onNudgeBars).not.toHaveBeenCalled();
+    expect(props.onTempoChange).not.toHaveBeenCalled();
+  });
+
+  it('Space still types a space in a text field (naming a loop)', async () => {
+    const props = renderTransport();
+    render(<input aria-label="loop name" />);
+    await userEvent.click(screen.getByLabelText('loop name'));
+    await userEvent.keyboard('Verse 2');
+    expect(props.onPlayPause).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('loop name')).toHaveValue('Verse 2');
+  });
+
   it('does not hijack a modifier chord (Ctrl/Cmd+A) meant for the OS/browser', () => {
     const props = renderTransport({ hasLoop: true });
     const event = new KeyboardEvent('keydown', {

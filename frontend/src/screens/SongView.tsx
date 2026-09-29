@@ -614,6 +614,37 @@ export function SongView() {
 
         {engine && song && (
           <>
+            {/* Playback controls at the top, pinned while the page scrolls: the one
+                surface touched with an instrument in hand, found in the same place
+                every time. */}
+            <div className={styles.transport}>
+              <Transport
+                playing={playing}
+                grid={grid}
+                getPosition={getPosition}
+                seekNonce={seekNonce}
+                tempo={song.playback.tempo}
+                pitchSemitones={song.playback.pitch_semitones}
+                metronome={song.metronome}
+                loopArmed={loopArmed}
+                hasLoop={Boolean(grid && song.active_loop)}
+                onPlayPause={handlePlayPause}
+                onTempoChange={handleTempoChange}
+                onPitchChange={handlePitchChange}
+                onMetronomeToggle={handleMetronomeToggle}
+                onLoopArmToggle={handleLoopArmToggle}
+                onSetLoopStart={handleSetLoopStart}
+                onSetLoopEnd={handleSetLoopEnd}
+                onNudgeBars={handleNudgeBars}
+                onMuteLane={handleMuteLane}
+                chords={chords}
+                zoom={zoom}
+                onZoomChange={setZoom}
+                follow={follow}
+                onFollowToggle={handleFollowToggle}
+              />
+            </div>
+
             {/* One time axis: ruler, chords and the four lanes are rows of a
                 single horizontally scrolling canvas, so a chord, its bar line
                 and the waveform under it always move together. */}
@@ -670,34 +701,6 @@ export function SongView() {
                   ))}
                 </div>
               </div>
-            </div>
-
-            <div className={styles.transport}>
-              <Transport
-                playing={playing}
-                grid={grid}
-                getPosition={getPosition}
-                seekNonce={seekNonce}
-                tempo={song.playback.tempo}
-                pitchSemitones={song.playback.pitch_semitones}
-                metronome={song.metronome}
-                loopArmed={loopArmed}
-                hasLoop={Boolean(grid && song.active_loop)}
-                onPlayPause={handlePlayPause}
-                onTempoChange={handleTempoChange}
-                onPitchChange={handlePitchChange}
-                onMetronomeToggle={handleMetronomeToggle}
-                onLoopArmToggle={handleLoopArmToggle}
-                onSetLoopStart={handleSetLoopStart}
-                onSetLoopEnd={handleSetLoopEnd}
-                onNudgeBars={handleNudgeBars}
-                onMuteLane={handleMuteLane}
-                chords={chords}
-                zoom={zoom}
-                onZoomChange={setZoom}
-                follow={follow}
-                onFollowToggle={handleFollowToggle}
-              />
             </div>
           </>
         )}
