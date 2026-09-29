@@ -1,45 +1,34 @@
-.table {
-  inline-size: 100%;
-  border-collapse: collapse;
-  text-align: start;
-}
-
-.table th {
-  text-align: start;
-  font: 400 var(--ds-t-xs) / 1 var(--ds-mono);
-  color: var(--ds-text-3);
-  text-transform: uppercase;
-  padding: var(--ds-2);
-  border-block-end: 1px solid var(--ds-border);
-}
+/* Table (src/ui/Table) owns the header, cell padding and row borders; this file holds
+   only what is specific to a track row. */
 
 .numberHead {
   inline-size: var(--ds-6);
 }
 
-.row td {
-  padding: var(--ds-1) var(--ds-2);
-  border-block-end: 1px solid var(--ds-border);
-  vertical-align: middle;
-}
-
 .number {
-  font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
   color: var(--ds-text-2);
 }
 
+/* Aligned to TextField's input: --ds-border-strong, the accent focus border and
+   --ds-t-md. It stays a raw input rather than a TextField because the column header
+   labels it -- a second visible label on every row would be wrong. */
 .title {
   inline-size: 100%;
   min-block-size: var(--ds-hit-setup);
-  padding: 0 var(--ds-2);
+  padding: 0 var(--ds-3);
   background: var(--ds-ground);
-  border: 1px solid var(--ds-border);
+  border: 1px solid var(--ds-border-strong);
   border-radius: var(--ds-r-input);
   color: var(--ds-text);
+  font: 400 var(--ds-t-md) / 1 var(--ds-font);
+}
+
+.title:focus {
+  border-color: var(--ds-accent);
+  outline: none;
 }
 
 .meta {
-  font: 400 var(--ds-t-xs) / 1.4 var(--ds-mono);
   color: var(--ds-text-2);
   white-space: nowrap;
 }

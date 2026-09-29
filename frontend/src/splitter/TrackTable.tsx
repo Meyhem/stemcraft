@@ -7,6 +7,7 @@
 // every track inherits them by construction (D8-05). "Typed once and filled
 // down" is the data model, not a button.
 import type { ClientSpan } from './spans';
+import { Table } from '../ui';
 import styles from './TrackTable.module.css';
 
 export interface TrackTableProps {
@@ -21,7 +22,7 @@ function formatDuration(seconds: number): string {
 
 export function TrackTable({ spans, onTitleChange }: TrackTableProps) {
   return (
-    <table className={styles.table}>
+    <Table>
       <thead>
         <tr>
           <th scope="col" className={styles.numberHead}>
@@ -34,8 +35,8 @@ export function TrackTable({ spans, onTitleChange }: TrackTableProps) {
       </thead>
       <tbody>
         {spans.map((span, index) => (
-          <tr key={span.number} className={styles.row}>
-            <td className={styles.number}>{span.number}</td>
+          <tr key={span.number}>
+            <td className={`num ${styles.number}`}>{span.number}</td>
             <td>
               <input
                 className={styles.title}
@@ -45,13 +46,13 @@ export function TrackTable({ spans, onTitleChange }: TrackTableProps) {
                 onChange={(event) => onTitleChange(index, event.target.value)}
               />
             </td>
-            <td className={styles.meta}>{formatDuration(span.durationSeconds)}</td>
+            <td className={`num ${styles.meta}`}>{formatDuration(span.durationSeconds)}</td>
             {/* Shown before the split runs, on purpose: the user should be
                 able to see what they are about to get. */}
-            <td className={styles.meta}>{span.filename}</td>
+            <td className={`num ${styles.meta}`}>{span.filename}</td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </Table>
   );
 }

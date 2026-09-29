@@ -15,7 +15,7 @@
 //    measured length reaches album.json only by a PUT from here. See
 //    `useStampedLength` below.
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -42,11 +42,34 @@ import {
 import { trackSpans } from '../splitter/spans';
 import { TrackTable } from '../splitter/TrackTable';
 import { WaveformMarkers } from '../splitter/WaveformMarkers';
+import {
+  Banner,
+  Button,
+  ButtonLink,
+  Chip,
+  DropZone,
+  EmptyState,
+  Panel,
+  ProgressBar,
+  TextField,
+  TextLink,
+  type ChipTone,
+} from '../ui';
 import styles from './AlbumSplitter.module.css';
 
 // D-03: the one sample rate. The <audio> element speaks seconds; album.json
 // speaks samples; this is the only place the two meet.
 const SAMPLE_RATE = 48000;
+
+// Album state, like song state, is derived from which files exist (client.ts AlbumState).
+// 'split' is the finished state; 'uploaded' and 'ready' are intermediate and neutral --
+// an album that has only been uploaded is not a warning. Unknown states fall back to
+// neutral, never to ok.
+const STATE_TONE: Record<string, ChipTone> = {
+  uploaded: 'neutral',
+  ready: 'neutral',
+  split: 'ok',
+};
 
 const ALBUM_JOB_KINDS = new Set(['import_album', 'split_album']);
 
@@ -134,65 +157,73 @@ function AlbumPicker() {
         out. Upload it, move the boundaries where you want them, name the tracks, then render.
       </p>
 
-      <form className={styles.form} onSubmit={handleUpload}>
-        <h2>Upload an album</h2>
-        <div className={styles.field}>
-          <label htmlFor="album-file">Audio or video file</label>
-          <input
+      <Panel className={styles.form}>
+        <form className={styles.inner} onSubmit={handleUpload}>
+          <h2>Upload an album</h2>
+          <DropZone
             id="album-file"
-            type="file"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            label="Audio or video file"
+            file={file}
+            onFile={setFile}
+            hint="One long file; anything ffmpeg can decode."
           />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="album-upload-title">Album title</label>
-          <input
+          <TextField
             id="album-upload-title"
+            label="Album title"
             placeholder="From the file name, if left blank"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="album-upload-artist">Artist</label>
-          <input
+          <TextField
             id="album-upload-artist"
+            label="Artist"
             value={artist}
             onChange={(event) => setArtist(event.target.value)}
           />
-        </div>
-        <button className={styles.submit} type="submit" disabled={!file || upload.isPending}>
-          {upload.isPending ? 'Uploading…' : 'Upload album'}
-        </button>
-        {/* N-08: the server's real message, not a generic failure notice. */}
-        {upload.isError && <p className={styles.error}>{String(upload.error)}</p>}
-      </form>
+          <Button
+            className={styles.submit}
+            type="submit"
+            variant="primary"
+            disabled={!file || upload.isPending}
+          >
+            {upload.isPending ? 'Uploading…' : 'Upload album'}
+          </Button>
+          {/* N-08: the server's real message, not a generic failure notice. */}
+          {upload.isError && (
+            <Banner tone="error" title="Upload failed" trace={String(upload.error)} />
+          )}
+        </form>
+      </Panel>
 
       <h2>Albums</h2>
-      {albums.isError && <p role="alert">{String(albums.error)}</p>}
-      {albums.data?.length === 0 && <p className={styles.note}>No albums yet.</p>}
-      {del.isError && <p className={styles.error}>{String(del.error)}</p>}
+      {albums.isError && (
+        <Banner tone="error" title="The albums could not be listed" trace={String(albums.error)} />
+      )}
+      {albums.data?.length === 0 && <EmptyState title="No albums yet." />}
+      {del.isError && (
+        <Banner tone="error" title="The album could not be deleted" trace={String(del.error)} />
+      )}
       <ul className={styles.grid}>
         {(albums.data ?? []).map((entry) => (
           <li key={entry.dir} className={styles.card}>
             {entry.album ? (
               <>
-                <Link className={styles.link} to={`/splitter/${entry.album.id}`}>
-                  {entry.album.title}
-                </Link>
+                <TextLink to={`/splitter/${entry.album.id}`}>{entry.album.title}</TextLink>
                 <span className={styles.artist}>{entry.album.artist}</span>
-                <span className={styles.state}>{entry.state}</span>
+                <Chip tone={STATE_TONE[entry.state ?? ''] ?? 'neutral'} dot>
+                  {entry.state}
+                </Chip>
               </>
             ) : (
               <>
                 <span>{entry.dir}</span>
                 {/* §9: one unreadable album never breaks the list. */}
-                <pre className={styles.error}>{entry.unreadable}</pre>
+                <Banner tone="error" title="This album could not be read" trace={entry.unreadable} />
               </>
             )}
-            <button className={styles.delete} type="button" onClick={() => handleDelete(entry)}>
+            <Button className={styles.delete} variant="danger" onClick={() => handleDelete(entry)}>
               Delete
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
@@ -371,9 +402,7 @@ function AlbumEditor({ albumId }: { albumId: string }) {
   // friendlier but invented diagnosis.
   if (albumQuery.isError) {
     return (
-      <p role="alert" className={styles.error}>
-        {String(albumQuery.error)}
-      </p>
+      <Banner tone="error" title="The album could not be loaded" trace={String(albumQuery.error)} />
     );
   }
 
@@ -387,10 +416,14 @@ function AlbumEditor({ albumId }: { albumId: string }) {
     return (
       <section className={styles.screen}>
         <h1>Album splitter</h1>
-        <pre className={styles.error}>{albumQuery.data?.unreadable}</pre>
-        <Link className={styles.link} to="/splitter">
+        <Banner
+          tone="error"
+          title="This album could not be read"
+          trace={albumQuery.data?.unreadable}
+        />
+        <ButtonLink variant="ghost" to="/splitter">
           Back to albums
-        </Link>
+        </ButtonLink>
       </section>
     );
   }
@@ -413,38 +446,34 @@ function AlbumEditor({ albumId }: { albumId: string }) {
             {album.artist ? ` — ${album.artist}` : ''}
           </p>
         </div>
-        <Link className={styles.link} to="/splitter">
+        <ButtonLink variant="ghost" to="/splitter">
           Back to albums
-        </Link>
+        </ButtonLink>
       </header>
 
       {/* ApiError's message already carries the server's own detail, so it is
           shown as it came rather than paraphrased into reassurance. */}
       {saveError && (
-        <p role="alert" className={styles.error}>
-          {saveError.message}
-        </p>
+        <Banner tone="error" title="Your last change was not saved" trace={saveError.message} />
       )}
 
       {/* Typed once, filled down by construction: these are fields on the
           album, so every rendered track carries them through SplitRecipe. */}
       <div className={styles.row}>
-        <div className={styles.field}>
-          <label htmlFor="album-title">Album title</label>
-          <input
-            id="album-title"
-            value={album.title}
-            onChange={(event) => applyEdit({ ...album, title: event.target.value })}
-          />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="album-artist">Album artist</label>
-          <input
-            id="album-artist"
-            value={album.artist}
-            onChange={(event) => applyEdit({ ...album, artist: event.target.value })}
-          />
-        </div>
+        <TextField
+          id="album-title"
+          label="Album title"
+          fieldClassName={styles.field}
+          value={album.title}
+          onChange={(event) => applyEdit({ ...album, title: event.target.value })}
+        />
+        <TextField
+          id="album-artist"
+          label="Album artist"
+          fieldClassName={styles.field}
+          value={album.artist}
+          onChange={(event) => applyEdit({ ...album, artist: event.target.value })}
+        />
       </div>
       <p className={styles.note}>
         Both are written into every track's tags — there is nothing to fill down.
@@ -481,21 +510,22 @@ function AlbumEditor({ albumId }: { albumId: string }) {
       )}
 
       <div className={styles.actions}>
-        <button
-          type="button"
+        <Button
           className={styles.action}
           disabled={!proposals || proposals.split_points.length === 0}
           onClick={applyProposals}
         >
           Use proposed boundaries
           {proposals ? ` (${proposals.split_points.length})` : ''}
-        </button>
+        </Button>
         <span className={styles.note}>
           {/* D8-04, stated in the UI: proposals never move a boundary on their
               own, so re-detecting can never undo a drag. */}
           Replaces every boundary with the detected silences. Nothing moves until you press it.
         </span>
       </div>
+      {/* Deliberately a note, not an alert: a 404 here is the normal "the worker has not
+          proposed anything yet" state, which is not a failure. */}
       {proposalsQuery.isError && <p className={styles.note}>{String(proposalsQuery.error)}</p>}
 
       <TrackTable spans={spans} onTitleChange={setTrackTitle} />
@@ -506,43 +536,37 @@ function AlbumEditor({ albumId }: { albumId: string }) {
         </p>
       )}
 
-      <button
-        type="button"
+      <Button
         className={styles.submit}
+        variant="primary"
         disabled={Boolean(reason) || queueSplit.isPending}
         aria-describedby={reason ? 'split-reason' : undefined}
         onClick={() => void handleSplit()}
       >
         {queueSplit.isPending ? 'Queueing…' : `Split into ${spans.length} tracks`}
-      </button>
+      </Button>
 
       {/* N-08: the API's own message, verbatim. */}
-      {queueSplit.isError && <p className={styles.error}>{String(queueSplit.error)}</p>}
+      {queueSplit.isError && (
+        <Banner tone="error" title="The split could not be queued" trace={String(queueSplit.error)} />
+      )}
 
       {job && (job.state === 'queued' || job.state === 'running') && (
-        <p className={styles.progressRow}>
+        <div className={styles.progressRow}>
           <span>
             {job.kind} — {job.state}
           </span>
-          <progress
-            className={styles.progress}
-            role="progressbar"
-            aria-valuenow={Math.round(job.progress * 100)}
-            max={100}
-            value={Math.round(job.progress * 100)}
-          />
-          <Link className={styles.link} to="/jobs">
-            Job {job.id}
-          </Link>
-        </p>
+          <ProgressBar className={styles.progress} value={job.progress} label={`${job.kind} progress`} />
+          <TextLink to="/jobs">Job {job.id}</TextLink>
+        </div>
       )}
       {/* N-08: the worker's real error text, never a generic message. */}
-      {job?.state === 'failed' && <p className={styles.error}>{job.error}</p>}
+      {job?.state === 'failed' && <Banner tone="error" title="The job failed" trace={job.error} />}
 
       {/* Derived state (§6): the zip is offered because the server says the
           file exists, never because this session happened to press Split. */}
       {files?.has_zip && (
-        <a className={styles.link} href={albumZipUrl(albumId)} download>
+        <a className={styles.download} href={albumZipUrl(albumId)} download>
           Download album.zip
         </a>
       )}
@@ -551,7 +575,7 @@ function AlbumEditor({ albumId }: { albumId: string }) {
         <ul className={styles.files}>
           {(tracksQuery.data ?? []).map((track) => (
             <li key={track.name}>
-              <a className={styles.link} href={albumTrackUrl(albumId, track.name)}>
+              <a className={styles.download} href={albumTrackUrl(albumId, track.name)}>
                 {track.name}
               </a>
             </li>
