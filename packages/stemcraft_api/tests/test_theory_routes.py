@@ -92,3 +92,15 @@ def test_the_worker_never_touches_theory_json():
     worker_src = Path(__file__).resolve().parents[2] / "stemcraft_worker" / "src"
     assert worker_src.is_dir()
     assert [p for p in worker_src.rglob("*.py") if "theory" in p.read_text()] == []
+
+
+def test_put_that_cannot_write_says_why(client, monkeypatch):
+    def boom(*_args, **_kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr("stemcraft_api.routes.theory.write_theory", boom)
+    doc = client.get("/api/theory").json()
+    resp = client.put("/api/theory", json=doc)
+    assert resp.status_code == 500
+    assert "disk full" in resp.json()["detail"]
+    assert "theory.json" in resp.json()["detail"]

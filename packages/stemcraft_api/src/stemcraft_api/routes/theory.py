@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 from stemcraft_lib.config import settings
-from stemcraft_lib.theory import Theory, TheoryUnreadable, read_theory, write_theory
+from stemcraft_lib.theory import Theory, TheoryUnreadable, read_theory, theory_path, write_theory
 
 router = APIRouter()
 
@@ -26,4 +26,9 @@ def get_theory() -> dict:
 def put_theory(body: Theory) -> dict:
     # A full replacement, like PUT /api/songs/{id}. FastAPI has already refused
     # an invalid body with a 422 naming the field.
-    return write_theory(settings().data_dir, body).model_dump(mode="json")
+    data_dir = settings().data_dir
+    try:
+        return write_theory(data_dir, body).model_dump(mode="json")
+    except OSError as exc:
+        # The banner quotes this (U-09); a bare 500 would hide why the save failed.
+        raise HTTPException(status_code=500, detail=f"{theory_path(data_dir)}: {exc}") from exc

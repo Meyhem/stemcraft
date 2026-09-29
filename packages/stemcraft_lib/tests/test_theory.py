@@ -103,3 +103,20 @@ def test_unknown_fields_and_tools_are_refused():
         Theory.model_validate({"last_tool": "tab-reader"})
     with pytest.raises(ValueError, match="fret range"):
         Theory.model_validate({"quiz": {"settings": {"fretboard": {"frets": [12, 3]}}}})
+
+
+def test_theory_json_that_is_a_directory_is_unreadable(tmp_path):
+    theory_path(tmp_path).mkdir()
+    with pytest.raises(TheoryUnreadable, match="theory.json"):
+        read_theory(tmp_path)
+
+
+def test_theory_json_that_is_not_utf8_is_unreadable(tmp_path):
+    theory_path(tmp_path).write_bytes(b'{"version": 1, "x": "\xff\xfe"}')
+    with pytest.raises(TheoryUnreadable, match="theory.json"):
+        read_theory(tmp_path)
+
+
+def test_pitch_with_a_trailing_newline_is_refused():
+    with pytest.raises(ValueError, match="not scientific pitch"):
+        Theory.model_validate({"instrument": {"tuning": ["E1\n", "A1", "D2", "G2"]}})

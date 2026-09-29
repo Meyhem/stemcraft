@@ -41,7 +41,7 @@ Tool = Literal[
 ]
 
 # Scientific pitch: a letter, up to two accidentals, an octave. "E1", "F#2", "Bb0".
-_PITCH = re.compile(r"^[A-G](#{1,2}|b{1,2})?-?\d$")
+_PITCH = re.compile(r"[A-G](#{1,2}|b{1,2})?-?\d")
 
 
 class TheoryUnreadable(Exception):
@@ -62,7 +62,7 @@ class Instrument(_Strict):
     @field_validator("tuning")
     @classmethod
     def _pitches(cls, tuning: list[str]) -> list[str]:
-        bad = [n for n in tuning if not _PITCH.match(n)]
+        bad = [n for n in tuning if not _PITCH.fullmatch(n)]
         if bad:
             raise ValueError(f"not scientific pitch (like E1 or F#2): {bad}")
         return tuning
@@ -141,6 +141,10 @@ def read_theory(data_dir: Path) -> Theory:
         return Theory()
     except json.JSONDecodeError as exc:
         raise TheoryUnreadable(f"{path}: invalid JSON at line {exc.lineno}: {exc.msg}") from exc
+    except (OSError, UnicodeDecodeError) as exc:
+        # A directory, a permissions error, bytes that are not UTF-8: still the
+        # player's file, still shown verbatim rather than a bare 500 (N-08).
+        raise TheoryUnreadable(f"{path}: {exc}") from exc
     try:
         return Theory.model_validate(raw)
     except ValidationError as exc:
