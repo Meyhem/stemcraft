@@ -245,6 +245,7 @@ Guitar comes later via basic-pitch. Clean single-note lines transcribe well; dis
 - Batch import of a whole folder
 - Song export/import as a zip, for backup or moving machines
 - Send album-splitter tracks straight into the library as Songs
+- Album splitter: full-length playback of the source and user-defined cuts. Autodetection stays the engine's job and proposes cuts; the user can add, remove and adjust them, then run the split. A full-length waveform bar, the same component as the song detail view, makes silences easy to spot
 
 ## Open questions
 
