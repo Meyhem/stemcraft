@@ -121,7 +121,6 @@ test('keys are ignored with a modifier, when held down, and while typing in a fi
   fireEvent.keyDown(window, { key, ctrlKey: true });
   fireEvent.keyDown(window, { key, metaKey: true });
   fireEvent.keyDown(window, { key, altKey: true });
-  fireEvent.keyDown(window, { key, shiftKey: true });
   fireEvent.keyDown(window, { key, repeat: true });
   const field = document.body.appendChild(document.createElement('input'));
   fireEvent.keyDown(field, { key });
@@ -130,6 +129,25 @@ test('keys are ignored with a modifier, when held down, and while typing in a fi
   fireEvent.keyDown(window, { key });
   expect(screen.getByText(/first try/)).toHaveTextContent('1/1 first try');
   field.remove();
+});
+
+test('a wrong tap next to the note says how far off it is in words', async () => {
+  renderTool('/theory/fretboard-quiz', { theory: fb({ strings: [3], frets: [0, 5] }) }); // E string: E F G A at 0 1 3 5
+  const prompt = await screen.findByText(/^Find every /);
+  const fret = { E: 0, F: 1, G: 3, A: 5 }[prompt.textContent!.replace('Find every ', '') as 'E' | 'F' | 'G' | 'A'];
+  const up = fret + 1 <= 5;
+  tapCell({ string: 3, fret: up ? fret + 1 : fret - 1 });
+  expect(screen.getByRole('status')).toHaveTextContent(`one fret too ${up ? 'high' : 'low'}`);
+});
+
+test('a digit typed with Shift answers too: AZERTY and Czech/Slovak keyboards type digits that way', async () => {
+  const { container } = renderTool('/theory/fretboard-quiz', { theory: nameNote });
+  await screen.findByText('Name this note');
+  fireEvent.keyDown(window, { key: DIGITS[questionPc(container)]!, shiftKey: true });
+  expect(screen.getByText(/first try/)).toHaveTextContent('1/1 first try');
+  fireEvent.keyDown(window, { key: '_', shiftKey: true }); // Shift+- on QWERTY is not the B key
+  fireEvent.keyDown(window, { key: '+', shiftKey: true });
+  expect(screen.getByText(/first try/)).toHaveTextContent('1/1 first try');
 });
 
 test('the keyboard listener is removed when the quiz goes away, and stays off in other modes', async () => {
@@ -640,6 +658,7 @@ test('theory.json unreadable: the quiz says it cannot save instead of asking que
   );
   expect(await screen.findByText(/The quiz needs theory.json/)).toBeInTheDocument();
   expect(screen.queryByText(/^round \d+ of 20$/)).toBeNull();
+  expect(screen.queryByRole('group', { name: 'Quiz' })).toBeNull(); // no mode switch that could not do anything
   fireEvent.keyDown(window, { key: '1' });
   expect(puts).toHaveLength(0);
 });
@@ -916,16 +935,16 @@ test('the mid-round warning goes away when the quiz is left (its answers are the
 test('the unsaved-answers warning survives StrictMode', async () => {
   vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => (init?.method === 'PUT' ? new Response(String(init.body)) : new Response(JSON.stringify(DEFAULT_THEORY)))));
   const view = render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <StrictMode>
+    <StrictMode>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <TheoryDocProvider>
           <Ready>
             <Probe />
             <p>ready</p>
           </Ready>
         </TheoryDocProvider>
-      </StrictMode>
-    </QueryClientProvider>,
+      </QueryClientProvider>
+    </StrictMode>,
   );
   await screen.findByText('ready');
   record(1);

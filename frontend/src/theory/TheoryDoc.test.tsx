@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
-import { StrictMode } from 'react';
+import { StrictMode, useEffect, useRef } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 
 import { DEFAULT_THEORY, type QuizAnswer, type TheoryDoc } from '../api/client';
@@ -14,6 +14,7 @@ function Probe() {
       <p data-testid="tool">{hook.doc ? hook.doc.last_tool : 'loading'}</p>
       <p data-testid="save-error">{hook.saveError ?? ''}</p>
       <p data-testid="load-error">{hook.loadError ?? ''}</p>
+      <p data-testid="holding">{hook.holding ? 'holding' : ''}</p>
     </>
   );
 }
@@ -468,13 +469,13 @@ test('the browser is asked to warn while a kept document exists after leaving, u
 test('the unload guard is taken again after StrictMode’s simulated unmount', async () => {
   const s = server({ putStatus: 200 });
   render(
-    <QueryClientProvider client={appClient()}>
-      <StrictMode>
+    <StrictMode>
+      <QueryClientProvider client={appClient()}>
         <TheoryDocProvider>
           <Probe />
         </TheoryDocProvider>
-      </StrictMode>
-    </QueryClientProvider>,
+      </QueryClientProvider>
+    </StrictMode>,
   );
   await screen.findByText('scale-finder');
   act(() => hook.update(tool('triads')));
@@ -694,4 +695,87 @@ test('the server saying the file is unreadable is told apart from a failure to r
   mount(appClient());
   await waitFor(() => expect(screen.getByTestId('load-error')).toHaveTextContent('broken'));
   expect(hook.fileUnreadable).toBe(true);
+});
+
+// ---------------------------------------------------------------- a save asked for as the previous one finishes (B5)
+
+test('a save asked for in the moment a save finishes is sent, not folded into the finished one', async () => {
+  const s = server();
+  mount();
+  await screen.findByText('scale-finder');
+  act(() => hook.update(tool('note-finder'), { now: true }));
+  await waitFor(() => expect(s.puts).toHaveLength(1));
+  // The finished save lets go of the unload guard as its last step; a change arriving in the very next microtask,
+  // before the finished save's own cleanup, must still go out.
+  const remove = window.removeEventListener.bind(window);
+  vi.spyOn(window, 'removeEventListener').mockImplementationOnce((...args: Parameters<typeof window.removeEventListener>) => {
+    queueMicrotask(() => hook.update(tool('triads'), { now: true }));
+    remove(...args);
+  });
+  await act(async () => s.settle[0]!(200));
+  await waitFor(() => expect(s.puts).toHaveLength(2));
+  expect(s.puts[1]!.last_tool).toBe('triads');
+  await act(async () => s.settle[1]!(200));
+  await waitFor(() => expect(unloadPrompted()).toBe(false));
+});
+
+// ---------------------------------------------------------------- held saves are visible (B9, B10)
+
+test('while a kept document waits for a slow read, the held saves are visible, and stop being so once it is applied', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const w = slowGetWorld();
+  await leaveWithKeptRound(w);
+  mount(w.client);
+  await screen.findByText('scale-finder'); // the cached document, while the GET hangs
+  expect(screen.getByTestId('holding')).toHaveTextContent('holding');
+  act(() => hook.update(tool('triads')));
+  await w.wait(1500);
+  expect(w.puts).toHaveLength(0);
+  expect(screen.getByTestId('holding')).toHaveTextContent('holding');
+  await w.answerGet();
+  await waitFor(() => expect(w.puts).toHaveLength(1));
+  expect(screen.getByTestId('holding')).toHaveTextContent('');
+});
+
+test('nothing is said to be held when no kept document is waiting', async () => {
+  server({ putStatus: 200 });
+  mount(appClient());
+  await screen.findByText('scale-finder');
+  act(() => hook.update(tool('triads')));
+  expect(screen.getByTestId('holding')).toHaveTextContent('');
+});
+
+test('an edit made while a kept document waits is applied exactly once across StrictMode’s simulated unmount and remount', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const w = slowGetWorld();
+  await leaveWithKeptRound(w);
+  // A mount-time edit, made once (the ref survives the simulated remount), while the kept document waits for the read.
+  function EditOnce() {
+    const done = useRef(false);
+    const { update } = useTheoryDoc();
+    useEffect(() => {
+      if (done.current) return;
+      done.current = true;
+      update(withAnswers([answer(50, '2026-03-05T00:00:00.000Z', 's9f9')]));
+    }, [update]);
+    return null;
+  }
+  // StrictMode at the root, as in main.tsx: nested inside another component, React 19 does not simulate the remount.
+  render(
+    <StrictMode>
+      <QueryClientProvider client={w.client}>
+        <TheoryDocProvider>
+          <Probe />
+          <EditOnce />
+        </TheoryDocProvider>
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+  await screen.findByText('scale-finder');
+  await w.answerGet();
+  await waitFor(() => expect(w.puts.length).toBeGreaterThan(0));
+  await w.wait(1500);
+  const sent = w.puts.at(-1)!;
+  expect(sent.quiz.history.filter((a) => a.item === 's9f9')).toHaveLength(1);
+  expect(sent.quiz.history).toHaveLength(4);
 });

@@ -45,7 +45,7 @@ export function CircleOfFifthsTool() {
             Relative {rel.mode}: <Link to={toKey(rel.root, rel.mode)}>{pretty(rel.root)} {rel.mode}</Link>
           </p>
           <p>
-            Neighbours (a fifth away, one sharp or flat different):{' '}
+            Neighbours (a fifth away; they share six of their seven notes):{' '}
             {neighbours.map((k, n) => (
               <span key={k.dir}>
                 {n > 0 && ' · '}

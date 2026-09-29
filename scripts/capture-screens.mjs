@@ -48,6 +48,8 @@ const PLAY_MS = { 'play-along': 7000 };
 const shots = process.argv.slice(2).map((arg) => {
   // Split on the FIRST '=' only: a path may carry a query string (theory=/theory/x?root=A).
   const eq = arg.indexOf('=');
+  // No '=' (or nothing before it) is not a pair; slicing at -1 would make one up.
+  if (eq < 1) throw new Error(`expected name=path, got ${arg}`);
   const name = arg.slice(0, eq);
   const path = arg.slice(eq + 1);
   if (!name || !path) throw new Error(`expected name=path, got ${arg}`);

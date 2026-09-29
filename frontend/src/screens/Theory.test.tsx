@@ -36,6 +36,10 @@ interface Server {
   putStatus?: number;
   songsStatus?: number;
   songsMessage?: string;
+  /** The song list, when not the default three songs. */
+  songs?: ReturnType<typeof songEntry>[];
+  /** GET /api/theory answers only once this settles. */
+  theoryGate?: Promise<void>;
   /** While true, GET /api/theory fails as fetch does when the API cannot be reached. */
   unreachable?: { value: boolean };
 }
@@ -52,6 +56,7 @@ function setup(path: string, server: Server = {}) {
       return new Response(JSON.stringify(body));
     }
     if (url === '/api/theory') {
+      await server.theoryGate;
       if (server.unreachable?.value) throw new TypeError('Failed to fetch');
       return 'status' in stored
         ? new Response(JSON.stringify({ detail: stored.detail }), { status: stored.status })
@@ -63,7 +68,7 @@ function setup(path: string, server: Server = {}) {
       }
       return new Response(
         JSON.stringify({
-          songs: [
+          songs: server.songs ?? [
             songEntry('01OLD', 'Old Song', true, '2026-01-01T00:00:00Z'),
             songEntry('01TIGHT', 'Tightrope', true, '2026-09-01T00:00:00Z'),
             songEntry('01RAW', 'Raw Song', false, null),
@@ -194,7 +199,7 @@ test('song card: analysed songs newest first, key candidates load the key', asyn
   const { where } = setup('/theory/scale-finder', { theory: { ...DEFAULT_THEORY, song_id: '01TIGHT' } });
   const picker = await screen.findByRole('combobox', { name: 'Song' });
   await waitFor(() => expect(within(picker).getAllByRole('option').map((o) => o.textContent)).toEqual([
-    'Pick an analysed song',
+    'Pick a song',
     'Tightrope',
     'Old Song',
   ]));
@@ -222,7 +227,7 @@ test('song card: a failed song list shows the real error, not "no longer exists"
   });
   const alert = await screen.findByText(/GET \/api\/songs → 500/);
   expect(alert).toBeInTheDocument();
-  expect(screen.queryByText('That song no longer exists')).not.toBeInTheDocument();
+  expect(screen.queryByText(/That song no longer exists/)).not.toBeInTheDocument();
 });
 
 test('a failed read offers Try again, with a neutral title when the API could not be reached (N-08)', async () => {
@@ -246,4 +251,30 @@ test('Try again on a file that is still unreadable keeps the banner and its reas
   fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('invalid JSON at line 3'));
   expect(screen.getByRole('alert')).toHaveTextContent("theory.json can't be read");
+});
+
+test('song card: with no analysed song there is nothing to pick, and it says so in full', async () => {
+  setup('/theory/scale-finder', { songs: [songEntry('01RAW', 'Raw Song', false, null)] });
+  await screen.findByRole('heading', { name: 'Scale finder' });
+  expect(await screen.findByText('No analysed songs yet')).toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'Song' })).toBeNull();
+});
+
+test('changes kept from the last visit wait for this visit’s read, and the screen says so while they do', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  setup('/theory/scale-finder', { putStatus: 500 });
+  const instrument = await screen.findByRole('combobox', { name: 'Instrument' });
+  await waitFor(() => expect(instrument).toBeEnabled());
+  fireEvent.change(instrument, { target: { value: 'guitar6' } });
+  await screen.findByText("Couldn't save", {}, { timeout: 2000 });
+  cleanup(); // left with the change unsaved: kept for the next visit
+  await new Promise((r) => setTimeout(r, 0));
+
+  let open!: () => void;
+  const { puts } = setup('/theory/scale-finder', { theoryGate: new Promise<void>((r) => (open = r)) });
+  expect(await screen.findByText('Waiting to read theory.json before saving your changes…')).toBeInTheDocument();
+  expect(puts).toHaveLength(0);
+  await act(async () => open());
+  await waitFor(() => expect(puts.at(-1)?.instrument.kind).toBe('guitar'));
+  expect(screen.queryByText(/Waiting to read theory.json/)).toBeNull();
 });

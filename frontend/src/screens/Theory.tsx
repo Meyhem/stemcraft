@@ -3,7 +3,9 @@
 // here, above whichever tool is open: a failed read is an error banner with the
 // verbatim reason, Try again, and a confirmed reset (U-09, N-08); its title says
 // whether the API reported the file unreadable or could not be reached. A failed
-// save is a warning with Retry, and the unsaved change stays in memory.
+// save is a warning with Retry, and the unsaved change stays in memory. Changes
+// kept from an earlier visit wait for this visit's read before any save, and a
+// status line says so while they do.
 import { useEffect } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 
@@ -24,7 +26,7 @@ export function Theory() {
 function TheoryScreen() {
   const { tool } = useParams();
   const { search } = useLocation();
-  const { doc, loadError, fileUnreadable, reload, saveError, update, retry, resetToDefaults } = useTheoryDoc();
+  const { doc, loadError, fileUnreadable, reload, saveError, holding, update, retry, resetToDefaults } = useTheoryDoc();
   const def = toolBySlug(tool);
 
   useEffect(() => {
@@ -55,6 +57,11 @@ function TheoryScreen() {
               Reset to defaults…
             </Button>
           </Banner>
+        )}
+        {holding && (
+          <p className={styles.dimText} role="status">
+            Waiting to read theory.json before saving your changes…
+          </p>
         )}
         {saveError && (
           <Banner tone="warn" title="Couldn't save" trace={saveError}>

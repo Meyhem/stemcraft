@@ -155,3 +155,28 @@ test('barLabel: a numeral, borrowed (outside the key), or unreadable with its re
   expect(numeralInKey('G', 'minor', 'C')).toBeNull();
   expect(barLabel('G', 'minor', 'Xyz')).toEqual({ kind: 'unreadable', text: 'unreadable', reason: expect.stringContaining('Xyz') });
 });
+
+test('progressions: a minor progression in a key picked as major is spelled as the minor key would be (Db major, Andalusian)', async () => {
+  renderTool('/theory/progressions?root=Db');
+  await screen.findByRole('heading', { name: 'Progressions' });
+  const def = PROGRESSIONS.find((p) => p.mode === 'minor')!;
+  fireEvent.click(within(screen.getByRole('group', { name: 'Progression' })).getByRole('button', { name: def.label }));
+  expect(screen.getByText('C♯ minor')).toBeInTheDocument();
+  expect(barsOf().map((b) => b.textContent).join(' ')).not.toMatch(/𝄫|Bbb|C♭/);
+  expect(barsOf().map((b) => b.textContent)).toEqual(progressionChords(def, 'C#').map((c, i) => `${def.numerals[i]}${c.replace('#', '♯').replace('b', '♭')}`));
+});
+
+test('progressions: a major progression in a key picked as minor is spelled as the major key would be (G♯ minor, pop)', async () => {
+  renderTool('/theory/progressions?root=G%23&scale=minor');
+  await screen.findByRole('heading', { name: 'Progressions' });
+  fireEvent.click(within(screen.getByRole('group', { name: 'Progression' })).getByRole('button', { name: 'I–V–vi–IV' }));
+  expect(screen.getByText('A♭ major')).toBeInTheDocument();
+  expect(barsOf().map((b) => b.textContent)).toEqual(['IA♭', 'VE♭', 'viFm', 'IVD♭']);
+});
+
+test("progressions: the song chart spells a chord by the key's own letters (D#:maj in G minor reads VI E♭), and says bars with no chord are left out", async () => {
+  renderTool('/theory/progressions?root=G&scale=minor', { theory: { song_id: '01SONG' }, analysis: analysisOf(['G:min', 'D#:maj', 'N', 'D:7']) });
+  fireEvent.click(await screen.findByRole('button', { name: 'This song · Tightrope' }));
+  expect(barsOf().map((b) => b.textContent)).toEqual(['iGm', 'VIE♭', 'VD7']);
+  expect(screen.getByText(/One entry per chord change/)).toHaveTextContent('Bars with no chord (N) are left out.');
+});

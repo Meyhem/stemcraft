@@ -29,6 +29,13 @@ test('circle of fifths: key signature, relative key and neighbours', async () =>
   expect(where()).toBe('/theory/circle-of-fifths?root=A');
 });
 
+test('neighbours are described by what stays true at the enharmonic seam: six shared notes, not one sharp or flat', async () => {
+  renderTool('/theory/circle-of-fifths?root=C%23'); // C♯ major's neighbours are F♯ and A♭: seven sharps next to four flats
+  await screen.findByRole('heading', { name: 'Circle of fifths' });
+  expect(screen.getByText(/Neighbours/)).toHaveTextContent('Neighbours (a fifth away; they share six of their seven notes):');
+  expect(screen.queryByText(/one sharp or flat/)).toBeNull();
+});
+
 test.each([
   ['A', 'minor', 'no sharps or flats', 'C major'],
   ['E', 'minor', '1 sharp · F♯', 'G major'],

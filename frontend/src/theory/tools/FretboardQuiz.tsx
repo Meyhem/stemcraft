@@ -176,14 +176,15 @@ export function FretboardQuiz() {
     if (pc === q.pc) return miss(a, cell, `✕ that's ${name}, ${OUTSIDE}`);
     const near = q.targets.filter((t) => t.string === cell.string).sort((x, y) => Math.abs(x.fret - cell.fret) - Math.abs(y.fret - cell.fret))[0];
     const diff = near ? cell.fret - near.fret : 0;
-    const how = near && Math.abs(diff) <= 2 ? `, ${Math.abs(diff)} fret${Math.abs(diff) > 1 ? 's' : ''} too ${diff > 0 ? 'high' : 'low'}` : '';
+    const how = near && Math.abs(diff) <= 2 ? `, ${['', 'one fret', 'two frets'][Math.abs(diff)]} too ${diff > 0 ? 'high' : 'low'}` : '';
     miss(a, cell, `✕ that's ${name}${how}`);
   };
 
-  // Name the note by keyboard. One listener per mode, always calling this render's handler.
+  // Name the note by keyboard. One listener per mode, always calling this render's handler. Shift is let through:
+  // AZERTY and Czech/Slovak QWERTZ type the digits with it, and Shift+- and Shift+= are _ and +, not note keys.
   const onKey = useRef<(e: KeyboardEvent) => void>(() => {});
   onKey.current = (e) => {
-    const key = quizKey(e);
+    const key = quizKey(e, { shift: true });
     const pc = key === null ? -1 : NOTE_KEYS.indexOf(key);
     if (pc >= 0) answerNote(pc);
   };
@@ -203,7 +204,8 @@ export function FretboardQuiz() {
 
   const header = (
     <ToolHeader title="Fretboard quiz">
-      <Segmented label="Quiz" value={settings.mode} onChange={(mode) => setSettings({ mode })} options={MODES} />
+      {/* Without a readable theory.json a mode could be neither saved nor played: no switch that does nothing. */}
+      {doc && <Segmented label="Quiz" value={settings.mode} onChange={(mode) => setSettings({ mode })} options={MODES} />}
     </ToolHeader>
   );
 

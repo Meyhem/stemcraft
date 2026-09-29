@@ -79,6 +79,12 @@ export interface TheoryDocState {
   /** The last PUT failed: its message. Cleared by the next successful save. */
   saveError: string | null;
   /**
+   * Changes left unsaved on an earlier visit (and any made since) are waiting for this visit's read of theory.json
+   * before anything is saved, so that the read's answers are merged in rather than overwritten. Nothing is written
+   * meanwhile; a slow or hanging read holds the saves, and this says so.
+   */
+  holding: boolean;
+  /**
    * Applies `change` now and saves it: after 500 ms, or at once with `{ now: true }`. Returns whether it was applied:
    * false while there is no readable document (nothing is written over an unreadable file, U-09). With `{ keep: true }`
    * a change that would be refused because the file cannot be read now is instead kept in memory, with a message in
@@ -140,6 +146,8 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   const blocked = useRef(false);
   blocked.current = unreadable;
   const doc = unreadable ? null : local ?? query.data ?? null;
+  // Read during render: every change to it (a kept document applied, an edit while waiting, a reset) sets `local`.
+  const holding = waiting() && !query.isError;
 
   // The server's document is the base until the player edits. A layout effect,
   // so the ref is set before any child's effect asks `update` for it.
@@ -192,9 +200,13 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
         if (latest.current) keepUnsaved(latest.current);
         leave(error);
       }
+      // Done, as of now: a save asked for from here on starts a run of its own. Left to the `finally` below, one asked
+      // for in the microtask between this return and that callback would set `again` on a loop that has already
+      // exited, and be lost.
+      running.current = null;
       return error;
     })().finally(() => {
-      running.current = null;
+      if (running.current === run) running.current = null; // this run threw: nothing else will clear it
     });
     running.current = run;
     return run;
@@ -333,13 +345,14 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
       doc,
       loadError: query.error ? query.error.message : null,
       fileUnreadable: saysUnreadable(query.error),
+      holding,
       reload: () => void query.refetch(),
       saveError,
       update,
       retry: () => void save(),
       resetToDefaults,
     }),
-    [doc, query.error, query.refetch, saveError, update, save, resetToDefaults],
+    [doc, query.error, query.refetch, saveError, holding, update, save, resetToDefaults],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

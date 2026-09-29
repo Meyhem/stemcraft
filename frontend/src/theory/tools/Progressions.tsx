@@ -67,8 +67,11 @@ export function Progressions() {
   const fromSong = wantsSong && song.state === 'ready' && problem === null;
   const def = PROGRESSIONS.find((p) => p.id === id) ?? PROGRESSIONS[0]!;
   const mode: KeyMode = wantsSong ? sel.mode : def.mode;
+  // A stock progression is in its own mode: the key is spelled as that mode spells it, so a minor progression after
+  // D♭ major is in C♯ minor (C♯m B A G♯), not D♭ minor (D♭m C♭ B𝄫 A♭).
+  const root = wantsSong ? sel.root : rootName(pcOf(sel.root)!, def.mode);
 
-  const chords: string[] = fromSong ? song.sequence : wantsSong ? [] : progressionChords(def, sel.root);
+  const chords: string[] = fromSong ? song.sequence : wantsSong ? [] : progressionChords(def, root);
   const labels: BarLabel[] = fromSong
     ? chords.map((c) => barLabel(sel.root, sel.mode, c))
     : chords.map((_, i) => ({ kind: 'numeral', text: def.numerals[i]! }));
@@ -96,7 +99,7 @@ export function Progressions() {
         <span className={styles.cap}>key</span>
         <NotePicker label="Key" selected={[pcOf(sel.root)!]} onPick={(pc) => select({ root: rootName(pc, mode), mode })} />
         <span>
-          <b>{pretty(sel.root)} {mode}</b>
+          <b>{pretty(root)} {mode}</b>
         </span>
       </div>
       {problem && (
@@ -157,7 +160,7 @@ export function Progressions() {
       )}
       <HelpBox>
         {wantsSong
-          ? `One entry per chord change in the song (a chord that repeats is shown once). Numerals are read against ${pretty(sel.root)} ${sel.mode}; load the song's own key from "from a song", or pick another above. A chord marked borrowed is outside the key: it is not built from the key's notes.`
+          ? `One entry per chord change in the song (a chord that repeats is shown once). Numerals are read against ${pretty(sel.root)} ${sel.mode}; load the song's own key from "from a song", or pick another above. A chord marked borrowed is outside the key: it is not built from the key's notes. Bars with no chord (N) are left out.`
           : 'Roman numerals name each chord by its step in the key, so the same progression works in any key: pick another key above.'}
       </HelpBox>
     </>

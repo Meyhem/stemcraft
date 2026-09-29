@@ -1,8 +1,9 @@
 // "From a song" (D-19): pick an analysed song, then load one of its key
 // candidates into the shared selection. The song's chords become available to
-// Chord finder (and later Progressions and Name that chord) through
-// useChosenSong. Candidates are probabilistic (R-05), so they are shown with
-// their confidence and the player picks.
+// Chord finder, Progressions and Name that chord through useChosenSong.
+// Candidates are probabilistic (R-05), so they are shown with their confidence
+// and the player picks. With no analysed song there is nothing to pick, and the
+// card says so in full rather than in a clipped select.
 import { useSongs } from '../api/queries';
 import { pretty } from '../music/spell';
 import { useSelection } from './selection';
@@ -24,20 +25,24 @@ export function SongCard() {
   return (
     <div className={chosen.state === 'missing' || chosen.state === 'unanalysed' || chosen.state === 'error' ? `${styles.songCard} ${styles.songCardWarn}` : styles.songCard}>
       <span className={styles.cap}>from a song</span>
-      <select
-        className={styles.select}
-        aria-label="Song"
-        value={doc?.song_id ?? ''}
-        onChange={(e) => choose(e.target.value)}
-        disabled={!doc}
-      >
-        <option value="">{analysed.length ? 'Pick an analysed song' : 'No analysed songs yet'}</option>
-        {analysed.map((e) => (
-          <option key={e.song!.id} value={e.song!.id}>
-            {e.song!.title}
-          </option>
-        ))}
-      </select>
+      {songs.isSuccess && analysed.length === 0 ? (
+        <span className={styles.dimText}>No analysed songs yet</span>
+      ) : (
+        <select
+          className={styles.select}
+          aria-label="Song"
+          value={doc?.song_id ?? ''}
+          onChange={(e) => choose(e.target.value)}
+          disabled={!doc}
+        >
+          <option value="">Pick a song</option>
+          {analysed.map((e) => (
+            <option key={e.song!.id} value={e.song!.id}>
+              {e.song!.title}
+            </option>
+          ))}
+        </select>
+      )}
       {chosen.state === 'missing' && <span className={styles.warnText}>That song no longer exists. Pick another.</span>}
       {chosen.state === 'unanalysed' && (
         <span className={styles.warnText}>{chosen.title} has no analysis yet. The analyze job hasn&apos;t run.</span>

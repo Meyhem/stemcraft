@@ -21,14 +21,15 @@ instrument and play along.
   from the chord ribbon; playback carries on when you switch back to the Song view
 - Theory tab for 4- and 5-string bass and 6-string guitar in any tuning, left-handed too:
   scale, chord and note finders, name a chord from notes you tap, scale positions
-  (pentatonic boxes, 3-notes-per-string, CAGED, all positions), triads and inversions,
+  (pentatonic boxes, 3-notes-per-string, CAGED, position boxes), triads and inversions,
   arpeggios, guitar voicings and bass arpeggio shapes, chords in a key, a circle of
   fifths, 15 progressions in any key and scales that fit a chord. Pick an analysed song
   and one of its key candidates to load its key and chords: they show as chips in the
   chord tools, and Progressions charts the song with numerals, borrowed chords labelled.
-  Two quizzes, a fretboard quiz (name, find, intervals, chord tones) and a theory quiz
-  (keys, chords, intervals), ask about your weak spots more often and show them on a
-  heatmap; the history is kept in `data/theory.json`
+  Two quizzes ask about your weak spots more often: a fretboard quiz (name the note, find
+  the note, find the interval, spell the chord) shows them on a heatmap of the neck, kept
+  per tuning, and a theory quiz (keys, chords, intervals) lists your weakest facts; the
+  history is kept in `data/theory.json`
 - Album splitter: cut a full album rip into tagged MP3s. Silence detection proposes cuts;
   on a full-length waveform you play, zoom with the wheel or by dragging across a range,
   drag, add and delete cuts, or type exact start and end times to the millisecond, then

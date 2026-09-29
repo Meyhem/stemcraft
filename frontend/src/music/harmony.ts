@@ -26,9 +26,11 @@ export function scalesOverChord(chord: ChordInfo): ScaleFit[] {
 }
 
 /**
- * The numeral of a chord in a key, or null when it is outside the key. Null
- * means exactly that (the caller says "borrowed"); it is never "a chord I do
- * not understand", and no chord in the forms below comes back null. Forms:
+ * The numeral of a chord in a key, or null. Null means the chord is outside
+ * the key (the caller says "borrowed"), or that `symbol` is not a chord
+ * chordInfo can read at all; callers pass symbols they have already read, so
+ * for them null is "outside the key". A readable chord of one of the forms
+ * below whose tones are all in the key never comes back null. Forms:
  *  - Diatonic triads and sevenths: the degree triad's numeral, seventh or not,
  *    so G major gives Em7 -> "vi", D7 -> "V". Uppercase for a major degree,
  *    lowercase for a minor one, "vii°"/"ii°" for a diminished one. Every chord
