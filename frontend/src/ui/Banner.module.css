@@ -1,0 +1,52 @@
+/* UI spec §5, "Banner": warn and error, carrying the verbatim trace (U-09). */
+
+.banner {
+  display: flex;
+  gap: var(--ds-4);
+  align-items: flex-start;
+  padding: var(--ds-4) var(--ds-5);
+  border: 1px solid;
+  border-radius: var(--ds-r-panel);
+  background: var(--ds-surface);
+}
+
+.warn {
+  border-color: color-mix(in srgb, var(--ds-warn) 45%, transparent);
+  background: color-mix(in srgb, var(--ds-warn) 8%, transparent);
+  color: var(--ds-warn);
+}
+
+.error {
+  border-color: color-mix(in srgb, var(--ds-error) 45%, transparent);
+  background: color-mix(in srgb, var(--ds-error) 8%, transparent);
+  color: var(--ds-error);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+  min-width: 0;
+  flex: 1;
+}
+
+/* The title takes the tone colour from .banner; the body text returns to --ds-text so
+   a long explanation is not read through a saturated hue. */
+.title { font-weight: 600; }
+
+.text { color: var(--ds-text); }
+
+/* U-09: verbatim, mono, copyable. `white-space: pre` and its own scroll container so a
+   long ffmpeg command line neither wraps into nonsense nor widens the page. */
+.trace {
+  margin-top: var(--ds-3);
+  padding: var(--ds-3);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-input);
+  background: var(--ds-ground);
+  color: var(--ds-text-2);
+  font: 400 var(--ds-t-xs) / 1.6 var(--ds-mono);
+  white-space: pre;
+  overflow-x: auto;
+  user-select: text;
+}

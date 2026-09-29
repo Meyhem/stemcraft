@@ -1,0 +1,39 @@
+/* UI spec §5, "Text field": setup tier. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--ds-t-sm);
+  font-weight: 600;
+  color: var(--ds-text-2);
+}
+
+.input {
+  width: 100%;
+  height: var(--ds-hit-setup);
+  padding: 0 var(--ds-3);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-input);
+  background: var(--ds-ground);
+  color: var(--ds-text);
+  font: 400 var(--ds-t-md) / 1 var(--ds-font);
+}
+
+.input::placeholder { color: var(--ds-text-3); }
+
+/* The accent border replaces the global ring here: an outline on a field inside a dense
+   form reads as a second border. The colour change is the same signal. */
+.input:focus {
+  border-color: var(--ds-accent);
+  outline: none;
+}
+
+.hint {
+  font-size: var(--ds-t-sm);
+  color: var(--ds-text-3);
+}
