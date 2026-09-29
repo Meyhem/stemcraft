@@ -62,6 +62,9 @@ describe('chordLabelFits', () => {
     expect(chordLabelFits('Cmaj7', 56, 24)).toBe(false);
     expect(chordLabelFits('Cmaj7', 112, 24)).toBe(true);
     expect(chordLabelFits('G', 12, 15)).toBe(false);
+    // Measured in the browser: "A#m" at 24 px renders 52 px wide, so with the
+    // 8 px padding and 1 px border (61 px) it overflows a 60 px segment.
+    expect(chordLabelFits('A#m', 60, 24)).toBe(false);
   });
 });
 

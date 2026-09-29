@@ -53,12 +53,13 @@ export function mergeChords(segments: readonly ChordSegment[]): ChordSegment[] {
 
 /**
  * Whether `text` fits a segment `width` px wide at `fontPx`, with the row's
- * 8 px left padding and a 4 px right margin. 0.66 em per glyph is a
- * deliberately generous average for the 600-weight UI sans: a label that
- * does not fit is hidden, never squeezed into its neighbour.
+ * 8 px left padding, its 1 px border and a margin. 0.75 em per glyph is a
+ * deliberately generous average for the 600-weight UI sans -- measured in the
+ * browser, "A#m" at 24 px is 52 px, 0.72 em a glyph, so 0.66 let it overflow.
+ * A label that does not fit is hidden, never squeezed into its neighbour.
  */
 export function chordLabelFits(text: string, width: number, fontPx: number): boolean {
-  return text.length * fontPx * 0.66 + 12 <= width;
+  return text.length * fontPx * 0.75 + 12 <= width;
 }
 
 /** Index of the segment under `position`, or -1 before the first. Binary search. */
