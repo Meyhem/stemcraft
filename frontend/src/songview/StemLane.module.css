@@ -24,6 +24,7 @@
   justify-content: center;
   gap: var(--ds-2);
   padding: var(--ds-2);
+  min-width: 0;
 }
 
 .name {
@@ -60,12 +61,17 @@
    Task 11's problem). accent-color colours a native range input's filled track
    and thumb in every browser this app targets, no custom track markup needed. */
 .gain input[type='range'] {
-  flex: 1;
+  /* min-width: 0 -- a range input has an intrinsic width of ~130px, and a flex item will
+     not shrink below its intrinsic width by default, so slider + readout overflowed the
+     200px head onto the waveform. */
+  flex: 1 1 0;
+  min-width: 0;
   min-height: var(--ds-hit-setup);
   accent-color: var(--lane-hue);
 }
 
 .readout {
+  flex: none;
   font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
   font-variant-numeric: tabular-nums; /* U-04 */
   color: var(--ds-text-2);
