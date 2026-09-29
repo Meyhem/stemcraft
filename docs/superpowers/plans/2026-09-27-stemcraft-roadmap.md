@@ -250,6 +250,8 @@ ordinary import, needing no shared write path.
 - Deploy runbook, and **this is where the dev-setup skill gets written** — against
   commands that have actually been run, not intended ones.
 
+**Plan:** [2026-09-29-phase-9-operations.md](2026-09-29-phase-9-operations.md).
+
 ---
 
 ## Explicitly not planned
