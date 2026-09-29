@@ -41,7 +41,7 @@ export function paintBeatLane(
     ctx.textAlign = 'left';
     ctx.font = '600 13px system-ui, sans-serif';
     ctx.fillStyle = isNext ? colors.textDim : colors.text;
-    ctx.fillText(lane.title, x0 + 10, 15);
+    ctx.fillText(lane.title, x0 + 10, 15, boxW - 20);
 
     for (let q = 1; q < beatsPerBar; q++) {
       const x = x0 + (q * boxW) / beatsPerBar;

@@ -55,6 +55,9 @@ export function paintNeck(
   const g = neckGeometry(width);
   const top = stringY(3) - 22;
   const bottom = stringY(0) + 22;
+  // Dots shrink with the frets on a phone so adjacent frets do not overlap; 21 on desktop.
+  const r = Math.min(21, g.fretW * 0.48);
+  const scale = r / 21;
   ctx.clearRect(0, 0, width, NECK_H);
 
   ctx.fillStyle = colors.board;
@@ -98,7 +101,7 @@ export function paintNeck(
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 4]);
     for (const n of next.notes) {
-      dot(ctx, noteX(g, n.position.fret), stringY(n.position.string), 18);
+      dot(ctx, noteX(g, n.position.fret), stringY(n.position.string), r * (18 / 21));
       ctx.stroke();
     }
     ctx.setLineDash([]);
@@ -126,12 +129,12 @@ export function paintNeck(
     if (isHot) {
       ctx.globalAlpha = 0.22;
       ctx.fillStyle = colors.hot;
-      dot(ctx, x, y, 30);
+      dot(ctx, x, y, r * (30 / 21));
       ctx.fill();
       ctx.globalAlpha = 1;
     }
     ctx.fillStyle = isHot ? colors.hot : colors.note;
-    dot(ctx, x, y, 21);
+    dot(ctx, x, y, r);
     ctx.fill();
     if (d.approach) {
       ctx.strokeStyle = colors.approach;
@@ -139,9 +142,9 @@ export function paintNeck(
       ctx.stroke();
     }
     ctx.fillStyle = colors.onNote;
-    ctx.font = '700 15px system-ui, sans-serif';
-    ctx.fillText(d.name, x, y - 1);
-    ctx.font = '700 10px system-ui, sans-serif';
-    ctx.fillText(d.index.map((i) => i + 1).join('·'), x, y + 13);
+    ctx.font = `700 ${Math.max(9, 15 * scale)}px system-ui, sans-serif`;
+    ctx.fillText(d.name, x, y - scale);
+    ctx.font = `700 ${Math.max(7, 10 * scale)}px system-ui, sans-serif`;
+    ctx.fillText(d.index.map((i) => i + 1).join('·'), x, y + 13 * scale);
   }
 }

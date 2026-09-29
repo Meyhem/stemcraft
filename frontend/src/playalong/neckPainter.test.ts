@@ -11,13 +11,14 @@ const colors: PlayAlongColors = {
 };
 
 function recordingContext() {
-  const calls: { fillText: [string, number, number][] } = { fillText: [] };
+  const calls: { fillText: [string, number, number][]; arc: number[] } = { fillText: [], arc: [] };
   const ctx = new Proxy(
     {},
     {
       get(_target, prop) {
         if (prop === 'fillText') return (text: string, x: number, y: number) => calls.fillText.push([text, x, y]);
-        if (typeof prop === 'string' && ['setLineDash', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'arc', 'fill', 'fillRect', 'clearRect', 'save', 'restore', 'strokeRect', 'roundRect'].includes(prop)) {
+        if (prop === 'arc') return (_x: number, _y: number, r: number) => calls.arc.push(r);
+        if (typeof prop === 'string' && ['setLineDash', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fill', 'fillRect', 'clearRect', 'save', 'restore', 'strokeRect', 'roundRect'].includes(prop)) {
           return vi.fn();
         }
         return undefined;
@@ -69,5 +70,19 @@ describe('paintNeck', () => {
     expect(calls.fillText.map(([t]) => t)).toEqual([
       '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'E', 'A', 'D', 'G',
     ]);
+  });
+
+  it('keeps the desktop dot sizes at 1400 px and shrinks them with the frets on a phone', () => {
+    const wide = recordingContext();
+    paintNeck(wide.ctx, 1400, colors, gBar, cBar, 0);
+    expect(wide.calls.arc).toEqual(expect.arrayContaining([21, 30, 18]));
+
+    const narrow = recordingContext();
+    paintNeck(narrow.ctx, 375, colors, gBar, cBar, 0);
+    const g = neckGeometry(375);
+    const dots = narrow.calls.arc.filter((r) => r > 5);
+    expect(Math.max(...dots)).toBeLessThan(21 * 1.43);
+    expect(Math.max(...dots)).toBeLessThanOrEqual(g.fretW * 0.48 * (30 / 21) + 1e-9);
+    expect(narrow.calls.arc).toContain(g.fretW * 0.48);
   });
 });
