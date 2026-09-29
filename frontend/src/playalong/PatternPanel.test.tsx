@@ -12,7 +12,7 @@ const candidates = [
 
 describe('PatternPanel', () => {
   it('shows the top candidate as the key when none is chosen', () => {
-    render(<PatternPanel candidates={candidates} value={DEFAULT_PLAY_ALONG} onChange={vi.fn()} />);
+    render(<PatternPanel candidates={candidates} value={DEFAULT_PLAY_ALONG} onChange={vi.fn()} pitchSemitones={0} />);
     const keys = screen.getByRole('group', { name: 'Key' });
     expect(keys.querySelector('[aria-pressed="true"]')).toHaveTextContent('G major 40%');
     expect(screen.getByRole('button', { name: 'Triad' })).toHaveAttribute('aria-pressed', 'true');
@@ -22,7 +22,7 @@ describe('PatternPanel', () => {
 
   it('reports each choice as a whole new recipe', async () => {
     const onChange = vi.fn();
-    render(<PatternPanel candidates={candidates} value={DEFAULT_PLAY_ALONG} onChange={onChange} />);
+    render(<PatternPanel candidates={candidates} value={DEFAULT_PLAY_ALONG} onChange={onChange} pitchSemitones={0} />);
     await userEvent.click(screen.getByRole('button', { name: /D major/ }));
     expect(onChange).toHaveBeenLastCalledWith({ ...DEFAULT_PLAY_ALONG, key: { tonic: 'D', mode: 'major' } });
     await userEvent.click(screen.getByRole('button', { name: 'Octave' }));
@@ -34,5 +34,14 @@ describe('PatternPanel', () => {
     expect(onChange.mock.lastCall![0].pattern.rhythm).toBe('eighth');
     await userEvent.click(screen.getByRole('button', { name: 'Chromatic' }));
     expect(onChange.mock.lastCall![0].pattern.approach).toBe('chromatic');
+  });
+
+  it('labels each key as heard after transposing, but stores it untransposed', async () => {
+    const onChange = vi.fn();
+    render(<PatternPanel candidates={candidates} value={DEFAULT_PLAY_ALONG} onChange={onChange} pitchSemitones={2} />);
+    const keys = screen.getByRole('group', { name: 'Key' });
+    expect(keys.querySelector('[aria-pressed="true"]')).toHaveTextContent('A major 40%');
+    await userEvent.click(screen.getByRole('button', { name: /E major/ }));
+    expect(onChange).toHaveBeenLastCalledWith({ ...DEFAULT_PLAY_ALONG, key: { tonic: 'D', mode: 'major' } });
   });
 });

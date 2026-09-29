@@ -131,6 +131,7 @@ export function PlayAlong() {
               candidates={analysis?.key_candidates ?? []}
               value={song.play_along}
               onChange={session.onPlayAlongChange}
+              pitchSemitones={song.playback.pitch_semitones}
             />
           </Panel>
 

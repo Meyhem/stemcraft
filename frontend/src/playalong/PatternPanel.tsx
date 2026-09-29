@@ -8,6 +8,7 @@ import type {
   PatternRhythm,
   PlayAlong,
 } from '../api/client';
+import { keyName, resolveKey } from '../music/patterns';
 import { Segmented } from '../ui';
 import styles from './PlayAlong.module.css';
 
@@ -39,9 +40,11 @@ export interface PatternPanelProps {
   candidates: KeyCandidate[];
   value: PlayAlong;
   onChange(next: PlayAlong): void;
+  /** The song's playback pitch; key labels are shown as heard. */
+  pitchSemitones: number;
 }
 
-export function PatternPanel({ candidates, value, onChange }: PatternPanelProps) {
+export function PatternPanel({ candidates, value, onChange, pitchSemitones }: PatternPanelProps) {
   const chosenKey = value.key ?? candidates[0] ?? null;
   const setPattern = (patch: Partial<PlayAlong['pattern']>) =>
     onChange({ ...value, pattern: { ...value.pattern, ...patch } });
@@ -56,7 +59,7 @@ export function PatternPanel({ candidates, value, onChange }: PatternPanelProps)
             value={keyId(chosenKey)}
             options={candidates.map((c) => ({
               value: keyId(c),
-              label: `${c.tonic} ${c.mode} ${Math.round(c.confidence * 100)}%`,
+              label: `${keyName(resolveKey(c, [], pitchSemitones)!)} ${Math.round(c.confidence * 100)}%`,
             }))}
             onChange={(id) => {
               const picked = candidates.find((c) => keyId(c) === id);
