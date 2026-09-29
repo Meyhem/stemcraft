@@ -16,7 +16,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import { api, DEFAULT_THEORY, type QuizAnswer, type TheoryDoc } from '../api/client';
+import { api, ApiError, DEFAULT_THEORY, type QuizAnswer, type TheoryDoc } from '../api/client';
 import { holdUnloadGuard, releaseUnloadGuard } from './unloadGuard';
 
 const KEY = ['theory'] as const;
@@ -69,6 +69,13 @@ export interface TheoryDocState {
   doc: TheoryDoc | null;
   /** GET /api/theory failed: the server's message, verbatim (U-09). */
   loadError: string | null;
+  /**
+   * The failed GET was the API saying theory.json itself cannot be read (its 500 carries a `detail`), not a failure
+   * to reach the API (a network error, or a proxy's 5xx while the API restarts).
+   */
+  fileUnreadable: boolean;
+  /** Reads theory.json again, after a failed read. A read that works applies a kept document as usual. */
+  reload: () => void;
   /** The last PUT failed: its message. Cleared by the next successful save. */
   saveError: string | null;
   /**
@@ -85,6 +92,17 @@ export interface TheoryDocState {
 }
 
 const Ctx = createContext<TheoryDocState | null>(null);
+
+/** FastAPI's own errors are JSON with a `detail`; a proxy with the API down answers with an empty or plain body. */
+function saysUnreadable(error: Error | null): boolean {
+  if (!(error instanceof ApiError) || error.status !== 500) return false;
+  try {
+    const body: unknown = JSON.parse(error.body);
+    return typeof body === 'object' && body !== null && typeof (body as { detail?: unknown }).detail === 'string';
+  } catch {
+    return false;
+  }
+}
 
 export function TheoryDocProvider({ children }: { children: ReactNode }) {
   const client = useQueryClient();
@@ -314,12 +332,14 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
     () => ({
       doc,
       loadError: query.error ? query.error.message : null,
+      fileUnreadable: saysUnreadable(query.error),
+      reload: () => void query.refetch(),
       saveError,
       update,
       retry: () => void save(),
       resetToDefaults,
     }),
-    [doc, query.error, saveError, update, save, resetToDefaults],
+    [doc, query.error, query.refetch, saveError, update, save, resetToDefaults],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

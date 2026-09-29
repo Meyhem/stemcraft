@@ -650,3 +650,48 @@ test('a refetch that fails while this tab has unsaved changes keeps them in memo
   await waitFor(() => expect(w.puts.at(-1)?.last_tool).toBe('triads'));
   await waitFor(() => expect(hook.doc?.last_tool).toBe('triads'));
 });
+
+// ---------------------------------------------------------------- a failed read can be tried again (I1)
+
+test('a failed read can be tried again: the document is shown and a kept document is applied and saved once', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  server({ putStatus: 500 });
+  const first = mount(appClient());
+  await screen.findByText('scale-finder');
+  act(() => hook.update(tool('triads'), { now: true }));
+  await waitFor(() => expect(screen.getByTestId('save-error')).toHaveTextContent('disk full'));
+  first.unmount();
+
+  // Back while the API restarts: the proxy answers 502 with no body. Then it is up again.
+  let up = false;
+  const puts: TheoryDoc[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        puts.push(JSON.parse(String(init.body)));
+        return new Response(String(init.body));
+      }
+      return up ? new Response(JSON.stringify(DEFAULT_THEORY)) : new Response('', { status: 502 });
+    }),
+  );
+  mount(appClient());
+  await waitFor(() => expect(screen.getByTestId('load-error')).toHaveTextContent('502'));
+  expect(hook.fileUnreadable).toBe(false); // not the file's fault: nothing says it cannot be read
+  up = true;
+  act(() => hook.reload());
+  await waitFor(() => expect(screen.getByTestId('tool')).toHaveTextContent('triads'));
+  await waitFor(() => expect(puts.map((p) => p.last_tool)).toEqual(['triads']));
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 50));
+  });
+  expect(puts).toHaveLength(1);
+  expect(screen.getByTestId('load-error')).toHaveTextContent('');
+});
+
+test('the server saying the file is unreadable is told apart from a failure to reach it', async () => {
+  server({ getStatus: 500 });
+  mount(appClient());
+  await waitFor(() => expect(screen.getByTestId('load-error')).toHaveTextContent('broken'));
+  expect(hook.fileUnreadable).toBe(true);
+});

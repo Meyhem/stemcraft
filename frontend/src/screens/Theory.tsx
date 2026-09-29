@@ -1,8 +1,9 @@
 // The Theory tab (D-19): a tool rail and the chosen tool. /theory redirects to
 // the tool used last (theory.json's last_tool). theory.json failures are shown
-// here, above whichever tool is open: an unreadable file is an error banner with
-// the verbatim reason and a confirmed reset (U-09, N-08); a failed save is a
-// warning with Retry, and the unsaved change stays in memory.
+// here, above whichever tool is open: a failed read is an error banner with the
+// verbatim reason, Try again, and a confirmed reset (U-09, N-08); its title says
+// whether the API reported the file unreadable or could not be reached. A failed
+// save is a warning with Retry, and the unsaved change stays in memory.
 import { useEffect } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 
@@ -23,7 +24,7 @@ export function Theory() {
 function TheoryScreen() {
   const { tool } = useParams();
   const { search } = useLocation();
-  const { doc, loadError, saveError, update, retry, resetToDefaults } = useTheoryDoc();
+  const { doc, loadError, fileUnreadable, reload, saveError, update, retry, resetToDefaults } = useTheoryDoc();
   const def = toolBySlug(tool);
 
   useEffect(() => {
@@ -47,8 +48,9 @@ function TheoryScreen() {
       <ToolRail />
       <section className={styles.content}>
         {loadError && (
-          <Banner tone="error" title="theory.json can't be read" trace={loadError}>
+          <Banner tone="error" title={fileUnreadable ? "theory.json can't be read" : "Couldn't load theory.json"} trace={loadError}>
             Your settings and quiz history were not loaded, and nothing has been overwritten.{' '}
+            <Button onClick={reload}>Try again</Button>{' '}
             <Button variant="danger" onClick={reset}>
               Reset to defaults…
             </Button>

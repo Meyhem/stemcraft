@@ -36,6 +36,8 @@ interface Server {
   putStatus?: number;
   songsStatus?: number;
   songsMessage?: string;
+  /** While true, GET /api/theory fails as fetch does when the API cannot be reached. */
+  unreachable?: { value: boolean };
 }
 
 function setup(path: string, server: Server = {}) {
@@ -50,6 +52,7 @@ function setup(path: string, server: Server = {}) {
       return new Response(JSON.stringify(body));
     }
     if (url === '/api/theory') {
+      if (server.unreachable?.value) throw new TypeError('Failed to fetch');
       return 'status' in stored
         ? new Response(JSON.stringify({ detail: stored.detail }), { status: stored.status })
         : new Response(JSON.stringify(stored));
@@ -220,4 +223,27 @@ test('song card: a failed song list shows the real error, not "no longer exists"
   const alert = await screen.findByText(/GET \/api\/songs → 500/);
   expect(alert).toBeInTheDocument();
   expect(screen.queryByText('That song no longer exists')).not.toBeInTheDocument();
+});
+
+test('a failed read offers Try again, with a neutral title when the API could not be reached (N-08)', async () => {
+  const unreachable = { value: true };
+  const { puts } = setup('/theory/scale-finder', { unreachable });
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent("Couldn't load theory.json");
+  expect(alert).not.toHaveTextContent("can't be read");
+  expect(alert).toHaveTextContent('Failed to fetch'); // the real message
+  expect(within(alert).getByRole('button', { name: 'Reset to defaults…' })).toBeInTheDocument();
+  unreachable.value = false;
+  fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByRole('heading', { name: 'Scale finder' })).toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(puts).toHaveLength(0); // nothing was reset
+});
+
+test('Try again on a file that is still unreadable keeps the banner and its reason', async () => {
+  setup('/theory/scale-finder', { theory: { status: 500, detail: 'data/theory.json: invalid JSON at line 3' } });
+  const alert = await screen.findByRole('alert');
+  fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('invalid JSON at line 3'));
+  expect(screen.getByRole('alert')).toHaveTextContent("theory.json can't be read");
 });

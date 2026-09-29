@@ -3,11 +3,14 @@
 // computed yet") from real failures without parsing the message string.
 export class ApiError extends Error {
   status: number;
+  /** The response body as the server sent it (FastAPI's is JSON with a `detail`; a proxy's may be empty). */
+  body: string;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, body = '') {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -24,6 +27,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(
       response.status,
       `${init?.method ?? 'GET'} ${path} → ${response.status}: ${detail}`,
+      detail,
     );
   }
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
