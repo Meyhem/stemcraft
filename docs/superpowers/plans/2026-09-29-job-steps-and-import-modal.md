@@ -1375,7 +1375,8 @@ test("the job's real error sits under the failed step", () => {
 
 test('the strip summarises how many steps are done', () => {
   render(<StepStrip steps={steps} />);
-  expect(screen.getByRole('img', { name: '1 of 4 steps done' })).toBeInTheDocument();
+  // A skipped step is finished too, so download (skipped) + decode (done) = 2.
+  expect(screen.getByRole('img', { name: '2 of 4 steps done' })).toBeInTheDocument();
 });
 ```
 
