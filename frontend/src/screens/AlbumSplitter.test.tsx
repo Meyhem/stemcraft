@@ -182,7 +182,7 @@ describe('AlbumSplitter', () => {
 
   it('keeps the track count consistent when a boundary is removed', async () => {
     renderWith(readyAlbum);
-    fireEvent.click(await screen.findByRole('button', { name: /remove split point 1/i }));
+    fireEvent.keyDown(await screen.findByRole('slider', { name: /split point 1/i }), { key: 'Delete' });
     await waitFor(() => {
       const body = putBody();
       expect(body.split_points).toEqual([]);

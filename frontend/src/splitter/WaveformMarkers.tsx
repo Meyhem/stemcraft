@@ -368,6 +368,11 @@ export function WaveformMarkers({
     else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') target = current - step;
     else if (event.key === 'Home') target = low;
     else if (event.key === 'End') target = high;
+    else if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      onRemove(index);
+      return;
+    }
     if (target === null) return;
     event.preventDefault();
     moveTo(index, target);
@@ -419,6 +424,12 @@ export function WaveformMarkers({
     }
   }
 
+  function focusGrip(index: number) {
+    contentRef.current
+      ?.querySelectorAll<HTMLElement>('[role="slider"]')
+      [index]?.focus({ preventScroll: true });
+  }
+
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
     const rect = event.currentTarget.getBoundingClientRect();
@@ -426,7 +437,10 @@ export function WaveformMarkers({
     if (event.clientY - rect.top < RULER_H) {
       gesture.current = { kind: 'seek' };
     } else {
-      const candidates = cutsNear(cutXs(), x);
+      // A press on a cut's number tag grabs exactly that cut, however many others are
+      // near; anywhere else, the cuts within reach of the pointer.
+      const tag = (event.target as Element).closest?.('[data-cut-index]');
+      const candidates = tag ? [Number(tag.getAttribute('data-cut-index'))] : cutsNear(cutXs(), x);
       gesture.current =
         candidates.length > 0
           ? { kind: 'cut', candidates, index: candidates.length === 1 ? candidates[0]! : null, startX: x }
@@ -451,9 +465,7 @@ export function WaveformMarkers({
         if (Math.abs(dx) < 1) return; // wait for a direction before choosing
         current.index = pickCut(current.candidates, dx);
         // The grabbed cut takes keyboard focus, so arrow keys fine-tune it afterwards.
-        (contentRef.current?.querySelectorAll<HTMLElement>('[role="slider"]')[current.index])?.focus({
-          preventScroll: true,
-        });
+        focusGrip(current.index);
       }
       const sample = sampleAt(event.clientX);
       if (sample !== null) moveTo(current.index, sample);
@@ -473,7 +485,13 @@ export function WaveformMarkers({
     }
     if (!current) return;
     const sample = sampleAt(event.clientX);
-    if (current.kind === 'seek') {
+    if (current.kind === 'cut') {
+      // Pressed and released without dragging: select the cut, so Delete removes it and
+      // the arrow keys nudge it.
+      if (current.index === null || Math.abs(contentX(event.clientX) - current.startX) < 1) {
+        focusGrip(current.index ?? current.candidates[0]!);
+      }
+    } else if (current.kind === 'seek') {
       if (sample !== null) onScrub(sample);
     } else if (current.kind === 'press') {
       if (sample !== null) onAdd(sample);
@@ -581,32 +599,31 @@ export function WaveformMarkers({
                 aria-valuemax={totalSamples}
                 aria-valuenow={sample}
                 aria-valuetext={formatTimestamp(sample)}
+                aria-keyshortcuts="Delete"
                 className={styles.grip}
                 style={{ left: percent(sample, totalSamples) }}
                 onKeyDown={(event) => handleKeyDown(index, event)}
               />
-              <button
-                type="button"
-                className={styles.remove}
-                aria-label={`Remove split point ${index + 1}`}
+              {/* The cut's number (cut N ends track N). A handle, not a button: press
+                  and drag it to move this cut, click it to select the cut. Deleting is
+                  Delete on the selected cut, or the × in the track list. */}
+              <span
+                className={styles.tag}
+                data-cut-index={index}
+                data-testid={`cut-tag-${index + 1}`}
+                aria-hidden="true"
                 style={{ left: percent(sample, totalSamples) }}
-                // Its own press must not start a waveform gesture underneath it.
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onRemove(index);
-                }}
               >
-                ×
-              </button>
+                {index + 1}
+              </span>
             </Fragment>
           ))}
         </div>
       </div>
       <p className={styles.hint}>
-        Click the waveform to add a cut · drag a cut to move it · drag across the waveform to
-        zoom to that range · wheel zooms · Shift+wheel or the scrollbar pans · click the ruler
-        to seek
+        Click the waveform to add a cut · drag a cut or its number to move it · click a cut's
+        number, then Delete to remove it · drag across the waveform to zoom to that range ·
+        wheel zooms · Shift+wheel or the scrollbar pans · click the ruler to seek
       </p>
     </div>
   );

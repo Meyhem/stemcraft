@@ -92,33 +92,47 @@
   position: absolute;
   /* Starts under the ruler, so the grip never covers a tick label. */
   inset-block: 24px 0;
-  inline-size: 12px;
-  margin-inline-start: -6px;
-  border-inline: 2px solid var(--ds-warn);
-  background: color-mix(in srgb, var(--ds-warn) 25%, transparent);
+  /* One 2 px line on the cut. It can be this thin because it is not the hit target: the
+     waveform hit-tests pointer presses within GRAB_PX of the cut. */
+  inline-size: 2px;
+  margin-inline-start: -1px;
+  background: var(--ds-warn);
   /* Pointer input is hit-tested by the waveform (GRAB_PX), so overlapping grips never
      decide which cut moves. The grip stays focusable for the keyboard. */
   pointer-events: none;
 }
 
-.grip:focus-visible {
-  outline: 2px solid var(--ds-accent);
-  outline-offset: 2px;
+/* Selected: the line turns accent rather than growing an outline box, which on a 2 px
+   line reads as two lines. The tag below carries the focus ring. */
+.grip:focus {
+  outline: none;
+  background: var(--ds-accent);
 }
 
-/* Under the ruler, so it never covers a tick label. */
-.remove {
+/* The cut's number, under the ruler so it never covers a tick label. It is a drag handle
+   (the waveform's pointer handler reads data-cut-index), so it keeps pointer events. */
+.tag {
   position: absolute;
   inset-block-start: 26px;
-  min-inline-size: var(--ds-hit-min);
-  min-block-size: var(--ds-hit-min);
-  margin-inline-start: calc(var(--ds-hit-min) / -2);
-  padding: 0;
-  background: var(--ds-overlay);
-  border: 1px solid var(--ds-border-strong);
+  min-inline-size: 22px;
+  block-size: 22px;
+  padding: 0 var(--ds-1);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ds-warn);
   border-radius: var(--ds-r-btn);
-  color: var(--ds-text);
-  line-height: 1;
+  color: var(--ds-on-warn);
+  font: 600 var(--ds-t-xs) / 1 var(--ds-mono);
+  cursor: ew-resize;
+}
+
+/* The selected cut: its tag shows it, since the 2 px line cannot carry a focus ring. */
+.grip:focus-visible + .tag,
+.grip:focus + .tag {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
 }
 
 .hint {

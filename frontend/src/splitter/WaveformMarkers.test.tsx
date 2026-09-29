@@ -72,9 +72,18 @@ describe('WaveformMarkers', () => {
     expect(marker).toHaveAttribute('aria-valuemax', '480000');
   });
 
-  it('removes a marker when its remove control is pressed', () => {
-    render(<WaveformMarkers {...props} />);
-    fireEvent.click(screen.getByRole('button', { name: /remove split point 1/i }));
+  it('labels each cut with its number instead of a delete button', () => {
+    render(<WaveformMarkers {...props} splitPoints={[120000, 240000]} />);
+    expect(screen.getByTestId('cut-tag-1')).toHaveTextContent('1');
+    expect(screen.getByTestId('cut-tag-2')).toHaveTextContent('2');
+    expect(screen.queryByRole('button', { name: /remove split point/i })).toBeNull();
+  });
+
+  it('removes the selected cut with Delete or Backspace', () => {
+    render(<WaveformMarkers {...props} splitPoints={[120000, 240000]} />);
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'split point 2' }), { key: 'Delete' });
+    expect(props.onRemove).toHaveBeenCalledWith(1);
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'split point 1' }), { key: 'Backspace' });
     expect(props.onRemove).toHaveBeenCalledWith(0);
   });
 
@@ -210,6 +219,38 @@ describe('WaveformMarkers dragging cuts', () => {
       props.onMove.mockClear();
       drag(screen.getByTestId('album-waveform'), 50, 20);
       expect(props.onMove).toHaveBeenLastCalledWith(0, 96000);
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
+  it('drags exactly the cut whose number tag was grabbed, even where cuts overlap', () => {
+    const rect = boxAt(0, 100);
+    try {
+      render(<WaveformMarkers {...props} splitPoints={[240000, 240480]} />);
+      // Dragging right from the overlap would otherwise pick cut 2; the tag says cut 1,
+      // which is pinned against cut 2 and so clamps to just below it.
+      const tag = screen.getByTestId('cut-tag-1');
+      pointer(tag, 'pointerdown', 50);
+      pointer(tag, 'pointermove', 80);
+      pointer(tag, 'pointerup', 80);
+      expect(props.onMove).toHaveBeenLastCalledWith(0, 240479);
+      expect(props.onAdd).not.toHaveBeenCalled();
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
+  it('a click on a number tag selects that cut, so Delete then removes it', () => {
+    const rect = boxAt(0, 100);
+    try {
+      render(<WaveformMarkers {...props} splitPoints={[120000, 240000]} />);
+      const tag = screen.getByTestId('cut-tag-2');
+      pointer(tag, 'pointerdown', 50);
+      pointer(tag, 'pointerup', 50);
+      expect(screen.getByRole('slider', { name: 'split point 2' })).toHaveFocus();
+      expect(props.onAdd).not.toHaveBeenCalled();
+      expect(props.onMove).not.toHaveBeenCalled();
     } finally {
       rect.mockRestore();
     }
