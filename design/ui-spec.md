@@ -190,9 +190,16 @@ assuming it can vary.
    State badges are **derived from which files exist** — there is no status field for
    them to disagree with. A song whose `song.json` is unreadable renders as an error
    card in place and does not affect its neighbours (§9).
-2. **Import** — modal. Upload or URL. Title and artist prefilled from the file's own
-   tags, always editable; no online lookup anywhere (C-06). The pipeline is shown as
-   five explicit steps ending in "analyze", so the wait is legible rather than a spinner.
+2. **Import** — modal over the current page (`/import` with a background location,
+   D-14), built on the native `<dialog>`. One form with one source zone: drop or choose
+   a file, or paste a link. The last one given is the source, and the zone collapses to
+   a row with Replace. Title and artist are shared fields, filled in from the file's own
+   tags when left blank and always editable; no online lookup anywhere (C-06). Title is
+   required for a link. After submit, the modal shows the song's `import`, `separate` and
+   `analyze` jobs as three step groups (D-17), drawn with the same StepList as the Job
+   queue, so the wait is legible rather than a spinner. A job not queued yet draws its
+   declared steps as pending. Closing doesn't stop the work; "Open job queue" goes to
+   `/jobs?song=<id>`.
 3. **Song view** — the hard screen. The transport sits on top (play, bar, chord → next,
    tempo, pitch, metronome, loop, Set A/B, zoom, Follow playhead). Below it one horizontally
    scrolling time axis holds, in order, the seek ruler, the chord row aligned to bars, and
@@ -210,6 +217,12 @@ assuming it can vary.
 6. **Job queue** — the real operational dashboard (§10). Live queue with cancel, failed
    jobs with full tracebacks, all-time stats split by kind **and device**, and full
    history. Rows whose song was deleted keep their `song_id` and render without a link.
+   One row per job with a disclosure: expanded, it shows the job's steps (D-17) with a
+   mark (✓ done, ● running with live % and bar, ○ pending, ! failed, dashed – skipped
+   with reason, ■ cancelled with detail) and a duration each. The running job is
+   expanded by default, and collapsed rows show a compact step strip. A failed job's
+   traceback sits under the step that failed. `?song=<id>` filters to one song's jobs.
+   Jobs from before step tracking say "No step record".
 7. **Album splitter** — full window width. Album title and artist are typed once and
    written into every track's tags (there is nothing to fill down). A toolbar with play and
    the zoom controls sits over the album waveform (seek ruler, played part in the accent,

@@ -219,6 +219,8 @@ reload. This is the main simplification C-01 buys and it should be spent freely.
   liveness, never data, and the client recovers by refetching.
 - **`jobs.sqlite`, API ↔ worker.** The real contract of the system. Rows are the
   queue; `payload` and `result` are JSON blobs whose shape is owned by the job kind.
+  `steps` is a JSON list seeded from the kind's declaration at enqueue and advanced
+  only by the worker (D-17).
   Idempotency is per kind: `separate`, `analyze` and `export` are safe to re-run and
   overwrite their outputs, which is what makes lease-based crash recovery sound.
 - **Writes are idempotent by re-derivation**, not by request IDs. Re-running any job
@@ -259,6 +261,9 @@ audit requirement exists.
 
 - **Import decode failure** — surface ffmpeg's or yt-dlp's actual message verbatim.
   `original.*` is retained, so retry costs nothing and never re-downloads.
+- **Any job failure** — the running step is marked `failed` and the traceback is
+  drawn under it, in the Job queue and in the Import modal (D-17). A kind that returns
+  with a declared step still pending fails as a bug rather than finishing.
 - **Cancelling a queued job** — immediate; the row is marked `cancelled` and never
   picked up.
 - **Cancelling a running separation** — honoured **between model segments** via the
@@ -267,7 +272,8 @@ audit requirement exists.
   leaves partial output cleanly discardable.
 - **Worker crash mid-job** — the running job holds a `lease_until`. On restart the
   worker reclaims expired leases and re-runs the job from the start. Safe because
-  every job kind is idempotent by re-derivation (§6).
+  every job kind is idempotent by re-derivation (§6). Its `steps` are re-seeded from
+  the declaration along with `progress` resetting to 0.
 - **CUDA unavailable or kernel mismatch** — detected at boot by the proof-of-work op,
   not at first use. Fall back to CPU, log the reason, show the banner, adjust
   estimates. Per N-08 this is loud, never silent.
@@ -483,6 +489,24 @@ audit requirement exists.
   jank, and U-05 forbids CSS-driven motion for anything the engine clocks).
   *Reversibility:* two-way, per component.
 
+- **D-17 — Jobs declare named steps; the job row records them live.**
+  Each job kind declares an ordered list of steps (id, label, weight) in torch-free
+  `stemcraft_lib/job_steps.py`. `enqueue()` seeds them all as `pending` into a
+  `steps` JSON column and refuses an undeclared kind. From then on only the worker
+  writes them, through `ctx.step()` / `ctx.skip()` / `ctx.detail()` / `ctx.progress()`.
+  The job's overall `progress` is still stored, computed from the step weights.
+  *Because:* a single anonymous float cannot say which phase is running, how long each
+  took, or which one failed. The kinds already work in clear phases. Seeding at enqueue
+  lets a queued job, and a job not yet queued (from the declaration), show what it will
+  do. The existing websocket makes it live for free.
+  *Rejected:* steps written only by the worker as it goes (a queued job shows nothing,
+  and "step 3 of 5" is impossible); a free-form per-job log (a log, not a pipeline);
+  grouping chained jobs into one pipeline row (one row per job was chosen; the Import
+  modal is where a song's chain is shown together).
+  *Reversibility:* two-way. The column is additive (jobs schema v2), and rows from
+  before it render as "No step record".
+  Design: `docs/superpowers/specs/2026-09-29-job-steps-design.md`.
+
 ## 12. Deferred decisions
 
 - **Tabs / transcription pipeline** (bass → torchcrepe → MIDI → fretboard → alphaTab,
@@ -544,7 +568,9 @@ audit requirement exists.
 - **Q-05** — Is any headless primitive library (Radix, Ark) needed for dialogs, menus
   and selects? The transport, mixer and sliders are bespoke by U-03/U-05 regardless, so
   this reduces to a handful of overlays. Decide when the first modal is built; nothing
-  in D-16 depends on it.
+  in D-16 depends on it. *Partly answered (2026-09-29):* dialogs use the native
+  `<dialog>` with `showModal()` (focus trap, Esc and inert background built in), so
+  they need no library. Menus and selects are still open.
 
 ## 15. Assumptions
 

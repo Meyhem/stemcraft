@@ -117,7 +117,8 @@ CREATE TABLE jobs (
   started_at       REAL,
   finished_at      REAL,
   error            TEXT,
-  result           TEXT       -- JSON
+  result           TEXT,      -- JSON
+  steps            TEXT       -- JSON list, seeded at enqueue from the kind's declared steps (D-17)
 );
 ```
 
@@ -132,14 +133,15 @@ Four screens: Song library, Song view, Album splitter and Job queue. Everything 
 - One card per Song: title, artist, detected key, duration, last played
 - Sorted by last played; opening a Song restores its saved mutes, loop, tempo and pitch
 - Delete removes the Song folder after a confirmation
-- “New Song” opens the import dialog
+- “New Song” opens the import dialog over the library; afterwards the dialog shows the song's import, separate and analyze jobs step by step
 
 ### Import
 
 Anything ffmpeg can decode is accepted — no format whitelist.
 
+- **One form, one source:** drop or choose a file, or paste a link. Whichever is given last is the source
 - **File upload:** audio or video; for video the audio track is extracted
-- **URL:** direct media links and sites like YouTube, fetched with yt-dlp
+- **URL:** direct media links and sites like YouTube, fetched with yt-dlp. A link has no tags to read before download, so its title is required
 - **Pipeline:** keep the original → decode to 48 kHz stereo WAV (D-03) → compute waveform peaks → queue separation
 - Title and artist are prefilled from the file's own tags when present, always editable
 - A decode failure shows ffmpeg's message; the original stays so the import can be retried
@@ -220,6 +222,7 @@ One long file becomes many tagged MP3s. All metadata is typed by the user — no
 
 - Strictly serial: one worker, one job at a time
 - Live list of queued and running jobs with progress, device and estimate
+- **Steps:** every job shows its kind's named steps live (done, running with %, pending, failed with the real error, skipped with a reason, cancelled with where it stopped) and each step's duration. Rows expand to show them
 - **Cancel:** queued jobs cancel immediately; a running job stops at its next checkpoint
 - **History:** every finished job kept with state, duration, device, error message and traceback
 - **Stats:** passed and failed counts, average duration per job kind and device
