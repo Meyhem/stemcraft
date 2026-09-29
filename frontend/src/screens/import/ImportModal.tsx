@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { type CreatedImport, ImportForm } from './ImportForm';
+import { ImportProgress } from './ImportProgress';
 import type { ImportLinkState } from './importLink';
 
 export function ImportModal() {
@@ -13,6 +14,9 @@ export function ImportModal() {
   // Back to the page it was opened over; a direct visit has none, so go home.
   const close = () => (background ? navigate(-1) : navigate('/', { replace: true }));
 
-  void created; // Task 10 renders the progress view from this.
-  return <ImportForm onCreated={setCreated} onClose={close} />;
+  return created ? (
+    <ImportProgress created={created} onClose={close} />
+  ) : (
+    <ImportForm onCreated={setCreated} onClose={close} />
+  );
 }

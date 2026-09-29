@@ -1,0 +1,7 @@
+.groups { display: flex; flex-direction: column; gap: var(--ds-4); }
+.group { display: flex; flex-direction: column; gap: var(--ds-3); }
+.group + .group { padding-top: var(--ds-4); border-top: 1px solid var(--ds-border); }
+.head { display: flex; align-items: center; gap: var(--ds-3); }
+.kind { text-transform: uppercase; letter-spacing: 0.08em; font-size: var(--ds-t-xs); font-weight: 600; color: var(--ds-text-3); }
+.note { font-size: var(--ds-t-sm); color: var(--ds-text-3); }
+.foot { flex: 1; font-size: var(--ds-t-sm); color: var(--ds-text-3); }
