@@ -19,7 +19,7 @@ export interface FretWindow {
   hi: number;
 }
 
-/** Scientific-pitch-free check for E A D G B E. */
+/** Exact E2 A2 D3 G3 B3 E4 guitar tuning. */
 export function isStandardGuitar(inst: Instrument): boolean {
   return inst.kind === 'guitar' && inst.tuning.join(' ') === 'E2 A2 D3 G3 B3 E4';
 }
@@ -28,8 +28,12 @@ export function isStandardGuitar(inst: Instrument): boolean {
  * `perString` consecutive scale notes on each string, low string first,
  * starting from scale degree `start` on the lowest string: 2 per string gives
  * the pentatonic boxes, 3 gives the three-notes-per-string patterns.
+ * Returns [] when no octave shift (0, +12, -12) places all notes within 0..maxFret.
  */
 export function perStringShape(inst: Instrument, scale: readonly Spelled[], start: number, perString: number, maxFret: number): Cell[] {
+  // Guard: empty scale or start out of range
+  if (scale.length === 0 || start < 0 || start >= scale.length) return [];
+
   const open = rowMidi(inst);
   const lowRow = open.length - 1;
   const pcs = scale.map((n) => n.pc);
@@ -43,20 +47,29 @@ export function perStringShape(inst: Instrument, scale: readonly Spelled[], star
       const string = lowRow - Math.floor(i / perString);
       return { string, fret: midi + shift - open[string]! };
     });
-  let cells = place(0);
-  if (cells.some((c) => c.fret < 0)) cells = place(12);
-  if (cells.every((c) => c.fret >= 12) && Math.max(...cells.map((c) => c.fret)) > maxFret) cells = place(-12);
-  return cells;
+
+  // Try shifts: 0, +12, -12 in order
+  for (const shift of [0, 12, -12]) {
+    const cells = place(shift);
+    if (cells.every((c) => c.fret >= 0 && c.fret <= maxFret)) {
+      return cells;
+    }
+  }
+  return [];
 }
 
-/** The five pentatonic boxes (5-note scales), box 1 starting on the root. */
+/** The five pentatonic boxes (5-note scales), box 1 starting on the root. Drop boxes with no playable cells; keep original numbering. */
 export function pentatonicBoxes(inst: Instrument, scale: readonly Spelled[], maxFret: number): Shape[] {
-  return scale.map((_, i) => ({ label: `Box ${i + 1}`, cells: perStringShape(inst, scale, i, 2, maxFret) }));
+  return scale
+    .map((_, i) => ({ label: `Box ${i + 1}`, cells: perStringShape(inst, scale, i, 2, maxFret) }))
+    .filter((s) => s.cells.length > 0);
 }
 
-/** Seven three-notes-per-string patterns (7-note scales), pattern 1 starting on the root. */
+/** Seven three-notes-per-string patterns (7-note scales), pattern 1 starting on the root. Drop patterns with no playable cells; keep original numbering. */
 export function threeNotesPerString(inst: Instrument, scale: readonly Spelled[], maxFret: number): Shape[] {
-  return scale.map((_, i) => ({ label: `Pattern ${i + 1}`, cells: perStringShape(inst, scale, i, 3, maxFret) }));
+  return scale
+    .map((_, i) => ({ label: `Pattern ${i + 1}`, cells: perStringShape(inst, scale, i, 3, maxFret) }))
+    .filter((s) => s.cells.length > 0);
 }
 
 /**
