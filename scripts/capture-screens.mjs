@@ -11,7 +11,9 @@
 //   node scripts/capture-screens.mjs library=/ song-view=/songs/<id> play-along=/songs/<id>/play album-splitter=/splitter/<id> job-queue=/jobs
 //
 // Each argument is name=path; the PNG is written to docs/screenshots/<name>.png. Pages are
-// only loaded and looked at -- nothing is clicked, so no song or album is modified.
+// loaded and looked at; the play-along capture also presses Space to play and pause, to get
+// the neck onto a bar. No song or album is modified: Space only plays/pauses, and nothing
+// here sets a pattern or a loop.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

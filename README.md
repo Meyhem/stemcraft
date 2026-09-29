@@ -15,7 +15,7 @@ instrument and play along.
 - Beat, key and chord analysis, plus a fretboard view
 - Play along screen for bass: a live neck shows what to play in the current and the next
   bar, with a beat lane underneath showing when. The notes are generated from the chord
-  chart by a pattern you pick (root, root–5th, octave, chord or diatonic triad, 7th; whole
+  chart by a pattern you pick (root, root–5th, root–5th–octave, octave, chord or diatonic triad, 7th; whole
   to eighth notes; optional chromatic, scale or fifth approach into the next bar), in the
   detected key or another candidate, and follow the pitch shift. Loop by bar numbers or
   from the chord ribbon; playback carries on when you switch back to the Song view
@@ -38,9 +38,9 @@ instrument and play along.
 ![Album splitter](docs/screenshots/album-splitter.png)
 ![Job queue](docs/screenshots/job-queue.png)
 
-All five are captures of the running app, made with
-`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> album-splitter=/splitter/<id> job-queue=/jobs`
-(API and dev server running; it only loads the pages). The design system these follow —
+All six are captures of the running app, made with
+`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> play-along=/songs/<id>/play album-splitter=/splitter/<id> job-queue=/jobs`
+(API and dev server running; it loads the pages, and for Play along it presses Space to play a few bars and pause again). The design system these follow —
 tokens, components and screen mockups — is in [design/ui](design/ui) (build it with
 `python3 design/ui/build.py`), with its rules in [design/ui-spec.md](design/ui-spec.md).
 
