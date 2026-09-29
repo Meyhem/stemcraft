@@ -105,6 +105,7 @@ function renderAt(path: string) {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   cursor = 0;
   mockFetch();
 });
@@ -150,6 +151,28 @@ describe('PlayAlong', () => {
     renderAt('/songs/abc123/play');
     await screen.findByTestId('neck-canvas');
     await userEvent.keyboard(' ');
-    await waitFor(() => expect(engine.play).toHaveBeenCalled());
+    await waitFor(() => expect(engine.play).toHaveBeenCalledTimes(1));
+    expect(engine.pause).not.toHaveBeenCalled();
+  });
+
+  it('plays on Space while the tempo slider has focus', async () => {
+    renderAt('/songs/abc123/play');
+    const slider = await screen.findByRole('slider', { name: 'Tempo' });
+    slider.focus();
+    await userEvent.keyboard(' ');
+    await waitFor(() => expect(engine.play).toHaveBeenCalledTimes(1));
+    expect(engine.pause).not.toHaveBeenCalled();
+  });
+
+  it('plays on Space while a button has focus, without firing that button', async () => {
+    renderAt('/songs/abc123/play');
+    const metronome = await screen.findByRole('button', { name: 'Metronome' });
+    await userEvent.click(metronome);
+    await waitFor(() => expect(metronome).toHaveAttribute('aria-pressed', 'true'));
+    expect(metronome).toHaveFocus();
+    await userEvent.keyboard(' ');
+    await waitFor(() => expect(engine.play).toHaveBeenCalledTimes(1));
+    expect(engine.pause).not.toHaveBeenCalled();
+    expect(metronome).toHaveAttribute('aria-pressed', 'true');
   });
 });

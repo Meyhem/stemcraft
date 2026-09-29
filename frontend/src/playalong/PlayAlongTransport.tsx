@@ -35,8 +35,11 @@ export function PlayAlongTransport(props: PlayAlongTransportProps) {
     const handler = (event: KeyboardEvent) => {
       if (event.key !== ' ' || event.ctrlKey || event.metaKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
-      // Space on a focused button or text field is that control's own key.
-      if (target?.closest('input, textarea, select, button, [contenteditable="true"]')) return;
+      // Text entry keeps its Space. A slider keeps focus after use and does nothing
+      // with Space; a button would re-fire its own action, so on this screen Space is
+      // play/pause wherever focus sits (the setup-with-mouse, play-with-Space flow).
+      if (target && (target.isContentEditable || /^(TEXTAREA|SELECT)$/.test(target.tagName))) return;
+      if (target instanceof HTMLInputElement && target.type !== 'range') return;
       event.preventDefault();
       onPlayPause();
     };

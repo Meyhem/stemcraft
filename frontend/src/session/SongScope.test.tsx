@@ -73,6 +73,7 @@ function PlayProbe({ name }: { name: string }) {
       <p>
         {name}: {session.playing ? 'playing' : 'paused'}
       </p>
+      <p>{session.engine ? 'engine ready' : 'no engine'}</p>
       <button onClick={() => session.onPlayPause()}>toggle</button>
     </>
   );
@@ -159,6 +160,8 @@ describe('SongScope', () => {
       </QueryClientProvider>,
     );
 
+    // The click is a silent no-op until the engine exists.
+    await screen.findByText('engine ready');
     // Start playback on the view screen
     await userEvent.click(await screen.findByRole('button', { name: 'toggle' }));
     expect(await screen.findByText('view: playing')).toBeInTheDocument();
@@ -177,6 +180,7 @@ function Controls() {
   return (
     <>
       <p>loop: {session.song?.active_loop ? `${session.song.active_loop.start_bar}-${session.song.active_loop.end_bar}` : 'none'}</p>
+      <p>{session.song && session.engine ? 'controls ready' : 'controls loading'}</p>
       <p>notes: {session.song?.play_along.pattern.notes}</p>
       <button onClick={() => session.onLoopBars(4, 8)}>loop 5 to 8</button>
       <button onClick={() => session.onLoopBars(8, 8)}>empty loop</button>
@@ -210,8 +214,9 @@ describe('play-along session handlers', () => {
 
   it('sets the loop by bars and saves it, and ignores an empty range', async () => {
     renderControls();
-    await userEvent.click(await screen.findByRole('button', { name: 'loop 5 to 8' }));
-    expect(screen.getByText('loop: 4-8')).toBeInTheDocument();
+    await screen.findByText('controls ready');
+    await userEvent.click(screen.getByRole('button', { name: 'loop 5 to 8' }));
+    expect(await screen.findByText('loop: 4-8')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'empty loop' }));
     expect(screen.getByText('loop: 4-8')).toBeInTheDocument();
     await waitFor(
@@ -225,7 +230,8 @@ describe('play-along session handlers', () => {
 
   it('replaces the play_along recipe', async () => {
     renderControls();
-    await userEvent.click(await screen.findByRole('button', { name: 'roots' }));
-    expect(screen.getByText('notes: root')).toBeInTheDocument();
+    await screen.findByText('controls ready');
+    await userEvent.click(screen.getByRole('button', { name: 'roots' }));
+    expect(await screen.findByText('notes: root')).toBeInTheDocument();
   });
 });
