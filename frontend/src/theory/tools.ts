@@ -15,6 +15,7 @@ import { Progressions } from './tools/Progressions';
 import { ScaleFinder } from './tools/ScaleFinder';
 import { ScalePositions } from './tools/ScalePositions';
 import { ScalesOverChord } from './tools/ScalesOverChord';
+import { TheoryQuiz } from './tools/TheoryQuiz';
 import { Triads } from './tools/Triads';
 
 export type ToolGroup = 'Find' | 'Shapes' | 'Harmony' | 'Practice';
@@ -41,6 +42,7 @@ export const TOOLS: readonly ToolDef[] = [
   { slug: 'progressions', label: 'Progressions', group: 'Harmony', Component: Progressions },
   { slug: 'scales-over-chord', label: 'Scales over a chord', group: 'Harmony', Component: ScalesOverChord },
   { slug: 'fretboard-quiz', label: 'Fretboard quiz', group: 'Practice', Component: FretboardQuiz },
+  { slug: 'theory-quiz', label: 'Theory quiz', group: 'Practice', Component: TheoryQuiz },
 ];
 
 export function toolBySlug(slug: string | undefined): ToolDef | undefined {

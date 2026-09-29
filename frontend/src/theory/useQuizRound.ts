@@ -129,10 +129,11 @@ export function useQuizRound(): Round {
 
 /**
  * The key a quiz should act on, or null when it should not: with Ctrl, Alt, Meta or Shift, auto-repeating (holding
- * a key must not answer the next question too), already handled, or typed into a field.
+ * a key must not answer the next question too), already handled, or typed into a field. `shift: true` lets Shift
+ * through, for digits: an AZERTY keyboard types 1–4 with Shift, and no other layout makes Shift+digit report a digit.
  */
-export function quizKey(e: KeyboardEvent): string | null {
-  if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey || e.repeat || e.defaultPrevented) return null;
+export function quizKey(e: KeyboardEvent, options: { shift?: boolean } = {}): string | null {
+  if (e.ctrlKey || e.altKey || e.metaKey || (e.shiftKey && !options.shift) || e.repeat || e.defaultPrevented) return null;
   const t = e.target;
   if (t instanceof HTMLElement && (t.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(t.tagName))) return null;
   return e.key;
