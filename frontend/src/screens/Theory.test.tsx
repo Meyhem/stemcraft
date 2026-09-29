@@ -33,6 +33,8 @@ const analysis = {
 interface Server {
   theory?: TheoryDoc | { status: number; detail: string };
   putStatus?: number;
+  songsStatus?: number;
+  songsMessage?: string;
 }
 
 function setup(path: string, server: Server = {}) {
@@ -52,6 +54,9 @@ function setup(path: string, server: Server = {}) {
         : new Response(JSON.stringify(stored));
     }
     if (url === '/api/songs') {
+      if (server.songsStatus) {
+        return new Response(JSON.stringify({ detail: server.songsMessage ?? 'song list unavailable' }), { status: server.songsStatus });
+      }
       return new Response(
         JSON.stringify({
           songs: [
@@ -198,4 +203,15 @@ test('song card: an unanalysed or missing song says so', async () => {
 test('song card: a deleted song says so', async () => {
   setup('/theory/scale-finder', { theory: { ...DEFAULT_THEORY, song_id: '01GONE' } });
   expect(await screen.findByText('That song no longer exists. Pick another.')).toBeInTheDocument();
+});
+
+test('song card: a failed song list shows the real error, not "no longer exists" (N-08)', async () => {
+  setup('/theory/scale-finder', {
+    theory: { ...DEFAULT_THEORY, song_id: '01TIGHT' },
+    songsStatus: 500,
+    songsMessage: 'database connection failed',
+  });
+  const alert = await screen.findByText(/GET \/api\/songs → 500/);
+  expect(alert).toBeInTheDocument();
+  expect(screen.queryByText('That song no longer exists')).not.toBeInTheDocument();
 });

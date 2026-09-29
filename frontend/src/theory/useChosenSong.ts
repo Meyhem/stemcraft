@@ -38,6 +38,7 @@ export function useChosenSong(): ChosenSong {
 
   if (!songId) return { state: 'none' };
   if (songs.isPending) return { state: 'loading', title: '' };
+  if (songs.error) return { state: 'error', title: '', message: songs.error.message };
   if (!entry?.song) return { state: 'missing', songId };
   const title = entry.song.title;
   if (!analysed) return { state: 'unanalysed', title };
