@@ -61,3 +61,24 @@ test('an empty queue says so instead of rendering an empty table', async () => {
   renderQueue([]);
   expect(await screen.findByText(/no jobs yet/i)).toBeInTheDocument();
 });
+
+test('a failed job and a done job never share a chip tone', async () => {
+  // U-01's whole reason for splitting the palette by saturation is that "drums red"
+  // and "failed red" must not collide. The weaker version of this test -- asserting
+  // the words "failed" and "done" are on screen -- passed against the old bare-text
+  // markup and would pass against a queue that painted both green.
+  renderQueue([
+    { ...job, id: 1, kind: 'separate', state: 'failed', progress: 1, error: 'boom' },
+    { ...job, id: 2, kind: 'analyze', state: 'done', progress: 1 },
+  ]);
+
+  expect(await screen.findByText('failed')).toHaveClass('chip', 'error');
+  expect(screen.getByText('done')).toHaveClass('chip', 'ok');
+});
+
+test('a job with no recorded device shows a dash, not an empty chip', async () => {
+  renderQueue([{ ...job, device: null }]);
+  await screen.findByText('probe');
+  expect(screen.queryByText('cpu')).toBeNull();
+  expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+});

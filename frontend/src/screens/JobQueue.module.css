@@ -1,59 +1,21 @@
-.list {
+.screen {
   display: flex;
   flex-direction: column;
-  gap: var(--ds-2);
-  margin: var(--ds-4) 0 0;
-  padding: 0;
-  list-style: none;
+  gap: var(--ds-5);
 }
 
-.row {
-  display: grid;
-  grid-template-columns: 8rem 6rem 4rem 5rem 1fr auto;
-  gap: var(--ds-3);
+.header {
+  display: flex;
   align-items: center;
-  min-height: var(--ds-hit-setup);
-  padding: var(--ds-2) var(--ds-3);
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-r-input);
+  justify-content: space-between;
+  gap: var(--ds-4);
 }
 
-.state[data-state='queued'] { color: var(--ds-queued); }
-.state[data-state='running'] { color: var(--ds-accent); }
-.state[data-state='done'] { color: var(--ds-ok); }
-.state[data-state='failed'] { color: var(--ds-error); }
-.state[data-state='cancelled'] { color: var(--ds-text-3); }
-
-/* U-04: every numeral is mono and tabular, so a ticking duration cannot jitter. */
-.device,
-.duration {
-  font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--ds-text-2);
+/* Progress takes the slack; everything else is sized by its content. */
+.progressHead {
+  width: 30%;
 }
 
-.progress {
-  block-size: 6px;
-  background: var(--ds-raised);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progress i {
-  display: block;
-  block-size: 100%;
-  background: var(--ds-accent);
-}
-
-.error {
-  grid-column: 1 / -1;
-  margin: 0;
-  white-space: pre-wrap;
-  font: 400 var(--ds-t-xs) / 1.4 var(--ds-mono);
-  color: var(--ds-error);
-}
-
-.action {
-  min-height: var(--ds-hit-setup);
+.actions {
+  text-align: right;
 }
