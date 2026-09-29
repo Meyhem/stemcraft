@@ -375,3 +375,66 @@ export function albumZipUrl(albumId: string): string {
 export function albumTrackUrl(albumId: string, filename: string): string {
   return `/api/albums/${albumId}/tracks/${filename}`;
 }
+
+// Mirrors packages/stemcraft_lib/src/stemcraft_lib/theory.py (D-19). The API is
+// theory.json's only writer; the browser GETs it and PUTs the whole document.
+export type TheoryTool =
+  | 'scale-finder' | 'chord-finder' | 'note-finder' | 'name-that-chord'
+  | 'scale-positions' | 'triads' | 'arpeggios'
+  | 'chords-in-key' | 'circle-of-fifths' | 'progressions' | 'scales-over-chord'
+  | 'fretboard-quiz' | 'theory-quiz';
+
+export interface TheoryInstrument {
+  kind: 'bass' | 'guitar';
+  strings: number;
+  /** Scientific pitch, low string first: ["E1", "A1", "D2", "G2"]. */
+  tuning: string[];
+  left_handed: boolean;
+}
+
+export interface FretboardQuizSettings {
+  mode: 'name-note' | 'find-note' | 'find-interval' | 'spell-chord';
+  /** Rows (0 = highest string); empty = every string. */
+  strings: number[];
+  frets: [number, number];
+  accidentals: boolean;
+}
+
+export interface TheoryQuizSettings {
+  topics: ('keys' | 'chords' | 'intervals')[];
+}
+
+export interface QuizAnswer {
+  quiz: 'fretboard' | 'theory';
+  mode: string;
+  item: string;
+  correct: boolean;
+  ms: number;
+  at: string;
+}
+
+export interface TheoryDoc {
+  version: 1;
+  instrument: TheoryInstrument;
+  last_tool: TheoryTool;
+  song_id: string | null;
+  quiz: {
+    settings: { fretboard: FretboardQuizSettings; theory: TheoryQuizSettings };
+    history: QuizAnswer[];
+  };
+}
+
+/** The server's defaults, for "Reset to defaults" after an unreadable theory.json. */
+export const DEFAULT_THEORY: TheoryDoc = {
+  version: 1,
+  instrument: { kind: 'bass', strings: 4, tuning: ['E1', 'A1', 'D2', 'G2'], left_handed: false },
+  last_tool: 'scale-finder',
+  song_id: null,
+  quiz: {
+    settings: {
+      fretboard: { mode: 'find-note', strings: [], frets: [0, 12], accidentals: false },
+      theory: { topics: ['keys', 'chords', 'intervals'] },
+    },
+    history: [],
+  },
+};
