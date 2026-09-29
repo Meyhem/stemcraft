@@ -5,6 +5,7 @@ import type { ComponentType } from 'react';
 
 import type { TheoryTool } from '../api/client';
 import { ChordFinder } from './tools/ChordFinder';
+import { ChordsInKey } from './tools/ChordsInKey';
 import { NoteFinder } from './tools/NoteFinder';
 import { ScaleFinder } from './tools/ScaleFinder';
 
@@ -23,6 +24,7 @@ export const TOOLS: readonly ToolDef[] = [
   { slug: 'scale-finder', label: 'Scale finder', group: 'Find', Component: ScaleFinder },
   { slug: 'chord-finder', label: 'Chord finder', group: 'Find', Component: ChordFinder },
   { slug: 'note-finder', label: 'Note finder', group: 'Find', Component: NoteFinder },
+  { slug: 'chords-in-key', label: 'Chords in a key', group: 'Harmony', Component: ChordsInKey },
 ];
 
 export function toolBySlug(slug: string | undefined): ToolDef | undefined {

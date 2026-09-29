@@ -1,0 +1,85 @@
+/* Circle of fifths (D-19). The lit key is chrome, so accent (U-01). */
+.svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.outer {
+  fill: var(--ds-surface);
+  stroke: var(--ds-border-strong);
+}
+
+.inner {
+  fill: var(--ds-raised);
+  stroke: var(--ds-border-strong);
+}
+
+.hub {
+  fill: var(--ds-ground);
+  stroke: var(--ds-border-strong);
+}
+
+.key {
+  cursor: pointer;
+}
+
+.key:focus-visible {
+  outline: none;
+}
+
+.key:focus-visible circle {
+  stroke: var(--ds-accent);
+  stroke-width: 3;
+}
+
+.off {
+  fill: transparent;
+}
+
+.near {
+  fill: transparent;
+  stroke: var(--ds-accent);
+  stroke-width: 1.5;
+}
+
+.on {
+  fill: var(--ds-accent);
+}
+
+.major,
+.minor,
+.center,
+.sig {
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-family: var(--ds-font);
+  pointer-events: none;
+}
+
+.major {
+  font-size: 17px;
+  font-weight: 700;
+  fill: var(--ds-text-2);
+}
+
+.minor {
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--ds-text-3);
+}
+
+.onText {
+  fill: var(--ds-on-accent);
+}
+
+.center {
+  font-size: 15px;
+  font-weight: 700;
+  fill: var(--ds-text);
+}
+
+.sig {
+  font-size: 12px;
+  fill: var(--ds-text-3);
+}
