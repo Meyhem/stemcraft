@@ -1,0 +1,78 @@
+/* UI spec §5, "Button, icon button": setup tier by default (40px), performance tier
+   (56px) for anything touched with an instrument in hand. "Pressed state uses accent,
+   never a stem hue -- a lit control is chrome." */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-2);
+  min-height: var(--ds-hit-setup);
+  padding: 0 var(--ds-4);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  background: var(--ds-raised);
+  color: var(--ds-text);
+  font: 600 var(--ds-t-sm) / 1 var(--ds-font);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--ds-m-flip) var(--ds-ease),
+    border-color var(--ds-m-flip) var(--ds-ease);
+}
+
+.btn:hover { background: var(--ds-overlay); }
+
+.primary {
+  background: var(--ds-accent);
+  border-color: var(--ds-accent);
+  color: var(--ds-on-accent);
+}
+
+.primary:hover {
+  background: var(--ds-accent);
+  filter: brightness(1.1);
+}
+
+.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ds-text-2);
+  font-weight: 500;
+}
+
+.ghost:hover {
+  background: var(--ds-raised);
+  color: var(--ds-text);
+}
+
+.danger {
+  background: transparent;
+  border-color: var(--ds-error);
+  color: var(--ds-error);
+}
+
+.danger:hover { background: color-mix(in srgb, var(--ds-error) 12%, transparent); }
+
+.perform {
+  min-height: var(--ds-hit-perform);
+  padding: 0 var(--ds-5);
+  font-size: var(--ds-t-md);
+}
+
+/* The UA disabled style is dark text on a light fill -- unreadable on this ground and
+   the reason every disabled submit in the app currently vanishes. Dimming the styled
+   button keeps it legible as a disabled control. */
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* A pressed control is chrome, so it takes the accent -- never a stem hue (U-01). */
+.btn[aria-pressed='true'] {
+  background: var(--ds-accent);
+  border-color: var(--ds-accent);
+  color: var(--ds-on-accent);
+}
