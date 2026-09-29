@@ -36,26 +36,16 @@
   gap: var(--ds-1);
 }
 
-.buttons button {
-  /* UI spec §5, Stem strip: "M/S are 56x44" -- width maps to --ds-hit-perform,
-     but tokens.css has no 44px token and inventing one just for this would be
-     worse than the literal, so the height stays a literal on purpose. */
-  min-width: var(--ds-hit-perform);
+/* UI spec §5, Stem strip: "M/S are 56x44". Button's performance tier supplies the look, the
+   pressed state (accent -- a lit control is chrome, never a stem hue) and the disabled
+   state; the width maps to --ds-hit-perform, and the 44px height is the literal the spec
+   names -- tokens.css has no 44px token, and inventing one for a single use would be
+   worse. Two-class selector so it wins over Button's min-height whatever the load order. */
+.buttons .ms {
+  width: var(--ds-hit-perform);
   min-height: 44px;
-  font: 600 var(--ds-t-sm) / 1 var(--ds-mono);
-  background: var(--ds-raised);
-  border: 1px solid var(--ds-border-strong);
-  border-radius: var(--ds-r-btn);
-  color: var(--ds-text);
-}
-
-.buttons button[aria-pressed='true'] {
-  background: var(--ds-accent); /* a lit control is chrome, never a stem hue */
-  color: var(--ds-ground);
-}
-
-.buttons button:disabled {
-  opacity: 0.5;
+  padding: 0;
+  font-family: var(--ds-mono);
 }
 
 .gain {

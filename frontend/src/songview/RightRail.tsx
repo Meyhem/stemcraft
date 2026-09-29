@@ -6,10 +6,10 @@
 // this rule exists to prevent. The scale sheet it links to is the opposite --
 // pure arithmetic from a chosen key to its notes, no model, no failure mode.
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import type { KeyCandidate, Loop } from '../api/client';
 import { noteName, pitchClassOf, type Mode } from '../music/theory';
+import { Button, Segmented, TextLink } from '../ui';
 import styles from './RightRail.module.css';
 
 export interface RightRailProps {
@@ -64,9 +64,9 @@ export function RightRail({
             );
           })}
         </ul>
-        <Link className={styles.link} to={`/songs/${songId}/scale`}>
+        <TextLink className={styles.link} to={`/songs/${songId}/scale`}>
           Scale &amp; fretboard &rarr;
-        </Link>
+        </TextLink>
       </section>
 
       <section className={styles.section}>
@@ -81,14 +81,13 @@ export function RightRail({
                   {loop.start_bar + 1}&ndash;{loop.end_bar + 1}
                 </span>
               </button>
-              <button
-                type="button"
+              <Button
                 className={styles.delete}
                 aria-label={`Delete loop ${loop.name}, bars ${loop.start_bar + 1}–${loop.end_bar + 1}`}
                 onClick={() => onDeleteLoop(loop.name)}
               >
                 &times;
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -103,30 +102,23 @@ export function RightRail({
               placeholder={activeLoop ? 'Name this loop' : 'Set A/B to enable'}
             />
           </label>
-          <button
-            type="button"
-            disabled={!activeLoop || loopName.trim() === ''}
-            onClick={handleSave}
-          >
+          <Button disabled={!activeLoop || loopName.trim() === ''} onClick={handleSave}>
             Save loop
-          </button>
+          </Button>
         </div>
       </section>
 
       <section className={styles.section}>
         <h2 className={styles.heading}>Count-in</h2>
-        <div className={styles.seg}>
-          {COUNT_IN_OPTIONS.map((bars) => (
-            <button
-              key={bars}
-              type="button"
-              aria-pressed={countInBars === bars}
-              onClick={() => onCountInChange(bars)}
-            >
-              {bars} {bars === 1 ? 'bar' : 'bars'}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Count-in"
+          value={String(countInBars)}
+          options={COUNT_IN_OPTIONS.map((bars) => ({
+            value: String(bars),
+            label: `${bars} ${bars === 1 ? 'bar' : 'bars'}`,
+          }))}
+          onChange={(value) => onCountInChange(Number(value))}
+        />
         {/* The count-in is played out of the bars *before* the start point, so
             there has to be room for it: starting from the top of a song plays
             none. Said here rather than left to be discovered mid-practice. */}

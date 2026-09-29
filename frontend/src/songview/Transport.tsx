@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import { barAt, type Grid } from '../music/grid';
 import type { SampleIndex } from '../engine/types';
+import { Button } from '../ui';
 import { usePlayhead } from './usePlayhead';
 import styles from './Transport.module.css';
 
@@ -135,14 +136,14 @@ export function Transport({
 
   return (
     <div className={styles.bar}>
-      <button
-        type="button"
+      <Button
+        tier="perform"
         className={styles.play}
         aria-label={playing ? 'Pause' : 'Play'}
         onClick={onPlayPause}
       >
         {playing ? '⏸' : '▶'}
-      </button>
+      </Button>
 
       <span className={styles.barNumber} data-testid="bar-readout" ref={barRef}>
         --
@@ -179,43 +180,47 @@ export function Transport({
         </output>
       </label>
 
-      <button
-        type="button"
+      <Button
+        tier="perform"
+        className={styles.action}
         aria-label="Metronome"
         aria-pressed={metronome}
         onClick={onMetronomeToggle}
       >
         Metronome
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        tier="perform"
+        className={styles.action}
         aria-label="Arm loop"
         aria-pressed={loopArmed}
         disabled={!hasLoop}
         onClick={onLoopArmToggle}
       >
         Loop
-      </button>
+      </Button>
       {/* Bars come from analysis; without a grid there is nothing to snap to,
           so the control is withheld and says why rather than no-opping. And a
           B with no A behind it is not an end of anything, so it waits for one
           rather than accepting a click that cannot mean what it looks like. */}
-      <button
-        type="button"
+      <Button
+        tier="perform"
+        className={styles.action}
         disabled={!barsAvailable}
         title={barsAvailable ? undefined : NO_BARS}
         onClick={onSetLoopStart}
       >
         Set A
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        tier="perform"
+        className={styles.action}
         disabled={!barsAvailable || !hasLoop}
         title={!barsAvailable ? NO_BARS : !hasLoop ? 'Set A first' : undefined}
         onClick={onSetLoopEnd}
       >
         Set B
-      </button>
+      </Button>
     </div>
   );
 }

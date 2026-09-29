@@ -13,17 +13,20 @@
   border-radius: var(--ds-r-panel);
 }
 
-.play {
+/* Every control here is a Button at the performance tier (56px, src/ui/Button). What is
+   left is what Button cannot express: the play button is square and icon-sized, and the
+   text buttons stay compact so the bar does not overflow. Two-class selectors so these
+   win over the primitive's rules whatever order the stylesheets load in. */
+.bar > .play {
   width: var(--ds-hit-perform);
-  height: var(--ds-hit-perform);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 0;
   font-size: var(--ds-t-lg);
-  background: var(--ds-raised);
-  border: 1px solid var(--ds-border-strong);
-  border-radius: var(--ds-r-btn);
-  color: var(--ds-text);
+}
+
+.bar > .action {
+  min-width: var(--ds-hit-perform);
+  padding-inline: var(--ds-3);
+  font-size: var(--ds-t-sm);
 }
 
 .barNumber {
@@ -66,24 +69,4 @@
    not at its default (UI spec §5). */
 .slider output[data-default='true'] {
   color: var(--ds-text-3);
-}
-
-.bar > button:not(.play) {
-  min-width: var(--ds-hit-perform);
-  min-height: var(--ds-hit-perform);
-  padding-inline: var(--ds-3);
-  font: 600 var(--ds-t-sm) / 1 var(--ds-font);
-  background: var(--ds-raised);
-  border: 1px solid var(--ds-border-strong);
-  border-radius: var(--ds-r-btn);
-  color: var(--ds-text);
-}
-
-.bar > button[aria-pressed='true'] {
-  background: var(--ds-accent); /* a lit control is chrome, never a stem hue */
-  color: var(--ds-ground);
-}
-
-.bar > button:disabled {
-  opacity: 0.5;
 }

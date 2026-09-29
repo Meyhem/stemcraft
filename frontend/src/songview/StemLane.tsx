@@ -12,6 +12,7 @@ import WaveSurfer from 'wavesurfer.js';
 
 import type { StemName } from '../engine/EngineController';
 import type { StemSummary } from '../engine/stemPeaks';
+import { Button } from '../ui';
 import styles from './StemLane.module.css';
 
 const STEM_COLOR: Record<StemName, string> = {
@@ -79,24 +80,26 @@ export function StemLane({
       <div className={styles.controls}>
         <span className={styles.name}>{name}</span>
         <div className={styles.buttons}>
-          <button
-            type="button"
+          <Button
+            tier="perform"
+            className={styles.ms}
             aria-label={`Mute ${name}`}
             aria-pressed={muted}
             disabled={nearSilent}
             onClick={onMuteToggle}
           >
             M
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            tier="perform"
+            className={styles.ms}
             aria-label={`Solo ${name}`}
             aria-pressed={soloed}
             disabled={nearSilent}
             onClick={onSoloToggle}
           >
             S
-          </button>
+          </Button>
         </div>
         <label className={styles.gain}>
           <span className={styles.srOnly}>{name} gain</span>

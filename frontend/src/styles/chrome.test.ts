@@ -41,3 +41,20 @@ test('no raw hex colour outside tokens.css', () => {
     .map(([path]) => path);
   expect(offenders).toEqual([]);
 });
+
+test('nothing on the playhead path is animated by CSS (U-05)', () => {
+  // D-07 makes the engine the only clock. A CSS transition on the playhead, the chord
+  // highlight or the splitter's playhead is a second clock that interpolates through
+  // moments the engine did not have -- including the loop wrap, where it would hide the
+  // seam R-01 exists to catch. Comments are stripped: these files explain the rule.
+  const PLAYHEAD_PATH = ['Timeline.module.css', 'ChordStrip.module.css', 'WaveformMarkers.module.css'];
+  const found = Object.entries(modules).filter(([path]) =>
+    PLAYHEAD_PATH.some((name) => path.endsWith(name)),
+  );
+  // If a file is renamed the guard would silently cover nothing.
+  expect(found.map(([path]) => path.split('/').pop()).sort()).toEqual([...PLAYHEAD_PATH].sort());
+  const offenders = found
+    .filter(([, css]) => /\b(transition|animation)\b/.test(code(css)))
+    .map(([path]) => path);
+  expect(offenders).toEqual([]);
+});
