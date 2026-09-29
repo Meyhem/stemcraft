@@ -14,3 +14,24 @@
   flex-direction: column;
   gap: var(--ds-2);
 }
+
+.pickers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--ds-5);
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+}
+
+.caption {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--ds-t-xs);
+  font-weight: 600;
+  color: var(--ds-text-3);
+}
