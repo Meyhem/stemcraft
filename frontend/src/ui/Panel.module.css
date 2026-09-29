@@ -1,0 +1,7 @@
+/* U-08: depth is a surface step plus a 1px border, never a drop shadow. */
+.panel {
+  padding: var(--ds-5);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+  background: var(--ds-surface);
+}

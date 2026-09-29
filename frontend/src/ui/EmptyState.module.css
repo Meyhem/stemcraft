@@ -1,0 +1,15 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-4);
+  padding: var(--ds-9) var(--ds-5);
+  color: var(--ds-text-2);
+  text-align: center;
+}
+
+.title {
+  font-size: var(--ds-t-lg);
+  line-height: var(--ds-lh-lg);
+  color: var(--ds-text);
+}

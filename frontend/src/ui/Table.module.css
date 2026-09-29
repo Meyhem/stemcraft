@@ -1,0 +1,29 @@
+/* UI spec §5, "Table": setup tier, and the only place --ds-t-xs (13px) is permitted. */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-t-sm);
+}
+
+.tbl th {
+  padding: var(--ds-2) var(--ds-3);
+  border-bottom: 1px solid var(--ds-border);
+  font-size: var(--ds-t-xs);
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-text-3);
+  white-space: nowrap;
+}
+
+.tbl td {
+  height: var(--ds-hit-setup);
+  padding: var(--ds-3);
+  border-bottom: 1px solid var(--ds-border);
+  vertical-align: middle;
+}
+
+.tbl tr:last-child td { border-bottom: 0; }
+
+.tbl tbody tr:hover { background: var(--ds-raised); }
