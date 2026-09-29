@@ -1,0 +1,90 @@
+<!-- @dsCard group="Components" name="Cut markers & cut list" subtitle="Album splitter: numbered cuts, grab rules, millisecond times" viewport="1100x1500" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cut markers — Stemcraft</title><style>/* @inject */
+.albumwave{position:relative;height:166px}
+.albumwave .wv{position:absolute;left:0;right:0;top:26px;bottom:0}
+.albumwave .wv svg{width:100%;height:100%;display:block}
+.tfield{width:100%;min-height:var(--ds-hit-setup);padding:0 var(--ds-3);background:var(--ds-ground);border:1px solid var(--ds-border-strong);
+  border-radius:var(--ds-r-input);color:var(--ds-text);font:400 var(--ds-t-md)/1 var(--ds-mono);font-variant-numeric:tabular-nums}
+.tfield.err{border-color:var(--ds-error)}
+.errmsg{display:block;margin-top:var(--ds-1);color:var(--ds-error);font:400 var(--ds-t-xs)/1.3 var(--ds-font)}
+.titlefield{width:100%;min-height:var(--ds-hit-setup);padding:0 var(--ds-3);background:var(--ds-ground);border:1px solid var(--ds-border-strong);
+  border-radius:var(--ds-r-input);color:var(--ds-text);font:400 var(--ds-t-md)/1 var(--ds-font)}
+.play{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--ds-border-strong);
+  background:var(--ds-raised);border-radius:var(--ds-r-btn);color:var(--ds-text)}
+.play svg{width:14px;height:14px;fill:currentColor}
+</style></head><body><div class="doc">
+
+<div class="sec">
+  <h1>Cut markers &amp; cut list</h1>
+  <p class="note">A cut is a <b>split point stored as an integer sample index at 48&nbsp;kHz</b> (D-03). Cut <b>N</b> ends track N
+  and starts track N+1, so the waveform and the table are two views of the same list: moving a cut in either moves it in
+  both. Detected silences are only <i>proposals</i> (D8-04) &mdash; applied when you press <b>Use proposed boundaries</b>, and
+  from then on indistinguishable from cuts you placed.</p>
+</div>
+
+<div class="sec">
+  <h2>On the waveform</h2>
+  <div class="wavewrap albumwave">
+    <div class="ruler">
+      <span style="left:0">6:30</span><span style="left:150px">7:00</span><span style="left:300px">7:30</span><span style="left:450px">8:00</span>
+      <span style="left:600px">8:30</span><span style="left:750px">9:00</span><span style="left:900px">9:30</span>
+    </div>
+    <div class="wv"><!--@wave mix 1100 140 404 0.8--></div>
+    <div class="cutmark" style="left:212px"></div><span class="cuttag" style="left:212px">3</span>
+    <div class="cutmark is-selected" style="left:560px"></div><span class="cuttag is-selected" style="left:560px">4</span>
+    <div class="cutmark" style="left:596px"></div><span class="cuttag" style="left:596px">5</span>
+    <div class="playhead" style="left:380px"></div>
+  </div>
+  <div class="row wrap t-sm dim" style="margin-top:var(--ds-3)">
+    <span><b style="color:var(--ds-warn)">Amber line + number</b> a cut</span>
+    <span><b style="color:var(--ds-accent)">Blue line, ringed number</b> the selected cut</span>
+    <span><b style="color:var(--ds-text)">White line</b> playhead</span>
+    <span><b style="color:var(--ds-accent)">Tinted band</b> ruler &mdash; click to seek</span>
+  </div>
+  <p class="note">The waveform is the whole album master, played from a plain <code class="num">&lt;audio&gt;</code> element; the
+  part already played is drawn in the accent, the rest in light grey. It zooms and pans exactly like the Song view (wheel at the
+  pointer, drag across it to zoom to a range, Shift+wheel or the scrollbar to pan), down to 100&nbsp;px/s &mdash; the album peaks
+  hold 10 buckets/s (D8-12), so closer shows nothing new. Past that, exact placement is what the millisecond fields are for.</p>
+  <table class="tbl">
+    <thead><tr><th>on the waveform</th><th>does</th></tr></thead>
+    <tbody>
+      <tr><td>Click bare waveform</td><td>Adds a cut there. The new track is inserted after the one it cut, so titles stay on their audio.</td></tr>
+      <tr><td>Press within 8&nbsp;px of a cut, drag</td><td>Moves that cut, clamped between its neighbours and inside the album. Cursor shows &harr; when you are close enough.</td></tr>
+      <tr><td>Press on a cut's number, drag</td><td>Moves exactly that cut, even where cuts overlap on screen.</td></tr>
+      <tr><td>Cuts overlapping on screen</td><td>The drag direction picks the one that can move (rightmost dragging right, leftmost dragging left).</td></tr>
+      <tr><td>Click a cut's number</td><td>Selects it: arrows nudge 0.1&nbsp;s (Shift: 1&nbsp;s), Home/End jump to its limits, <b>Delete</b> removes it.</td></tr>
+      <tr><td>Drag across bare waveform</td><td>Zooms that range to fit.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="sec">
+  <h2>Cut list</h2>
+  <div class="card" style="padding:0 var(--ds-3)">
+    <table class="tbl">
+      <thead><tr><th style="width:40px">#</th><th style="width:56px"></th><th>title</th><th style="width:170px">start</th><th style="width:210px">end</th><th style="width:80px">length</th><th style="width:200px">file</th><th style="width:56px"></th></tr></thead>
+      <tbody>
+        <tr><td class="num dim">1</td><td><span class="play"><svg viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z"/></svg></span></td>
+          <td><input class="titlefield" value="Heaven and Hell"></td><td class="num dim">0:00.000</td>
+          <td><input class="tfield" value="4:35.736"></td><td class="num dim">4:36</td><td class="num dim t-sm" style="white-space:nowrap">01-heaven-and-hell.mp3</td>
+          <td><button class="btn" aria-label="Remove the cut after track 1">&times;</button></td></tr>
+        <tr><td class="num dim">2</td><td><span class="play"><svg viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z"/></svg></span></td>
+          <td><input class="titlefield" placeholder="Untitled"></td><td><input class="tfield" value="4:35.736"></td>
+          <td><input class="tfield err" value="99:00.000"><span class="errmsg">Must be between 4:35.737 and 10:00.130</span></td>
+          <td class="num dim">0:49</td><td class="num dim t-sm" style="white-space:nowrap">02-track-2.mp3</td>
+          <td><button class="btn" aria-label="Remove the cut after track 2">&times;</button></td></tr>
+        <tr><td class="num dim">3</td><td><span class="play"><svg viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z"/></svg></span></td>
+          <td><input class="titlefield" value="Tattoo"></td><td><input class="tfield" value="5:24.395"></td>
+          <td class="num dim">41:18.000</td><td class="num dim">35:54</td><td class="num dim t-sm" style="white-space:nowrap">03-tattoo.mp3</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note"><b>Start</b> and <b>End</b> are typed as <span class="num">m:ss.mmm</span> (or <span class="num">h:mm:ss.mmm</span>,
+  or bare seconds). Track 1's start and the last track's end are the album's edges, not cuts, so they are plain text. A time that
+  is not a time, or that would cross a neighbouring cut, is <b>refused with the allowed range and the cut does not move</b> &mdash;
+  never clamped to something you did not type (N-08). Escape abandons the edit. <b>&#9654;</b> plays from the track's first sample;
+  <b>&times;</b> removes the cut after the track, merging it with the next (its title survives). Filenames are shown before the
+  split runs, exactly as it will write them.</p>
+</div>
+
+</div></body></html>

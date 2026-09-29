@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Timeline & loop" subtitle="Bar ruler, beat grid, A–B region, playhead" viewport="1100x1170" -->
+<!-- @dsCard group="Components" name="Timeline & loop" subtitle="Seek ruler, beat grid, A–B region, playhead, zoom and pan" viewport="1100x1650" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Timeline — Stemcraft</title><style>/* @inject */
 .tl{position:relative}
 .tl .lanes{position:relative}
@@ -17,9 +17,8 @@
   <h2>Anatomy</h2>
   <div class="wavewrap tl">
     <div class="ruler">
-      <span style="left:0">1</span><span style="left:168px">5</span><span style="left:336px">9</span>
-      <span style="left:504px">13</span><span style="left:672px">17</span><span style="left:840px">21</span>
-      <span style="left:1008px">25</span>
+      <span style="left:200px">1</span><span style="left:368px">5</span><span style="left:536px">9</span>
+      <span style="left:704px">13</span><span style="left:872px">17</span>
     </div>
     <div class="lanes">
       <div class="stem-row stem stem-v"><div class="stem-ctl" style="padding:var(--ds-2) var(--ds-3)"><div class="stem-name t-sm"><i class="sw"></i>vocals</div></div><div class="stem-lane"><!--@wave vocals 1200 56 11--></div></div>
@@ -33,14 +32,63 @@
     </div>
   </div>
   <div class="row wrap t-sm dim" style="margin-top:var(--ds-3)">
+    <span><b style="color:var(--ds-accent)">Tinted band</b> the ruler &mdash; click to seek</span>
     <span><b style="color:var(--ds-text)">Faint lines</b> beats</span>
     <span><b style="color:var(--ds-text)">Bright lines</b> downbeats</span>
     <span><b style="color:var(--ds-accent)">Blue field</b> A&ndash;B loop, snapped to bars</span>
     <span><b style="color:var(--ds-text)">White line</b> playhead</span>
   </div>
-  <p class="note">The playhead is positioned by <code class="num">requestAnimationFrame</code> from the engine's clock. wavesurfer
-  renders the waveform and hosts the region handles and <b>does not play audio</b> (D-07) &mdash; it has no playhead of its
-  own to disagree with.</p>
+  <p class="note">The playhead is positioned by <code class="num">requestAnimationFrame</code> from the engine's clock. Each lane
+  is painted from the stem's precomputed envelope onto a canvas the size of the <b>visible</b> part of the lane, which repaints
+  its slice on every pan &mdash; so the cost is the same at every zoom. Nothing that draws a waveform <b>plays audio</b> (D-07),
+  and none has a playhead of its own to disagree with.</p>
+  <p class="note">The <b>ruler is the one click-to-seek strip</b>: a tinted band with a pointer cursor that brightens on hover.
+  Everywhere below it a press means something else (zoom here, a cut in the Album splitter), so the two must never look alike.</p>
+</div>
+
+<div class="sec">
+  <h2>Zoom &amp; pan</h2>
+  <div class="panel panel-pad row wrap" style="gap:var(--ds-5)">
+    <div class="col" style="gap:var(--ds-1)">
+      <span class="cap">zoom</span>
+      <div class="zoomctl">
+        <button class="btn" aria-label="Zoom out">&minus;</button>
+        <output class="zoomval">7.4 bars in view</output>
+        <button class="btn" aria-label="Zoom in">+</button>
+        <button class="btn">Fit</button>
+      </div>
+    </div>
+    <div class="col" style="gap:var(--ds-1)">
+      <span class="cap">at fit</span>
+      <div class="zoomctl"><output class="zoomval">Whole song</output></div>
+    </div>
+  </div>
+  <div class="wavewrap tl" style="margin-top:var(--ds-3)">
+    <div class="ruler is-hover">
+      <span style="left:200px">17</span><span style="left:500px">18</span><span style="left:800px">19</span>
+    </div>
+    <div class="lanes">
+      <div class="stem-row stem stem-d"><div class="stem-ctl" style="padding:var(--ds-2) var(--ds-3)"><div class="stem-name t-sm"><i class="sw"></i>drums</div></div><div class="stem-lane"><!--@wave drums 1200 56 71--></div></div>
+      <div class="stem-row stem stem-b"><div class="stem-ctl" style="padding:var(--ds-2) var(--ds-3)"><div class="stem-name t-sm"><i class="sw"></i>bass</div></div><div class="stem-lane"><!--@wave bass 1200 56 72--></div></div>
+      <div class="zoomsel" style="left:420px;width:260px"></div>
+    </div>
+  </div>
+  <table class="tbl" style="margin-top:var(--ds-3)">
+    <thead><tr><th>gesture</th><th>does</th></tr></thead>
+    <tbody>
+      <tr><td>Wheel over the chords or lanes</td><td>Zoom in / out around the pointer (~1.3&times; a notch). Over the sticky heads it does nothing &mdash; they hold sliders.</td></tr>
+      <tr><td>Drag across the chords or lanes</td><td>Draws the blue selection above; releasing fits that range to the view. A press that does not travel 4&nbsp;px does nothing.</td></tr>
+      <tr><td>Shift+wheel, trackpad swipe, scrollbar</td><td>Pan.</td></tr>
+      <tr><td>&minus; / + / Fit</td><td>Step 2&times; / fit the whole song. Button zoom keeps the playhead where you can see it.</td></tr>
+      <tr><td>Click the ruler</td><td>Seek (and disarm an active loop first, U-06).</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Zoom is continuous, from the whole song fitted to the view down to <b>200&nbsp;px per second</b> (stem peaks
+  hold 100 buckets/s, so that is 2&nbsp;px a bucket &mdash; fine enough to put a loop on a beat). The readout says how much is in
+  view, in bars when the song is analysed and as time when it is not; <span class="num">px/s</span> means nothing to a player.</p>
+  <p class="note"><b>Follow playhead</b> pages the view while playing. A zoom or pan by hand while playing switches it off,
+  visibly (the toggle unlights), so the view never snaps back while you look elsewhere. While paused, follow moves the view
+  only when the playhead itself moves &mdash; a seek, or switching follow on &mdash; never because the zoom changed.</p>
 </div>
 
 <div class="sec">

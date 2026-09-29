@@ -24,8 +24,11 @@ instrument and play along.
 ![Song view](docs/screenshots/song-view.png)
 ![Album splitter](docs/screenshots/album-splitter.png)
 
-The Library and Song view images are design mockups from [design/ui](design/ui). The Album
-splitter image is a capture of the running app.
+All three are captures of the running app, made with
+`node scripts/capture-screens.mjs library=/ song-view=/songs/<id> album-splitter=/splitter/<id>`
+(API and dev server running; it only loads the pages). The design system these follow —
+tokens, components and screen mockups — is in [design/ui](design/ui) (build it with
+`python3 design/ui/build.py`), with its rules in [design/ui-spec.md](design/ui-spec.md).
 
 ## Run locally
 

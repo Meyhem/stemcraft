@@ -1,16 +1,22 @@
-<!-- @dsCard group="Screens" name="Album splitter" subtitle="One long file → tagged MP3s; every field typed by hand" viewport="1440x1070" -->
+<!-- @dsCard group="Screens" name="Album splitter" subtitle="One long file → tagged MP3s: zoomable waveform, numbered cuts, millisecond cut list" viewport="1440x1060" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Album splitter — Stemcraft</title><style>/* @inject */
-.segwave{position:relative;height:140px;background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
-.segwave svg{width:100%;height:100%;display:block}
-.cut{position:absolute;top:0;bottom:0;width:2px;background:var(--ds-accent);cursor:col-resize}
-.cut::before{content:"";position:absolute;top:0;left:-7px;width:16px;height:16px;border-radius:0 0 8px 8px;background:var(--ds-accent)}
-.cut.auto{background:var(--ds-warn)}
-.cut.auto::before{background:var(--ds-warn)}
-.tracklab{position:absolute;bottom:6px;font:600 var(--ds-t-xs)/1 var(--ds-mono);color:var(--ds-text-2);padding-left:6px}
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--ds-4)}
-.tbl td input{background:transparent;border:1px solid transparent;color:var(--ds-text);font:400 var(--ds-t-sm)/1 var(--ds-font);padding:var(--ds-2);width:100%;border-radius:var(--ds-r-input)}
-.tbl td input:hover{border-color:var(--ds-border)}
-.tbl td input:focus{border-color:var(--ds-accent);background:var(--ds-ground);outline:none}
+.toolbar{display:flex;align-items:center;gap:var(--ds-3);padding:var(--ds-2) var(--ds-3);background:var(--ds-raised);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel)}
+.albumwave{position:relative;height:166px}
+.albumwave .wv{position:absolute;left:0;right:0;top:26px;bottom:0}
+.albumwave .wv svg{width:100%;height:100%;display:block}
+.albumwave .played{position:absolute;left:0;top:26px;bottom:0;overflow:hidden}
+.albumwave .played svg{width:1392px;height:100%;display:block}
+.albumwave .played svg polygon{fill:var(--ds-accent)}
+.scrollbar{height:10px;margin:0 var(--ds-1);position:relative}
+.scrollbar i{position:absolute;top:2px;height:6px;border-radius:3px;background:var(--ds-border-strong)}
+.hint{font:400 var(--ds-t-xs)/1.4 var(--ds-font);color:var(--ds-text-3)}
+.tfield,.titlefield{width:100%;min-height:var(--ds-hit-setup);padding:0 var(--ds-3);background:var(--ds-ground);border:1px solid var(--ds-border-strong);
+  border-radius:var(--ds-r-input);color:var(--ds-text);font:400 var(--ds-t-md)/1 var(--ds-font)}
+.tfield{font-family:var(--ds-mono);font-variant-numeric:tabular-nums}
+.play{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--ds-border-strong);
+  background:var(--ds-raised);border-radius:var(--ds-r-btn);color:var(--ds-text)}
+.play svg{width:14px;height:14px;fill:currentColor}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--ds-4)}
 </style></head><body><div class="app">
 
 <div class="topbar">
@@ -20,68 +26,72 @@
   <span class="chip chip-ok">cuda · RTX 5080</span>
 </div>
 
-<div class="main col" style="gap:var(--ds-5)">
+<div class="main col" style="gap:var(--ds-4)">
 
   <div class="row">
-    <h1 class="t-lg" style="margin:0">Album splitter</h1>
-    <span class="t-md dim num">live-at-leeds.flac · 41:18</span>
+    <div class="col" style="gap:var(--ds-1)">
+      <h1 class="t-lg" style="margin:0">Album splitter</h1>
+      <span class="t-md dim">Live at Leeds — The Who</span>
+    </div>
     <div class="grow"></div>
-    <button class="btn">Re-detect silence</button>
-    <button class="btn btn-primary">Export 6 MP3s as zip</button>
+    <button class="btn btn-ghost">Back to albums</button>
   </div>
+
+  <div class="grid2">
+    <div class="field"><label for="al">Album title</label><input class="input" id="al" value="Live at Leeds"></div>
+    <div class="field"><label for="ar">Album artist</label><input class="input" id="ar" value="The Who"></div>
+  </div>
+  <p class="t-sm dim" style="margin:0">Both are written into every track's tags — there is nothing to fill down.</p>
 
   <div class="col" style="gap:var(--ds-2)">
-    <div class="segwave">
-      <!--@wave mix 1360 140 777 0.7-->
-      <div class="cut auto" style="left:14%"></div>
-      <div class="cut auto" style="left:31%"></div>
-      <div class="cut" style="left:46%"></div>
-      <div class="cut auto" style="left:62%"></div>
-      <div class="cut auto" style="left:79%"></div>
-      <span class="tracklab" style="left:0">1</span>
-      <span class="tracklab" style="left:14%">2</span>
-      <span class="tracklab" style="left:31%">3</span>
-      <span class="tracklab" style="left:46%">4</span>
-      <span class="tracklab" style="left:62%">5</span>
-      <span class="tracklab" style="left:79%">6</span>
-    </div>
-    <div class="row wrap t-sm dim">
-      <span><b style="color:var(--ds-warn)">Amber</b> proposed by silence detection</span>
-      <span><b style="color:var(--ds-accent)">Blue</b> moved or added by you</span>
+    <div class="toolbar">
+      <button class="play" aria-label="Pause" aria-pressed="true" style="background:var(--ds-accent);color:var(--ds-on-accent);border-color:var(--ds-accent)"><svg viewBox="0 0 14 14"><path d="M3 1.5h3v11H3zM8 1.5h3v11H8z"/></svg></button>
+      <span class="num t-md"><b style="font-weight:400;color:var(--ds-text)">7:42.118</b> <span class="dim">/ 41:18.000</span></span>
       <div class="grow"></div>
-      <button class="btn btn-ghost" style="min-height:32px">+ Add split at playhead</button>
+      <span class="t-sm dim">Zoom</span>
+      <div class="zoomctl">
+        <button class="btn" aria-label="Zoom out">&minus;</button>
+        <output class="zoomval">5:04 in view</output>
+        <button class="btn" aria-label="Zoom in">+</button>
+        <button class="btn">Fit</button>
+      </div>
     </div>
+    <div class="wavewrap albumwave">
+      <div class="ruler">
+        <span style="left:0">5:30</span><span style="left:196px">6:00</span><span style="left:392px">6:30</span><span style="left:588px">7:00</span>
+        <span style="left:784px">7:30</span><span style="left:980px">8:00</span><span style="left:1176px">8:30</span>
+      </div>
+      <div class="wv"><!--@wave mix 1392 140 777 0.75--></div>
+      <div class="played" style="width:863px"><!--@wave mix 1392 140 777 0.75--></div>
+      <div class="cutmark" style="left:112px"></div><span class="cuttag" style="left:112px">1</span>
+      <div class="cutmark is-selected" style="left:1182px"></div><span class="cuttag is-selected" style="left:1182px">2</span>
+      <div class="playhead" style="left:863px"></div>
+    </div>
+    <div class="scrollbar"><i style="left:12%;width:12%"></i></div>
+    <span class="hint">Click the waveform to add a cut · drag a cut or its number to move it · click a cut's number, then Delete to remove it · drag across the waveform to zoom to that range · wheel zooms · Shift+wheel or the scrollbar pans · click the ruler to seek</span>
   </div>
 
-  <div class="panel panel-pad col" style="gap:var(--ds-4)">
-    <span class="cap">album fields — typed once, filled down</span>
-    <div class="grid3">
-      <div class="field"><label for="ar">Artist</label><input class="input" id="ar" value="The Who"></div>
-      <div class="field"><label for="al">Album</label><input class="input" id="al" value="Live at Leeds"></div>
-      <div class="field"><label for="yr">Year</label><input class="input num" id="yr" value="1970"></div>
-    </div>
-    <p class="t-sm dim3" style="margin:0">C-06: no fingerprinting, no metadata fetch, no album identification. Everything here is yours to type,
-    and nothing leaves the machine.</p>
+  <div class="row">
+    <button class="btn">Use proposed boundaries (5)</button>
+    <span class="t-sm dim">Replaces every boundary with the detected silences. Nothing moves until you press it.</span>
   </div>
 
   <div class="card" style="padding:0 var(--ds-3)">
     <table class="tbl">
-      <thead><tr><th class="num" style="width:56px">#</th><th>title</th><th class="num" style="width:120px">start</th><th class="num" style="width:120px">length</th><th class="num" style="width:110px">size</th><th style="width:130px">file</th></tr></thead>
+      <thead><tr><th style="width:40px">#</th><th style="width:56px"></th><th>title</th><th style="width:170px">start</th><th style="width:170px">end</th><th style="width:80px">length</th><th style="width:250px">file</th><th style="width:56px"></th></tr></thead>
       <tbody>
-        <tr><td class="num">01</td><td><input value="Heaven and Hell"></td><td class="num dim">0:00</td><td class="num">5:47</td><td class="num dim">13.9 MB</td><td class="t-xs dim3 num">01-heaven…mp3</td></tr>
-        <tr><td class="num">02</td><td><input value="I Can't Explain"></td><td class="num dim">5:47</td><td class="num">7:01</td><td class="num dim">16.8 MB</td><td class="t-xs dim3 num">02-i-cant…mp3</td></tr>
-        <tr><td class="num">03</td><td><input value="Fortune Teller"></td><td class="num dim">12:48</td><td class="num">6:12</td><td class="num dim">14.9 MB</td><td class="t-xs dim3 num">03-fortune…mp3</td></tr>
-        <tr><td class="num">04</td><td><input value="Tattoo"></td><td class="num dim">19:00</td><td class="num">6:36</td><td class="num dim">15.8 MB</td><td class="t-xs dim3 num">04-tattoo.mp3</td></tr>
-        <tr><td class="num">05</td><td><input value="Young Man Blues"></td><td class="num dim">25:36</td><td class="num">7:01</td><td class="num dim">16.8 MB</td><td class="t-xs dim3 num">05-young-man…mp3</td></tr>
-        <tr><td class="num">06</td><td><input placeholder="Untitled — type a title" style="color:var(--ds-text-3)"></td><td class="num dim">32:37</td><td class="num">8:41</td><td class="num dim">20.8 MB</td><td class="t-xs dim3 num">06-untitled.mp3</td></tr>
+        <tr><td class="num dim">1</td><td><span class="play"><svg viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z"/></svg></span></td><td><input class="titlefield" value="Heaven and Hell"></td><td class="num dim">0:00.000</td><td><input class="tfield" value="5:47.204"></td><td class="num dim">5:47</td><td class="num dim t-sm" style="white-space:nowrap">01-heaven-and-hell.mp3</td><td><button class="btn" aria-label="Remove the cut after track 1">&times;</button></td></tr>
+        <tr><td class="num dim">2</td><td><span class="play"><svg viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z"/></svg></span></td><td><input class="titlefield" value="I Can't Explain"></td><td><input class="tfield" value="5:47.204"></td><td><input class="tfield" value="8:30.911"></td><td class="num dim">2:44</td><td class="num dim t-sm" style="white-space:nowrap">02-i-can-t-explain.mp3</td><td><button class="btn" aria-label="Remove the cut after track 2">&times;</button></td></tr>
+        <tr><td class="num dim">3</td><td><span class="play"><svg viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z"/></svg></span></td><td><input class="titlefield" value="Fortune Teller"></td><td><input class="tfield" value="8:30.911"></td><td><input class="tfield" value="12:48.020"></td><td class="num dim">4:17</td><td class="num dim t-sm" style="white-space:nowrap">03-fortune-teller.mp3</td><td><button class="btn" aria-label="Remove the cut after track 3">&times;</button></td></tr>
+        <tr><td class="num dim">4</td><td><span class="play"><svg viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z"/></svg></span></td><td><input class="titlefield" placeholder="Untitled"></td><td><input class="tfield" value="12:48.020"></td><td class="num dim">41:18.000</td><td class="num dim">28:30</td><td class="num dim t-sm" style="white-space:nowrap">04-track-4.mp3</td><td></td></tr>
       </tbody>
     </table>
   </div>
 
-  <div class="row t-sm dim3">
-    <span>Track numbers are automatic. ID3 tags are written from the fields above.</span>
+  <div class="row">
+    <button class="btn btn-primary">Split into 4 tracks</button>
     <div class="grow"></div>
-    <span class="num">6 tracks · 41:18 · 99.0 MB</span>
+    <span class="t-sm dim3">Track numbers are automatic. ID3 tags are written from the fields above.</span>
   </div>
 
 </div>

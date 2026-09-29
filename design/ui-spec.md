@@ -62,7 +62,9 @@ hit-target tiers rather than one.
 
 - **U-05 — The playhead is positioned by `requestAnimationFrame` from the engine clock;
   never by a CSS transition or animation.**
-  *Because:* D-07 makes wavesurfer a slave to the engine's clock. A CSS-animated
+  *Because:* D-07 keeps every waveform a drawing with no clock of its own — each is painted
+  from a precomputed envelope and never plays audio — so the engine's clock is the only one
+  there is. A CSS-animated
   playhead is a second clock that interpolates smoothly through moments the engine did
   not have — including the loop wrap, where it would hide exactly the seam R-01 exists
   to catch. `prefers-reduced-motion` zeroes every other duration and changes nothing
@@ -98,6 +100,28 @@ hit-target tiers rather than one.
   stored, consistent with deriving Song state from what exists on disk.
   *Rejected:* hiding the lane (breaks the fixed four-lane order that U-01 depends on for
   identity); showing it unmarked (the failure this decision exists to fix).
+  *Reversibility:* two-way.
+
+- **U-11 — The ruler is the one click-to-seek strip, and looks it.** On every time axis
+  (Song view, Album splitter) the ruler is a tinted accent band with a pointer cursor that
+  brightens on hover.
+  *Because:* everywhere below it a press means something else — a zoom selection on the
+  Song view's lanes, a new cut on the splitter's waveform. Two targets that look alike get
+  confused, and a stray cut or a lost playback position is the result.
+  *Reversibility:* two-way.
+
+- **U-12 — One zoom-and-pan model for every time axis.** The wheel zooms around the
+  pointer; a drag across the content zooms that range to fit; Shift+wheel, a trackpad swipe
+  or the scrollbar pans; `−` / `+` step 2× and `Fit` shows everything. The readout says how
+  much is in view (bars when analysed, otherwise time) — never px/s. Zoom is continuous from
+  fit to a per-axis maximum set by its peak resolution (Song view 200 px/s at 100 buckets/s;
+  splitter 100 px/s at 10 buckets/s, D8-12). A lane or waveform paints only its visible
+  slice, so zooming in costs nothing extra.
+  *Because:* the splitter and the Song view are the same problem — find a moment in a long
+  timeline — and a user who learns one should already know the other.
+  *Follow:* a manual zoom or pan while playing switches Follow off, visibly. While paused,
+  Follow moves the view only when the playhead itself moves (a seek, or switching Follow
+  on), never because the zoom changed — or an anchored zoom would snap straight back.
   *Reversibility:* two-way.
 
 - **U-09 — Every failure surface shows the real message from the real tool.** ffmpeg
@@ -139,7 +163,10 @@ other), a permanent text label, and a fixed lane position; hue is an accelerator
 | Text field, drop zone, checkbox, segmented | setup | |
 | Slider | both | tempo/pitch are performance (14 px track, 32 px knob); gain is setup. **Every slider mirrors its value as a mono readout** — a knob position is unreadable at 1.5 m. Gain fill takes the stem hue; tempo fill takes the accent |
 | Stem strip | performance | the signature component. M/S are 56×44. A muted lane drops to 28 % opacity so the mute is visible across a room, not just as a toggle. A **near-silent** lane (U-10) dims its waveform to 16 %, carries an explanatory pill, and renders M/S inert |
-| Timeline | — | bar ruler, beat grid (faint) and downbeat grid (bright), A–B region with bar labels, playhead |
+| Timeline | — | seek ruler as a tinted band (U-11), beat grid (faint) and downbeat grid (bright), A–B region with bar labels, playhead; lanes painted from envelopes on a viewport-sized canvas |
+| Zoom controls | setup | `−` / readout of what is in view / `+` / `Fit`, identical on the Song view transport and the splitter toolbar (U-12) |
+| Cut marker | — | Album splitter. One 2 px amber line plus a numbered tag (cut N ends track N). A press within 8 px grabs it; the tag grabs exactly that cut; overlapping cuts resolve by drag direction. Selected: line turns accent, tag gets the focus ring |
+| Cut list | setup | per track: ▶ (play from its first sample), title, **Start** and **End** typed as `m:ss.mmm`, length, the exact filename the split will write, and × (remove the cut after it). A time that crosses a neighbour is refused with the allowed range — never clamped |
 | Transport bar | performance | bar number in display/48 mono; untouched tempo/pitch values render muted |
 | Banner | — | warn and error; carries the verbatim trace (U-09) |
 | Progress bar, job row | setup | estimate derives from the job's recorded device and N-01 |
@@ -166,10 +193,13 @@ assuming it can vary.
 2. **Import** — modal. Upload or URL. Title and artist prefilled from the file's own
    tags, always editable; no online lookup anywhere (C-06). The pipeline is shown as
    five explicit steps ending in "analyze", so the wait is legible rather than a spinner.
-3. **Song view** — the hard screen. Bar ruler, four full-height stem lanes with beat and
-   downbeat grid, A–B region, chord strip aligned to bars, transport bar. A 320 px right
-   rail holds key candidates, saved loops and count-in — all setup
-   tier, all out of the way. Every value auto-saves to `song.json`.
+3. **Song view** — the hard screen. The transport sits on top (play, bar, chord → next,
+   tempo, pitch, metronome, loop, Set A/B, zoom, Follow playhead). Below it one horizontally
+   scrolling time axis holds, in order, the seek ruler, the chord row aligned to bars, and
+   four full-height stem lanes with beat and downbeat grid, A–B region and playhead; the
+   200 px lane heads stay put while it scrolls. Zoom and pan per U-12. A 320 px right rail
+   holds key candidates, saved loops and count-in — all setup tier, all out of the way.
+   Every value auto-saves to `song.json`; zoom and scroll are view state and never do.
 4. **Scale & fretboard** — bass or guitar, generated from the selected key candidate.
    Pure arithmetic; no model, no failure mode. The page says so, because the chips above
    it are probabilistic and the board below it is not (R-05).
@@ -180,9 +210,13 @@ assuming it can vary.
 6. **Job queue** — the real operational dashboard (§10). Live queue with cancel, failed
    jobs with full tracebacks, all-time stats split by kind **and device**, and full
    history. Rows whose song was deleted keep their `song_id` and render without a link.
-7. **Album splitter** — waveform with proposed and user-moved split points visually
-   distinguished, album fields typed once and filled down, per-track title table with
-   automatic track numbers.
+7. **Album splitter** — full window width. Album title and artist are typed once and
+   written into every track's tags (there is nothing to fill down). A toolbar with play and
+   the zoom controls sits over the album waveform (seek ruler, played part in the accent,
+   numbered cut markers); below it, **Use proposed boundaries (N)** applies the detected
+   silences only when pressed (D8-04) — after that, proposed and hand-placed cuts are the
+   same thing and look the same. Then the cut list (automatic track numbers, millisecond
+   start/end, play, remove) and **Split into N tracks**.
 
 ## 7. Keyboard
 
@@ -190,6 +224,10 @@ Performance controls all have keys, because reaching for a mouse mid-song is wha
 layout is trying to avoid. `Space` play/pause · `L` arm loop · `A`/`B` set loop points
 at the current bar · `M` metronome · `1`–`4` mute stem by lane position · `↑`/`↓` tempo
 ±5 % · `←`/`→` jump one bar.
+
+Album splitter, on a selected cut (click its number): `←`/`→` nudge 0.1 s, with `Shift`
+1 s · `Home`/`End` jump to the limits its neighbours allow · `Delete` or `Backspace`
+removes it. In a Start/End field, `Enter` commits and `Escape` abandons the edit.
 
 ## 8. Deferred
 
