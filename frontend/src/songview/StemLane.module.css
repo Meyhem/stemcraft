@@ -23,7 +23,7 @@
   flex-direction: column;
   justify-content: center;
   gap: var(--ds-2);
-  padding: var(--ds-2) var(--ds-3);
+  padding: var(--ds-2);
 }
 
 .name {
@@ -71,6 +71,7 @@
   color: var(--ds-text-2);
   min-width: 5ch;
   text-align: right;
+  white-space: nowrap; /* "-12.5 dB" on one line inside the 200px head */
 }
 
 .pill {
