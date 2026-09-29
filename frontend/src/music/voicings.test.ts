@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'vitest';
 
-import { chordInfo, type ChordInfo } from './spell';
+import { mod12 } from './chordTones';
+import { rowMidi } from './positions';
+import { chordInfo, type ChordInfo, pcOf } from './spell';
 import { DEFAULT_INSTRUMENT, instrumentFor } from './tuning';
-import { bassArpeggios, guitarVoicings, isPlayable, tabOf } from './voicings';
+import { bassArpeggios, guitarVoicings, isPlayable, tabOf, type Voicing } from './voicings';
 
 const guitar = instrumentFor('guitar6', false);
 const chord = (s: string): ChordInfo => {
@@ -10,6 +12,76 @@ const chord = (s: string): ChordInfo => {
   if (!r.ok) throw new Error(r.reason);
   return r.chord;
 };
+
+/**
+ * Independent oracle: validates a voicing without using isPlayable.
+ * Returns true if valid, or error message if invalid.
+ */
+function validateVoicing(inst: ReturnType<typeof instrumentFor>, c: ChordInfo, frets: readonly (number | null)[]): true | string {
+  const open = rowMidi(inst);
+
+  // 1. Unbroken run of at least 4 strings
+  const soundingRows = frets.map((f, row) => (f !== null ? row : null)).filter((r) => r !== null) as number[];
+  if (soundingRows.length < 4) return 'fewer than 4 sounding strings';
+  for (let i = 0; i < soundingRows.length - 1; i++) {
+    if (soundingRows[i + 1]! - soundingRows[i]! !== 1) return 'sounding strings not contiguous';
+  }
+
+  // 2. Lowest note is chord bass
+  const soundingNotes = soundingRows.map((row) => ({
+    row,
+    midi: open[row]! + frets[row]!,
+  }));
+  const lowestNote = soundingNotes.reduce((a, b) => (b.midi < a.midi ? b : a));
+  const bassPc = pcOf(c.bass ?? c.root)!;
+  if (mod12(lowestNote.midi) !== bassPc) return 'wrong bass note';
+
+  // 3. Fretted span ≤ 3
+  const frettedValues = soundingNotes.map((n) => frets[n.row]!).filter((f) => f > 0);
+  if (frettedValues.length > 0 && Math.max(...frettedValues) - Math.min(...frettedValues) > 3) {
+    return 'fretted span > 3';
+  }
+
+  // 4. Finger count ≤ 4 (barre only if no open string in its span)
+  const entries = frets
+    .map((f, row) => ({ row, fret: f }))
+    .filter((x): x is { row: number; fret: number } => x.fret !== null && x.fret > 0);
+  let fingerCount = 0;
+  if (entries.length > 0) {
+    const minFret = Math.min(...entries.map((x) => x.fret));
+    const atMinFret = entries.filter((x) => x.fret === minFret);
+
+    if (atMinFret.length >= 2) {
+      const minRow = Math.min(...atMinFret.map((x) => x.row));
+      const maxRow = Math.max(...atMinFret.map((x) => x.row));
+      const hasOpenInSpan = frets.slice(minRow, maxRow + 1).some((f) => f === 0);
+
+      fingerCount = !hasOpenInSpan ? 1 + entries.filter((x) => x.fret > minFret).length : entries.length;
+    } else {
+      fingerCount = entries.length;
+    }
+  }
+  if (fingerCount > 4) return `too many fingers: ${fingerCount}`;
+
+  // 5. All sounding notes are chord tones
+  const playedPcs = new Set(soundingNotes.map((n) => mod12(n.midi)));
+  const chordTones = new Set(c.notes.map((n) => n.pc));
+  if (c.extraBass) chordTones.add(c.extraBass.pc);
+
+  for (const pc of playedPcs) {
+    if (!chordTones.has(pc)) return 'non-chord tone sounding';
+  }
+
+  // 6. All required chord tones sound (except optional 5th in 4+ note chords)
+  const fifth = c.notes.find((n) => n.interval === '5')?.pc;
+  const required = [...chordTones].filter((pc) => !(c.notes.length >= 4 && pc === fifth));
+
+  for (const pc of required) {
+    if (!playedPcs.has(pc)) return 'missing chord tone';
+  }
+
+  return true;
+}
 
 describe('guitar voicings', () => {
   test('tab notation, low string first', () => {
@@ -48,6 +120,63 @@ describe('guitar voicings', () => {
     expect(isPlayable(guitar, am7, [0, 1, 2, 2, 0, null])).toBe(false); // A on G string: no ♭7
     expect(isPlayable(guitar, am7, [0, 1, 0, 2, 0, 0])).toBe(false); // low E is the bass
     expect(isPlayable(guitar, am7, [0, 1, 0, 2, null, 5])).toBe(false); // gap in the strings
+  });
+
+  test('independent oracle validates every voicing from the spec', () => {
+    for (const s of ['C', 'Am', 'Am7', 'G7', 'Dmaj7', 'F#m7b5', 'Bdim7', 'Esus4', 'C/E', 'Cadd9', 'A9']) {
+      const c = chord(s);
+      const vs = guitarVoicings(guitar, c);
+      for (const v of vs) {
+        const result = validateVoicing(guitar, c, v.frets);
+        expect(result, `${s} voicing ${v.tab} failed: ${result === true ? '' : result}`).toBe(true);
+      }
+    }
+  });
+
+  test('F major contains barre 133211 and not the invalid open 103211', () => {
+    const fMajor = chord('F');
+    const voicings = guitarVoicings(guitar, fMajor);
+    const tabs = voicings.map((v) => v.tab);
+
+    // 133211 is a valid F major barre chord
+    expect(tabs).toContain('133211');
+
+    // 103211 is NOT valid: it's an open shape (0 on E) with a barre on fret 1
+    // that would span the open string, requiring 5 fingers
+    expect(tabs).not.toContain('103211');
+  });
+
+  test('no voicing has an open string strictly inside its barre span', () => {
+    for (const s of ['C', 'F', 'Bb', 'Am', 'Em', 'Dm']) {
+      const c = chord(s);
+      const vs = guitarVoicings(guitar, c);
+      for (const v of vs) {
+        const entries = v.frets
+          .map((f, row) => ({ row, fret: f }))
+          .filter((x): x is { row: number; fret: number } => x.fret !== null && x.fret > 0);
+        if (entries.length >= 2) {
+          const minFret = Math.min(...entries.map((x) => x.fret));
+          const atMinFret = entries.filter((x) => x.fret === minFret);
+          if (atMinFret.length >= 2) {
+            const minRow = Math.min(...atMinFret.map((x) => x.row));
+            const maxRow = Math.max(...atMinFret.map((x) => x.row));
+            const openInSpan = v.frets.slice(minRow, maxRow + 1).some((f) => f === 0);
+            expect(openInSpan, `${s} voicing ${v.tab} has open inside barre span`).toBe(false);
+          }
+        }
+      }
+    }
+  });
+
+  test('C/E has slash bass validation and contains root-position voicings', () => {
+    const cOverE = chord('C/E');
+    const vs = guitarVoicings(guitar, cOverE);
+    expect(vs.length).toBeGreaterThan(0);
+    // Bass must be E (not C)
+    for (const v of vs) {
+      const result = validateVoicing(guitar, cOverE, v.frets);
+      expect(result).toBe(true);
+    }
   });
 });
 

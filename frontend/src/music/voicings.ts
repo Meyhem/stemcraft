@@ -23,12 +23,29 @@ export function tabOf(frets: readonly (number | null)[]): string {
   return low.some((f) => f !== null && f > 9) ? parts.join('-') : parts.join('');
 }
 
-function fingers(fretted: number[]): number {
-  if (fretted.length === 0) return 0;
-  const min = Math.min(...fretted);
-  const atMin = fretted.filter((f) => f === min).length;
-  // Two or more strings at the lowest fret are one barre finger.
-  return atMin >= 2 ? 1 + fretted.filter((f) => f > min).length : fretted.length;
+function fingers(frets: readonly (number | null)[]): number {
+  const entries = frets
+    .map((f, row) => ({ row, fret: f }))
+    .filter((x): x is { row: number; fret: number } => x.fret !== null && x.fret > 0);
+  if (entries.length === 0) return 0;
+
+  const minFret = Math.min(...entries.map((x) => x.fret));
+  const atMinFret = entries.filter((x) => x.fret === minFret);
+
+  // A barre counts as one finger only if there's no open string in its span.
+  if (atMinFret.length >= 2) {
+    const minRow = Math.min(...atMinFret.map((x) => x.row));
+    const maxRow = Math.max(...atMinFret.map((x) => x.row));
+    const hasOpenInSpan = frets.slice(minRow, maxRow + 1).some((f) => f === 0);
+
+    if (!hasOpenInSpan) {
+      // Clean barre: 1 finger for the barre + 1 for each fret above it.
+      return 1 + entries.filter((x) => x.fret > minFret).length;
+    }
+  }
+
+  // Not a barre, or open string in span: count each fretted string separately.
+  return entries.length;
 }
 
 /**
@@ -55,9 +72,25 @@ export function isPlayable(inst: Instrument, chord: ChordInfo, frets: readonly (
   const fifth = chord.notes.find((n) => n.interval === '5')?.pc;
   const required = [...tones].filter((pc) => !(chord.notes.length >= 4 && pc === fifth));
   if (required.some((pc) => !played.has(pc))) return false;
-  const fretted = notes.map((n) => n.fret).filter((f) => f > 0);
-  if (fretted.length && Math.max(...fretted) - Math.min(...fretted) > 3) return false;
-  return fingers(fretted) <= 4;
+  const frettedValues = notes.map((n) => n.fret).filter((f) => f > 0);
+  if (frettedValues.length && Math.max(...frettedValues) - Math.min(...frettedValues) > 3) return false;
+  // No open string inside a barre span: if lowest-fret notes span multiple rows,
+  // no open string can lie between the outermost rows at that fret.
+  {
+    const entries = frets
+      .map((f, row) => ({ row, fret: f }))
+      .filter((x): x is { row: number; fret: number } => x.fret !== null && x.fret > 0);
+    if (entries.length >= 2) {
+      const minFret = Math.min(...entries.map((x) => x.fret));
+      const atMinFret = entries.filter((x) => x.fret === minFret);
+      if (atMinFret.length >= 2) {
+        const minRow = Math.min(...atMinFret.map((x) => x.row));
+        const maxRow = Math.max(...atMinFret.map((x) => x.row));
+        if (frets.slice(minRow, maxRow + 1).some((f) => f === 0)) return false;
+      }
+    }
+  }
+  return fingers(frets) <= 4;
 }
 
 function label(frets: readonly (number | null)[], slash: boolean): string {
@@ -88,7 +121,7 @@ export function guitarVoicings(inst: Instrument, chord: ChordInfo, limit = 9): V
         const fretted = pick.filter((f): f is number => f !== null && f > 0);
         const min = fretted.length ? Math.min(...fretted) : 0;
         const sounding = pick.filter((f) => f !== null).length;
-        const score = sounding * 10 + pick.filter((f) => f === 0).length - fingers(fretted);
+        const score = sounding * 10 + pick.filter((f) => f === 0).length - fingers(pick);
         const prev = best.get(min);
         if (!prev || score > prev.score) best.set(min, { frets: [...pick], score });
         return;
