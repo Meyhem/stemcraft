@@ -141,3 +141,37 @@ test('running separation on cpu shows a fallback banner naming the reason', asyn
   const banner = await screen.findByText(/running separation on cpu/i);
   expect(banner.textContent).toMatch(/no cuda device found/i);
 });
+
+test('the nav highlights the page under the Import modal, not Import', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter
+        initialEntries={[
+          '/jobs',
+          { pathname: '/import', state: { background: { pathname: '/jobs', search: '', hash: '', state: null, key: 'x' } } },
+        ]}
+        initialIndex={1}
+      >
+        <AppRoutes />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole('dialog', { name: 'Add song' });
+  // The dialog is modal, so the nav sits outside the accessibility tree: query hidden.
+  expect(screen.getByRole('link', { name: 'Job queue', hidden: true })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('link', { name: 'Import', hidden: true })).not.toHaveAttribute('aria-current');
+});
+
+test('a direct visit to /import highlights the Library drawn underneath', async () => {
+  renderAt('/import');
+  await screen.findByRole('dialog', { name: 'Add song' });
+  expect(screen.getByRole('link', { name: 'Library', hidden: true })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('link', { name: 'Import', hidden: true })).not.toHaveAttribute('aria-current');
+});
+
+test('the Import modal opens with the file input focused', async () => {
+  renderAt('/import');
+  const input = await screen.findByLabelText(/audio or video file/i);
+  expect(document.activeElement).toBe(input);
+});

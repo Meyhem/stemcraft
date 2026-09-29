@@ -22,3 +22,17 @@ test('the close button, Esc and a backdrop click all close it', async () => {
   fireEvent.click(screen.getByText('body'));
   expect(onClose).toHaveBeenCalledTimes(3);
 });
+
+test('focuses the element marked data-autofocus once open', () => {
+  render(
+    <Modal title="T" onClose={() => {}}>
+      <input aria-label="first" data-autofocus />
+    </Modal>,
+  );
+  expect(document.activeElement).toBe(screen.getByLabelText('first'));
+});
+
+test('without a marked element focus is left to the browser', () => {
+  render(<Modal title="T" onClose={() => {}}><input aria-label="first" /></Modal>);
+  expect(document.activeElement).not.toBe(screen.getByLabelText('first'));
+});

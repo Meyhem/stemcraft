@@ -73,15 +73,17 @@ export function ImportForm({ onCreated, onClose }: ImportFormProps) {
     // the other mutation.
     upload.reset();
     fromUrl.reset();
+    const cleanTitle = title.trim();
+    const cleanArtist = artist.trim();
     if (file) {
       const form = new FormData();
       form.set('file', file);
-      if (title) form.set('title', title);
-      if (artist) form.set('artist', artist);
+      if (cleanTitle) form.set('title', cleanTitle);
+      if (cleanArtist) form.set('artist', cleanArtist);
       upload.mutate(form, { onSuccess: done(file.name) });
     } else {
       fromUrl.mutate(
-        { url: link.trim(), title, artist: artist || undefined },
+        { url: link.trim(), title: cleanTitle, artist: cleanArtist || undefined },
         { onSuccess: done(linkHost(link.trim())) },
       );
     }

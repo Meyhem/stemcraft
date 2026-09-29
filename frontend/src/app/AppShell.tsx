@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, matchPath, Outlet, useLocation } from 'react-router-dom';
 
 import { useHealth } from '../api/queries';
 import { useJobStream } from '../api/useJobStream';
@@ -17,21 +17,27 @@ export function AppShell() {
   useJobStream();
   const location = useLocation();
   const health = useHealth();
+  // Under the Import modal the page drawn is the one it was opened over. <Routes
+  // location={background}> already makes useLocation() report that page, so the only
+  // case left is a direct visit to /import, which draws the Library.
+  const current = location.pathname === '/import' ? '/' : location.pathname;
+  const active = (to: string) =>
+    to !== '/import' && matchPath({ path: to, end: to === '/' }, current) !== null;
   const broken = health.data?.deps.filter((d) => !d.ok) ?? [];
 
   return (
     <div className={styles.shell}>
       <nav className={styles.nav}>
         {NAV.map((item) => (
-          <NavLink
+          <Link
             key={item.to}
             to={item.to}
-            end={item.to === '/'}
             state={item.to === '/import' ? importLinkState(location) : undefined}
-            className={({ isActive }) => (isActive ? styles.active : styles.link)}
+            className={active(item.to) ? styles.active : styles.link}
+            aria-current={active(item.to) ? 'page' : undefined}
           >
             {item.label}
-          </NavLink>
+          </Link>
         ))}
       </nav>
 

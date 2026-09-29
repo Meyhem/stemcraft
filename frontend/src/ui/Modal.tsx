@@ -20,6 +20,10 @@ export function Modal({ title, subtitle, onClose, footer, children }: ModalProps
   useEffect(() => {
     const dialog = ref.current!;
     if (!dialog.open) dialog.showModal();
+    // React's autoFocus runs before the dialog is open, so it is done here; without
+    // a marked element showModal() focuses the close button, which is not what
+    // the user came to do.
+    dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus();
     return () => {
       if (dialog.open) dialog.close();
     };

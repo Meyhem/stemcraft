@@ -138,3 +138,29 @@ test('the form submit event, which Enter fires, submits a ready form', async () 
   fireEvent.submit(screen.getByLabelText(/^title/i).closest('form')!);
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/songs/upload', expect.anything()));
 });
+
+test('title and artist are trimmed before they are sent', async () => {
+  const { fetchMock } = renderForm(async () => created('s1', 1, 'My Song'));
+  await userEvent.upload(screen.getByLabelText(/audio or video file/i), new File(['b'], 'a.mp3'));
+  await userEvent.type(screen.getByLabelText(/^title/i), '  My Song  ');
+  await userEvent.type(screen.getByLabelText(/^artist/i), '   ');
+  await userEvent.click(screen.getByRole('button', { name: /import & separate/i }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+  const form = (fetchMock.mock.calls[0]![1] as RequestInit).body as FormData;
+  expect(form.get('title')).toBe('My Song');
+  expect(form.get('artist')).toBeNull();
+});
+
+test('a link posts trimmed title and artist too', async () => {
+  const { fetchMock } = renderForm(async () => created('s1', 1, 'My Song'));
+  await userEvent.type(screen.getByLabelText(/^link$/i), 'https://example.com/a.mp3');
+  await userEvent.type(screen.getByLabelText(/^title/i), '  My Song ');
+  await userEvent.type(screen.getByLabelText(/^artist/i), ' Band  ');
+  await userEvent.click(screen.getByRole('button', { name: /import & separate/i }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+  expect(JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string)).toEqual({
+    url: 'https://example.com/a.mp3',
+    title: 'My Song',
+    artist: 'Band',
+  });
+});

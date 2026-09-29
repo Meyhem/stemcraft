@@ -33,6 +33,7 @@ export function SourceZone({ file, link, onFile, onLink }: SourceZoneProps) {
         id="import-file"
         label="Audio or video file"
         file={null}
+        autoFocus
         onFile={onFile}
         hint="For video, the audio track is extracted."
       />

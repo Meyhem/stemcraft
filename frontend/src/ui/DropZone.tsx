@@ -9,6 +9,8 @@ export interface DropZoneProps {
   onFile: (file: File | null) => void;
   hint?: ReactNode;
   className?: string;
+  /** Marks the input for Modal's initial focus (`data-autofocus`). */
+  autoFocus?: boolean;
 }
 
 /**
@@ -18,7 +20,7 @@ export interface DropZoneProps {
  * whatever ffmpeg decodes is accepted -- and an accept filter would hide valid files
  * from the picker.
  */
-export function DropZone({ id, label, file, onFile, hint, className }: DropZoneProps) {
+export function DropZone({ id, label, file, onFile, hint, className, autoFocus }: DropZoneProps) {
   const [over, setOver] = useState(false);
 
   function take(files: FileList | File[] | null) {
@@ -52,6 +54,7 @@ export function DropZone({ id, label, file, onFile, hint, className }: DropZoneP
           id={id}
           className={styles.input}
           type="file"
+          data-autofocus={autoFocus ? '' : undefined}
           onChange={(event) => take(event.target.files)}
         />
         <p className={styles.primary}>{file ? file.name : 'Drop a file here, or choose one'}</p>
