@@ -1,14 +1,15 @@
 // D-14: one route per screen, song id in the path.
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 
 import { AlbumSplitter } from '../screens/AlbumSplitter';
 import { Export } from '../screens/Export';
-import { Import } from '../screens/Import';
 import { JobQueue } from '../screens/JobQueue';
 import { Library } from '../screens/Library';
 import { ScaleSheet } from '../screens/ScaleSheet';
 import { SongView } from '../screens/SongView';
+import { ImportModal } from '../screens/import/ImportModal';
+import type { ImportLinkState } from '../screens/import/importLink';
 import { AppShell } from './AppShell';
 
 // Task 8: dev-only manual verification page for the playback engine (R-01).
@@ -23,32 +24,43 @@ import { AppShell } from './AppShell';
 const EngineHarness = import.meta.env.DEV ? lazy(() => import('../dev/EngineHarness')) : null;
 
 export function AppRoutes() {
+  const location = useLocation();
+  // D-14: /import is a route that renders as a modal over the page it was
+  // opened from. A direct visit has no background, so the Library is drawn under it.
+  const background = (location.state as ImportLinkState | null)?.background;
+
   return (
-    <Routes>
-      {import.meta.env.DEV && EngineHarness && (
-        <Route
-          path="dev/engine-harness"
-          element={
-            <Suspense fallback={null}>
-              <EngineHarness />
-            </Suspense>
-          }
-        />
-      )}
-      <Route element={<AppShell />}>
-        <Route index element={<Library />} />
-        <Route path="import" element={<Import />} />
-        <Route path="splitter" element={<AlbumSplitter />} />
-        {/* D-14: the album id lives in the path, like every other document
-            this app edits. /splitter is the picker; /splitter/:albumId is the
-            editor. */}
-        <Route path="splitter/:albumId" element={<AlbumSplitter />} />
-        <Route path="jobs" element={<JobQueue />} />
-        <Route path="songs/:songId" element={<SongView />} />
-        <Route path="songs/:songId/scale" element={<ScaleSheet />} />
-        <Route path="songs/:songId/export" element={<Export />} />
-        <Route path="*" element={<p>Not found</p>} />
-      </Route>
-    </Routes>
+    <>
+      <Routes location={background ?? location}>
+        {import.meta.env.DEV && EngineHarness && (
+          <Route
+            path="dev/engine-harness"
+            element={
+              <Suspense fallback={null}>
+                <EngineHarness />
+              </Suspense>
+            }
+          />
+        )}
+        <Route element={<AppShell />}>
+          <Route index element={<Library />} />
+          <Route path="import" element={<Library />} />
+          <Route path="splitter" element={<AlbumSplitter />} />
+          {/* D-14: the album id lives in the path, like every other document
+              this app edits. /splitter is the picker; /splitter/:albumId is the
+              editor. */}
+          <Route path="splitter/:albumId" element={<AlbumSplitter />} />
+          <Route path="jobs" element={<JobQueue />} />
+          <Route path="songs/:songId" element={<SongView />} />
+          <Route path="songs/:songId/scale" element={<ScaleSheet />} />
+          <Route path="songs/:songId/export" element={<Export />} />
+          <Route path="*" element={<p>Not found</p>} />
+        </Route>
+      </Routes>
+      <Routes>
+        <Route path="/import" element={<ImportModal />} />
+        <Route path="*" element={null} />
+      </Routes>
+    </>
   );
 }

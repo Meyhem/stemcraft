@@ -98,7 +98,6 @@ test('the library is the index route', async () => {
 });
 
 test.each([
-  ['/import', /import/i],
   ['/jobs', /job queue/i],
   ['/splitter', /album splitter/i],
   // The Song view's heading is the song's own title (UI spec §6, screen 3).
@@ -110,6 +109,12 @@ test.each([
 ])('%s renders its screen', async (path, heading) => {
   renderAt(path);
   expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
+});
+
+test('/import opened directly shows the Add song dialog over the library', async () => {
+  renderAt('/import');
+  expect(await screen.findByRole('dialog', { name: 'Add song' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /library/i })).toBeInTheDocument();
 });
 
 test('an unknown path shows a not-found screen rather than a blank page', async () => {

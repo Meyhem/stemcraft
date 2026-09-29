@@ -19,3 +19,5 @@ export { Table } from './Table';
 export { StepList } from './StepList';
 export type { StepListProps } from './StepList';
 export { StepStrip } from './StepStrip';
+export { Modal } from './Modal';
+export type { ModalProps } from './Modal';

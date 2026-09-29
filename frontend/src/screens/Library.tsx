@@ -1,9 +1,10 @@
 // Domain spec, "Song library": one card per Song, sorted by last played;
 // delete removes the Song folder after a confirmation.
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import type { SongEntry } from '../api/client';
 import { useDeleteSong, useSongs } from '../api/queries';
+import { importLinkState } from './import/importLink';
 import { Banner, Button, ButtonLink, Chip, EmptyState, type ChipTone } from '../ui';
 import styles from './Library.module.css';
 
@@ -22,6 +23,7 @@ function sortKey(entry: SongEntry): string {
 }
 
 export function Library() {
+  const location = useLocation();
   const songs = useSongs();
   const del = useDeleteSong();
 
@@ -39,7 +41,7 @@ export function Library() {
     <section className={styles.screen}>
       <div className={styles.header}>
         <h1>Library</h1>
-        <ButtonLink variant="primary" to="/import">
+        <ButtonLink variant="primary" to="/import" state={importLinkState(location)}>
           New Song
         </ButtonLink>
       </div>
@@ -50,7 +52,7 @@ export function Library() {
 
       {songs.data?.length === 0 && (
         <EmptyState title="No songs yet.">
-          <ButtonLink variant="primary" to="/import">
+          <ButtonLink variant="primary" to="/import" state={importLinkState(location)}>
             Import your first song
           </ButtonLink>
         </EmptyState>

@@ -1,7 +1,8 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useHealth } from '../api/queries';
 import { useJobStream } from '../api/useJobStream';
+import { importLinkState } from '../screens/import/importLink';
 import { Banner } from '../ui';
 import styles from './AppShell.module.css';
 
@@ -14,6 +15,7 @@ const NAV = [
 
 export function AppShell() {
   useJobStream();
+  const location = useLocation();
   const health = useHealth();
   const broken = health.data?.deps.filter((d) => !d.ok) ?? [];
 
@@ -25,6 +27,7 @@ export function AppShell() {
             key={item.to}
             to={item.to}
             end={item.to === '/'}
+            state={item.to === '/import' ? importLinkState(location) : undefined}
             className={({ isActive }) => (isActive ? styles.active : styles.link)}
           >
             {item.label}
