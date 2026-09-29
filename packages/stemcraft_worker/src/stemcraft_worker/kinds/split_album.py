@@ -49,6 +49,7 @@ def run(ctx: JobContext) -> dict:
             "never from original.*"
         )
 
+    ctx.step("tracks")
     tracks_dir(album_dir).mkdir(parents=True, exist_ok=True)
     total = len(recipe.tracks)
     rendered = []
@@ -75,8 +76,8 @@ def run(ctx: JobContext) -> dict:
             track_total=total,
         )
         rendered.append({"filename": track.filename, "bytes": destination.stat().st_size})
-        # Held below 1.0 until the zip has been written too.
-        ctx.progress(min(0.95, (index + 1) / (total + 1)))
+        ctx.detail(f"{index + 1} of {total} rendered")
+        ctx.progress((index + 1) / total)
 
     if ctx.cancelled():
         raise JobCancelled
@@ -87,13 +88,13 @@ def run(ctx: JobContext) -> dict:
     # behind and GET /api/albums/{id}/tracks showed a 12-track album as 13.
     # Pruning here is also what makes §6 true of the *directory* and not only
     # of the zip: after this job, the recipe fully determines tracks/.
+    ctx.step("zip")
     keep = {track.filename for track in recipe.tracks}
     for stale in tracks_dir(album_dir).glob("*.mp3"):
         if stale.name not in keep:
             stale.unlink()
 
     archive = write_album_zip(album_dir, [t.filename for t in recipe.tracks])
-    ctx.progress(1.0)
 
     return {
         "zip": zip_path(album_dir).name,

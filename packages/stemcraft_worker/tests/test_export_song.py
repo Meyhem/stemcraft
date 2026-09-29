@@ -84,6 +84,7 @@ def test_export_writes_the_mp3_and_reports_its_real_duration(conn, songs_dir):
     # the whole point of "matches what you practised to".
     assert done.result["duration_seconds"] == pytest.approx(2.44, abs=0.2)
     assert probe(mp3).title == "Tightrope"
+    assert [(s["id"], s["state"]) for s in get_job(conn, job_id).steps] == [("render", "done")]
 
 
 def test_export_at_original_tempo_matches_the_source_length(conn, songs_dir):
@@ -190,8 +191,9 @@ def test_a_cancelled_export_leaves_no_file(conn, songs_dir):
     job_id = _queue(conn, song, recipe)
     # The flag the kind polls, set before the render starts.
     conn.execute("UPDATE jobs SET state = 'running', cancel_requested = 1 WHERE id = ?", (job_id,))
+    # steps seeded from the row, as run_one does: the kind now calls ctx.step().
     ctx = JobContext(conn=conn, job_id=job_id, payload=recipe.model_dump(mode="json"),
-                     device="cpu")
+                     device="cpu", steps=jobs_db.get_job(conn, job_id).steps)
 
     with pytest.raises(JobCancelled):
         run(ctx)

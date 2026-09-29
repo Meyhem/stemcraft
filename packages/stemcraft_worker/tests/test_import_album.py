@@ -64,6 +64,11 @@ def test_import_album_writes_the_three_worker_owned_files(conn, albums_dir):
     assert (album_dir / "proposals.json").is_file()
     assert done.result["duration_seconds"] == pytest.approx(12.0, abs=0.1)
     assert done.result["total_samples"] == pytest.approx(12 * SAMPLE_RATE, rel=0.01)
+    assert [(s["id"], s["state"]) for s in get_job(conn, job_id).steps] == [
+        ("decode", "done"),
+        ("peaks", "done"),
+        ("silences", "done"),
+    ]
 
 
 def test_album_peaks_are_coarse_enough_to_download(conn, albums_dir):

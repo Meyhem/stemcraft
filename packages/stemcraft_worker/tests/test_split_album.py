@@ -94,6 +94,9 @@ def test_split_renders_every_track_and_the_zip(conn, albums_dir):
     assert [t["filename"] for t in done.result["tracks"]] == ["01-one.mp3", "02-two.mp3"]
     with zipfile.ZipFile(zip_path(album_dir)) as zf:
         assert zf.namelist() == ["01-one.mp3", "02-two.mp3"]
+    steps = get_job(conn, job_id).steps
+    assert [(s["id"], s["state"]) for s in steps] == [("tracks", "done"), ("zip", "done")]
+    assert steps[0]["detail"].endswith("rendered")
 
 
 def test_the_tracks_have_the_durations_the_boundaries_asked_for(conn, albums_dir):
@@ -249,6 +252,7 @@ def test_a_cancel_between_tracks_stops_the_render_and_writes_no_zip(
     assert sorted(p.name for p in (album_dir / "tracks").glob("*.mp3")) == ["01-one.mp3"]
     assert not zip_path(album_dir).exists()
     assert list(album_dir.glob("**/*.tmp")) == []
+    assert [s["state"] for s in get_job(conn, box[0]).steps] == ["cancelled", "pending"]
 
 
 def test_a_cancel_during_the_last_track_still_writes_no_zip(conn, albums_dir, monkeypatch):

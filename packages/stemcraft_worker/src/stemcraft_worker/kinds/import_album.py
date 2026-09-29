@@ -51,8 +51,8 @@ def run(ctx: JobContext) -> dict:
         raise JobCancelled
 
     audio_wav = album_dir / "audio.wav"
+    ctx.step("decode")
     ffmpeg.decode_to_wav(original, audio_wav, sample_rate=SAMPLE_RATE)
-    ctx.progress(0.5)
     if ctx.cancelled():
         raise JobCancelled
 
@@ -68,14 +68,15 @@ def run(ctx: JobContext) -> dict:
     # waveform is an overview for placing boundaries, not a zoomable editor.
     # (Sample-accurate positioning is unaffected: boundaries are integer sample
     # indices, never read off the peaks array.)
+    ctx.step("peaks")
     atomic_write_json(
         album_dir / "peaks.json",
         peaks_module.compute_peaks(audio_wav, buckets_per_second=ALBUM_BUCKETS_PER_SECOND),
     )
-    ctx.progress(0.8)
     if ctx.cancelled():
         raise JobCancelled
 
+    ctx.step("silences")
     split_points = silence.detect_split_points(audio_wav, total_samples=total_samples)
     atomic_write_json(
         album_dir / "proposals.json",
@@ -88,7 +89,6 @@ def run(ctx: JobContext) -> dict:
             "min_silence_seconds": silence.DEFAULT_MIN_SILENCE_SECONDS,
         },
     )
-    ctx.progress(1.0)
 
     # Unlike import_song, nothing is enqueued next: a split is the user's
     # decision, made after they have looked at the proposed boundaries.

@@ -42,6 +42,7 @@ def run(ctx: JobContext) -> dict:
     # Every stem is the same length by construction (they come out of one
     # separation of one audio.wav), so the first one's duration is the source
     # duration -- and it is what turns ffmpeg's out_time into a fraction.
+    ctx.step("render")
     source_seconds = ffmpeg.probe(stem_paths[0]).duration_seconds
     dst = export_path(song_dir, recipe.name)
 
@@ -63,7 +64,6 @@ def run(ctx: JobContext) -> dict:
         # D7-07: the temp file is already gone; nothing partial survives.
         raise JobCancelled from exc
 
-    ctx.progress(1.0)
     return {
         "file": f"exports/{recipe.name}.mp3",
         "bytes": dst.stat().st_size,
