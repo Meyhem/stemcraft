@@ -17,6 +17,7 @@ import WaveSurfer from 'wavesurfer.js';
 import type { StemName } from '../engine/EngineController';
 import type { StemSummary } from '../engine/stemPeaks';
 import { Button } from '../ui';
+import { resolveColor } from '../ui/resolveColor';
 import axis from './Axis.module.css';
 import styles from './StemLane.module.css';
 
@@ -26,22 +27,6 @@ const STEM_COLOR: Record<StemName, string> = {
   bass: 'var(--ds-bass)',
   other: 'var(--ds-other)',
 };
-
-/**
- * wavesurfer paints on a <canvas>, and a canvas cannot resolve `var(--ds-x)`: it ignores
- * the invalid colour and fills black, which on this ground is invisible. So the token is
- * resolved to its concrete value here, from the computed style, which keeps tokens.css
- * the single authority (U-02) rather than copying a hex into TSX.
- */
-function resolveColor(cssVar: string): string {
-  // Read from :root, where tokens.css defines every token.
-  const root = getComputedStyle(document.documentElement);
-  const name = /^var\((--[\w-]+)\)$/.exec(cssVar)?.[1];
-  const value = name ? root.getPropertyValue(name).trim() : '';
-  // N-08: an unresolved token is not silently black. Fall back to the secondary text
-  // colour, which is legible on every surface.
-  return value || root.getPropertyValue('--ds-text-2').trim() || cssVar;
-}
 
 export interface StemLaneProps {
   summary: StemSummary;

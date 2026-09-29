@@ -256,7 +256,12 @@ function AlbumEditor({ albumId }: { albumId: string }) {
   const files = albumQuery.data?.files ?? null;
 
   const [album, setAlbum] = useState<Album | null>(null);
-  const [playheadSample, setPlayheadSample] = useState<number | null>(null);
+  // The <audio> element is the only clock. `playing` and `seekNonce` are the coarse
+  // signals the waveform needs to repaint; the position itself is read straight off the
+  // element every frame and never goes through React state (U-05).
+  const [playing, setPlaying] = useState(false);
+  const [seekNonce, setSeekNonce] = useState(0);
+  const [playError, setPlayError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Seeded once per album id, never on every query result: a PUT's response
@@ -267,7 +272,9 @@ function AlbumEditor({ albumId }: { albumId: string }) {
   useEffect(() => {
     seededFor.current = null;
     setAlbum(null);
-    setPlayheadSample(null);
+    setPlaying(false);
+    setSeekNonce(0);
+    setPlayError(null);
   }, [albumId]);
   useEffect(() => {
     if (fetched && seededFor.current !== fetched.id) {
@@ -380,7 +387,37 @@ function AlbumEditor({ albumId }: { albumId: string }) {
     const audio = audioRef.current;
     if (!audio) return;
     audio.currentTime = sample / SAMPLE_RATE;
-    setPlayheadSample(sample);
+    setSeekNonce((n) => n + 1);
+  }
+
+  const getPlayheadSample = useCallback(
+    () => Math.round((audioRef.current?.currentTime ?? 0) * SAMPLE_RATE),
+    [],
+  );
+
+  // N-08: a refused play() (autoplay policy, a decode error) is shown as itself rather
+  // than leaving a Play button that silently does nothing.
+  function startPlayback() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    setPlayError(null);
+    audio.play().catch((error: unknown) => setPlayError(String(error)));
+  }
+
+  function togglePlay() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) startPlayback();
+    else audio.pause();
+  }
+
+  // A track's Play starts from its first sample; the waveform follows on its own once
+  // the playhead is off-screen.
+  function playTrack(index: number) {
+    const span = spans[index];
+    if (!span) return;
+    scrubTo(span.startSample);
+    startPlayback();
   }
 
   // D8-05: POST /split reads album.json off disk and snapshots it into the
@@ -439,7 +476,7 @@ function AlbumEditor({ albumId }: { albumId: string }) {
   const showWaveform = hasAudio && album.total_samples > 0 && envelope !== null;
 
   return (
-    <section className={styles.screen}>
+    <section className={`${styles.screen} ${styles.wide}`}>
       <header className={styles.head}>
         <div>
           <h1>Album splitter</h1>
@@ -482,26 +519,33 @@ function AlbumEditor({ albumId }: { albumId: string }) {
       </p>
 
       {hasAudio && (
-        // D8-11: preview is a plain <audio> element on the decoded master.
-        // wavesurfer renders and never plays (invariant 7 / D-07), so the
-        // playhead over the waveform is drawn from this element's clock.
+        // D8-11: preview is a plain <audio> element on the decoded master, driven by
+        // the waveform's own transport. Nothing that draws the waveform plays audio
+        // (invariant 7 / D-07); the playhead is drawn from this element's clock.
         <audio
           ref={audioRef}
-          className={styles.audio}
           src={albumMedia(albumId).audio}
-          controls
-          onTimeUpdate={(event) =>
-            setPlayheadSample(Math.round(event.currentTarget.currentTime * SAMPLE_RATE))
+          preload="auto"
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onEnded={() => setPlaying(false)}
+          onSeeked={() => setSeekNonce((n) => n + 1)}
+          onError={(event) =>
+            setPlayError(event.currentTarget.error?.message || 'The audio could not be loaded')
           }
         />
       )}
+      {playError && <Banner tone="error" title="Playback failed" trace={playError} />}
 
       {showWaveform ? (
         <WaveformMarkers
           peaks={envelope}
           totalSamples={album.total_samples}
           splitPoints={album.split_points}
-          playheadSample={playheadSample}
+          getPlayheadSample={getPlayheadSample}
+          playing={playing}
+          seekNonce={seekNonce}
+          onTogglePlay={togglePlay}
           onMove={moveBoundary}
           onAdd={addBoundary}
           onRemove={removeBoundary}
@@ -530,7 +574,13 @@ function AlbumEditor({ albumId }: { albumId: string }) {
           proposed anything yet" state, which is not a failure. */}
       {proposalsQuery.isError && <p className={styles.note}>{String(proposalsQuery.error)}</p>}
 
-      <TrackTable spans={spans} onTitleChange={setTrackTitle} />
+      <TrackTable
+        spans={spans}
+        onTitleChange={setTrackTitle}
+        onCutChange={moveBoundary}
+        onPlay={playTrack}
+        onRemoveCut={removeBoundary}
+      />
 
       {reason && (
         <p className={styles.note} id="split-reason">

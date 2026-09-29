@@ -5,20 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AlbumSplitter } from './AlbumSplitter';
 
-// Copied from src/songview/StemLane.test.tsx: jsdom has no canvas and no
-// ResizeObserver, and `create` being a spy is what lets invariant 7 be
-// asserted from the screen's own render.
-const { createWaveSurfer } = vi.hoisted(() => ({
-  createWaveSurfer: vi.fn((_options: Record<string, unknown>) => ({
-    destroy: vi.fn(),
-    setOptions: vi.fn(),
-    on: () => () => {},
-  })),
-}));
-vi.mock('wavesurfer.js', () => ({
-  default: { create: createWaveSurfer },
-}));
-
 const SR = 48000;
 const ALBUM_ID = '01J0';
 
@@ -134,10 +120,6 @@ function renderWith(entry: unknown, extras: Extras = {}) {
   return fetchMock;
 }
 
-beforeEach(() => {
-  createWaveSurfer.mockClear();
-});
-
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -222,7 +204,7 @@ describe('AlbumSplitter', () => {
       renderWith(readyAlbum);
       await screen.findByRole('slider', { name: /split point 1/i });
       // A quarter of the way in — before the existing boundary at half.
-      fireEvent.click(screen.getByTestId('album-waveform'), { clientX: 250 });
+      fireEvent.click(screen.getByTestId('album-waveform'), { clientX: 250, clientY: 80 });
       await waitFor(() => expect(putBody().split_points).toEqual([SR * 150, SR * 300]));
       expect(putBody().tracks.map((track) => track.title)).toEqual(['One', '', 'Two']);
     } finally {
@@ -358,20 +340,69 @@ describe('AlbumSplitter', () => {
     // The boundary is still placed by sample, at 300 s of a 600 s album.
     const marker = await screen.findByRole('slider', { name: /split point 1/i });
     expect(marker.style.left).toBe('50%');
-    await waitFor(() => expect(createWaveSurfer).toHaveBeenCalled());
-    const options = createWaveSurfer.mock.calls.at(-1)![0];
-    // Duration comes from total_samples / 48000, not from the bucket count.
-    expect(options.duration).toBe(600);
-    expect(options.peaks).toEqual([[0.6, 0.3, 0.5, 0.2]]);
+    // The time axis comes from total_samples (600 s), never from the bucket count:
+    // with no layout, fit falls back to 25 px/s, so the content is 600 * 25 px wide.
+    expect(screen.getByTestId('album-waveform').style.width).toBe('15000px');
   });
 
-  it('never constructs a wavesurfer that can play (invariant 7 / D-07)', async () => {
+  it('never starts audio on its own: only a Play control does (invariant 7 / D-07)', async () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    try {
+      renderWith(readyAlbum);
+      await screen.findByRole('slider', { name: /split point 1/i });
+      expect(play).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+      expect(play).toHaveBeenCalledTimes(1);
+    } finally {
+      play.mockRestore();
+    }
+  });
+
+  it("plays a track from its first sample when its row's play button is pressed", async () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    try {
+      renderWith(readyAlbum);
+      await screen.findByRole('slider', { name: /split point 1/i });
+      fireEvent.click(screen.getByRole('button', { name: /play track 2 from its start/i }));
+      // Track 2 starts at the boundary, 300 s.
+      expect(document.querySelector('audio')!.currentTime).toBe(300);
+      expect(play).toHaveBeenCalledTimes(1);
+    } finally {
+      play.mockRestore();
+    }
+  });
+
+  it('shows the real reason when playback is refused (N-08)', async () => {
+    const play = vi
+      .spyOn(HTMLMediaElement.prototype, 'play')
+      .mockRejectedValue(new Error('NotSupportedError: no supported source'));
+    try {
+      renderWith(readyAlbum);
+      await screen.findByRole('slider', { name: /split point 1/i });
+      fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+      expect(await screen.findByText(/NotSupportedError: no supported source/)).toBeInTheDocument();
+    } finally {
+      play.mockRestore();
+    }
+  });
+
+  it('moves a cut when its time is typed in the list, and keeps the track count', async () => {
     renderWith(readyAlbum);
-    await screen.findByRole('slider', { name: /split point 1/i });
-    const options = createWaveSurfer.mock.calls.at(-1)![0];
-    expect(options.url).toBeUndefined();
-    expect(options.media).toBeUndefined();
-    expect(options.peaks).toBeDefined();
+    const end = await screen.findByRole('textbox', { name: 'Track 1 end' });
+    expect(end).toHaveValue('5:00.000');
+    fireEvent.change(end, { target: { value: '4:10.500' } });
+    fireEvent.blur(end);
+    await waitFor(() => expect(putBody().split_points).toEqual([250.5 * SR]));
+    expect(putBody().tracks.map((track) => track.title)).toEqual(['One', 'Two']);
+    // The neighbouring row follows: track 2 now starts at the same moment.
+    expect(screen.getByRole('textbox', { name: 'Track 2 start' })).toHaveValue('4:10.500');
+  });
+
+  it('deletes a cut from the list, merging the tracks either side of it', async () => {
+    renderWith(readyAlbum);
+    fireEvent.click(await screen.findByRole('button', { name: /remove the cut after track 1/i }));
+    await waitFor(() => expect(putBody().split_points).toEqual([]));
+    expect(putBody().tracks.map((track) => track.title)).toEqual(['One']);
   });
 
   it('previews the album with a plain audio element on the decoded master (D8-11)', async () => {

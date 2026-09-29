@@ -1,41 +1,84 @@
 .frame {
   display: flex;
   flex-direction: column;
-  gap: var(--ds-1);
+  gap: var(--ds-2);
 }
 
-.track {
-  position: relative;
-  min-height: 96px;
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-2);
+  padding: var(--ds-2) var(--ds-3);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+}
+
+.time {
+  font: 400 var(--ds-t-md) / 1 var(--ds-mono);
+  color: var(--ds-text-2);
+  white-space: nowrap;
+}
+
+.time output {
+  color: var(--ds-text);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.zoomLabel {
+  color: var(--ds-text-2);
+  font: 400 var(--ds-t-sm) / 1 var(--ds-font);
+}
+
+.zoomValue {
+  min-inline-size: 6ch;
+  text-align: center;
+  font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
+  color: var(--ds-text-2);
+}
+
+/* The one horizontal scroll container; the canvas sticks to its left edge and repaints
+   the visible slice. */
+.scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
   background: var(--ds-surface);
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-r-panel);
-  overflow: hidden;
+}
+
+.content {
+  position: relative;
   cursor: crosshair;
 }
 
-.wave {
-  position: absolute;
-  inset: 0;
+.canvas {
+  position: sticky;
+  inset-inline-start: 0;
+  display: block;
 }
 
-/* D-07: the playhead is never animated by CSS -- it is redrawn from the
-   <audio> element's own clock. */
+/* D-07: the playhead is never animated by CSS -- it is redrawn from the <audio>
+   element's own clock. */
 .playhead {
   position: absolute;
   inset-block: 0;
   inline-size: 2px;
   margin-inline-start: -1px;
-  background: var(--ds-accent);
+  background: var(--ds-text);
   pointer-events: none;
 }
 
 .grip {
   position: absolute;
-  inset-block: 0;
+  /* Starts under the ruler, so the grip never covers a tick label. */
+  inset-block: 24px 0;
   inline-size: 12px;
   margin-inline-start: -6px;
-  border-inline: 1px solid var(--ds-warn);
+  border-inline: 2px solid var(--ds-warn);
   background: color-mix(in srgb, var(--ds-warn) 25%, transparent);
   cursor: ew-resize;
   touch-action: none;
@@ -46,9 +89,10 @@
   outline-offset: 2px;
 }
 
+/* Under the ruler, so it never covers a tick label. */
 .remove {
   position: absolute;
-  inset-block-start: 0;
+  inset-block-start: 26px;
   min-inline-size: var(--ds-hit-min);
   min-block-size: var(--ds-hit-min);
   margin-inline-start: calc(var(--ds-hit-min) / -2);
@@ -60,20 +104,8 @@
   line-height: 1;
 }
 
-.scrub {
-  position: relative;
-  min-block-size: var(--ds-hit-setup);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--ds-raised);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-r-btn);
-  cursor: pointer;
-}
-
-.scrubHint {
-  font: 400 var(--ds-t-xs) / 1 var(--ds-mono);
+.hint {
+  margin: 0;
   color: var(--ds-text-3);
-  text-transform: uppercase;
+  font: 400 var(--ds-t-xs) / 1.4 var(--ds-font);
 }

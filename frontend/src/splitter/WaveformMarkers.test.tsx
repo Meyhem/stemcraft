@@ -1,54 +1,44 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { WaveformMarkers } from './WaveformMarkers';
-
-// Copied verbatim from src/songview/StemLane.test.tsx: wavesurfer needs a real
-// canvas and ResizeObserver, and jsdom has neither. `create` is a spyable
-// vi.fn() so the invariant-7 test below can pin exactly what it was
-// constructed with.
-const { createWaveSurfer } = vi.hoisted(() => ({
-  createWaveSurfer: vi.fn((_options: Record<string, unknown>) => ({
-    destroy: vi.fn(),
-    setOptions: vi.fn(),
-    on: () => () => {},
-  })),
-}));
-vi.mock('wavesurfer.js', () => ({
-  default: { create: createWaveSurfer },
-}));
 
 const props = {
   peaks: [0, 0.5, 1, 0.5, 0],
   totalSamples: 480000, // 10 s at 48 kHz
   splitPoints: [240000], // one boundary at 5 s
-  playheadSample: null,
+  getPlayheadSample: () => 0,
+  playing: false,
+  seekNonce: 0,
+  onTogglePlay: vi.fn(),
   onMove: vi.fn(),
   onAdd: vi.fn(),
   onRemove: vi.fn(),
   onScrub: vi.fn(),
 };
 
+// jsdom has no layout: a fixed box for the waveform content, and a viewport width.
+function boxAt(left: number, width: number) {
+  return vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+    left,
+    width,
+    right: left + width,
+    top: 0,
+    bottom: 0,
+    height: 0,
+    x: left,
+    y: 0,
+    toJSON: () => ({}),
+  } as DOMRect);
+}
+
 describe('WaveformMarkers', () => {
   beforeEach(() => {
-    createWaveSurfer.mockClear();
+    props.onTogglePlay.mockClear();
     props.onMove.mockClear();
     props.onAdd.mockClear();
     props.onRemove.mockClear();
     props.onScrub.mockClear();
-  });
-
-  it('constructs wavesurfer from precomputed peaks, never a URL or media element (invariant 7 / D-07)', () => {
-    render(<WaveformMarkers {...props} />);
-    const options = createWaveSurfer.mock.calls.at(-1)![0];
-    expect(options.peaks).toBeDefined();
-    expect(options.url).toBeUndefined();
-    expect(options.media).toBeUndefined();
-    expect(options.interact).toBe(false);
-    // An explicit duration is the other half of "it cannot play": with peaks
-    // and a duration there is nothing left for it to fetch.
-    expect(options.duration).toBe(10);
-    expect(options.cursorWidth).toBe(0);
   });
 
   it('renders one marker per split point', () => {
@@ -191,7 +181,7 @@ describe('WaveformMarkers', () => {
     } as DOMRect);
     try {
       render(<WaveformMarkers {...props} />);
-      fireEvent.click(screen.getByTestId('album-waveform'), { clientX: 3 });
+      fireEvent.click(screen.getByTestId('album-waveform'), { clientX: 3, clientY: 60 });
       const [sample] = props.onAdd.mock.calls.at(-1)!;
       expect(Number.isInteger(sample)).toBe(true);
       expect(sample).toBe(205714);
@@ -200,73 +190,154 @@ describe('WaveformMarkers', () => {
     }
   });
 
-  it('seeks the preview from the scrub strip, in samples', () => {
-    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-      left: 0,
-      width: 100,
-      right: 100,
-      top: 0,
-      bottom: 0,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    } as DOMRect);
+  it('seeks when the ruler is clicked, and adds a cut when the waveform below it is', () => {
+    const rect = boxAt(0, 100);
     try {
       render(<WaveformMarkers {...props} />);
-      fireEvent.click(screen.getByRole('button', { name: /scrub/i }), { clientX: 25 });
+      const content = screen.getByTestId('album-waveform');
+      fireEvent.click(content, { clientX: 25, clientY: 10 });
       expect(props.onScrub).toHaveBeenCalledWith(120000);
       expect(props.onAdd).not.toHaveBeenCalled();
+      fireEvent.click(content, { clientX: 25, clientY: 80 });
+      expect(props.onAdd).toHaveBeenCalledWith(120000);
+      expect(props.onScrub).toHaveBeenCalledTimes(1);
     } finally {
       rect.mockRestore();
     }
   });
 
-  it('measures the scrub strip against its own box, not the waveform\'s', () => {
-    // The scrub strip is a SIBLING of the waveform, not a child of it. They
-    // happen to be the same width today, so reading the waveform's box from
-    // the scrub handler is invisible -- until either grows a padding or a
-    // margin, at which point every seek lands in the wrong place.
-    //
-    // The other tests in this file mock getBoundingClientRect on
-    // Element.prototype with a single fixed rect, which makes both elements
-    // report the same box and so cannot tell the two apart. This one gives
-    // the scrub strip a box offset from the waveform's, which is what makes
-    // the difference observable.
-    const rect = vi
-      .spyOn(Element.prototype, 'getBoundingClientRect')
-      .mockImplementation(function (this: Element) {
-        const scrub = this.getAttribute('aria-label') === 'Scrub the preview';
-        return {
-          left: scrub ? 40 : 0,
-          width: 100,
-          right: scrub ? 140 : 100,
-          top: 0,
-          bottom: 0,
-          height: 0,
-          x: scrub ? 40 : 0,
-          y: 0,
-          toJSON: () => ({}),
-        } as DOMRect;
-      });
-    try {
-      render(<WaveformMarkers {...props} />);
-      fireEvent.click(screen.getByRole('button', { name: /scrub/i }), { clientX: 65 });
-      // 25 % into the scrub strip's own box. Measured against the waveform's
-      // box instead it would be 65 %, i.e. 312000.
-      expect(props.onScrub).toHaveBeenCalledWith(120000);
-    } finally {
-      rect.mockRestore();
-    }
+  it('places the playhead in px from the audio clock', () => {
+    // No layout in jsdom: 25 px/s fit fallback -> 10 s is 250 px, 2.5 s is 62.5 px.
+    render(<WaveformMarkers {...props} getPlayheadSample={() => 120000} />);
+    expect(screen.getByTestId('album-playhead').style.left).toBe('62.5px');
   });
 
-  it('draws its own playhead from the prop, since wavesurfer\'s cursor is off', () => {
-    render(<WaveformMarkers {...props} playheadSample={120000} />);
-    expect(screen.getByTestId('album-playhead').style.left).toBe('25%');
+  it('reads the time from the same clock, to the millisecond', () => {
+    render(<WaveformMarkers {...props} getPlayheadSample={() => 34_769_136} />);
+    expect(screen.getByTestId('album-time')).toHaveTextContent('12:04.357');
+    expect(screen.getByText(/0:10\.000/)).toBeInTheDocument(); // the album length
   });
 
-  it('draws no playhead when the preview has no position', () => {
+  it('play button reflects and toggles playback', () => {
+    const { rerender } = render(<WaveformMarkers {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(props.onTogglePlay).toHaveBeenCalledTimes(1);
+    rerender(<WaveformMarkers {...props} playing />);
+    expect(screen.getByRole('button', { name: 'Pause' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+describe('WaveformMarkers zoom', () => {
+  const width = () => Number.parseFloat(screen.getByTestId('album-waveform').style.width);
+
+  it('starts fitted, zooms in and out with the buttons, and Fit returns', () => {
     render(<WaveformMarkers {...props} />);
-    expect(screen.queryByTestId('album-playhead')).toBeNull();
+    expect(screen.getByTestId('album-zoom')).toHaveTextContent('Whole album');
+    const fitted = width();
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(width()).toBeGreaterThan(fitted);
+    expect(screen.getByTestId('album-zoom')).toHaveTextContent('px/s');
+    fireEvent.click(screen.getByRole('button', { name: 'Fit' }));
+    expect(width()).toBe(fitted);
+    expect(screen.getByTestId('album-zoom')).toHaveTextContent('Whole album');
+  });
+
+  it('cannot zoom out past fit', () => {
+    render(<WaveformMarkers {...props} />);
+    const fitted = width();
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+    expect(width()).toBe(fitted);
+  });
+
+  it('cannot zoom in past the envelope resolution', () => {
+    render(<WaveformMarkers {...props} />);
+    for (let i = 0; i < 30; i++) fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(width()).toBe(10 * 100); // 10 s at 100 px/s
+  });
+
+  it('ctrl+wheel zooms, and the page is not zoomed with it', () => {
+    render(<WaveformMarkers {...props} />);
+    const before = width();
+    const event = new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, cancelable: true, bubbles: true });
+    act(() => {
+      screen.getByTestId('album-scroller').dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(true);
+    expect(width()).toBeGreaterThan(before);
+  });
+
+  it('a plain wheel is left to the browser when there is nothing to pan', () => {
+    render(<WaveformMarkers {...props} />);
+    const event = new WheelEvent('wheel', { deltaY: 100, cancelable: true, bubbles: true });
+    screen.getByTestId('album-scroller').dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  });
+});
+
+describe('WaveformMarkers painting', () => {
+  interface Rect {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    style: unknown;
+  }
+  const rects: Rect[] = [];
+  let realGetContext: typeof HTMLCanvasElement.prototype.getContext;
+  let clientWidth: PropertyDescriptor | undefined;
+
+  beforeEach(() => {
+    rects.length = 0;
+    realGetContext = HTMLCanvasElement.prototype.getContext;
+    const ctx = {
+      fillStyle: '' as unknown,
+      font: '',
+      textBaseline: '',
+      setTransform: () => {},
+      // Each paint starts with a clear, so `rects` is always the latest frame.
+      clearRect: () => void (rects.length = 0),
+      fillText: () => {},
+      fillRect(x: number, y: number, w: number, h: number) {
+        rects.push({ x, y, w, h, style: this.fillStyle });
+      },
+    };
+    HTMLCanvasElement.prototype.getContext = (() => ctx) as unknown as typeof realGetContext;
+    clientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 200 });
+  });
+
+  afterEach(() => {
+    HTMLCanvasElement.prototype.getContext = realGetContext;
+    if (clientWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', clientWidth);
+    else delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+  });
+
+  // The waveform bars sit below the 24 px ruler strip.
+  const bars = () => rects.filter((r) => r.y >= 24);
+
+  it('paints the played part and the rest in different colours, split at the playhead', () => {
+    // Viewport 200 px, 10 s -> 20 px/s; the playhead at 2.5 s is x = 50.
+    render(<WaveformMarkers {...props} getPlayheadSample={() => 120000} />);
+    const before = bars().filter((r) => r.x < 50);
+    const after = bars().filter((r) => r.x >= 50);
+    expect(before.length).toBeGreaterThan(0);
+    expect(after.length).toBeGreaterThan(0);
+    const played = new Set(before.map((r) => r.style));
+    const rest = new Set(after.map((r) => r.style));
+    expect(played.size).toBe(1);
+    expect(rest.size).toBe(1);
+    expect([...played][0]).not.toBe([...rest][0]);
+  });
+
+  it('never fills black: an unresolvable token falls back to a legible colour', () => {
+    render(<WaveformMarkers {...props} />);
+    for (const r of rects) expect(String(r.style).toLowerCase()).not.toMatch(/^(#000|black|#000000)$/);
+  });
+
+  it('draws silence as a hairline rather than dropping the column', () => {
+    render(<WaveformMarkers {...props} peaks={[0, 0, 1, 0, 0]} />);
+    const columns = bars();
+    expect(columns).toHaveLength(200); // one bar per pixel column, none skipped
+    expect(Math.min(...columns.map((r) => r.h))).toBeGreaterThanOrEqual(2); // 1 px each side of centre
   });
 });

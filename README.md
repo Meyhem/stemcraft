@@ -9,7 +9,9 @@ instrument and play along.
 - Tempo and pitch change without re-separating; stems are never modified
 - Sample-accurate seamless loops on the beat grid, with optional count-in
 - Beat, key and chord analysis, plus a fretboard view
-- Album splitter: cut a full album rip into tracks
+- Album splitter: cut a full album rip into tagged MP3s. Silence detection proposes cuts;
+  you play, zoom and pan a full-length waveform, drag, add and delete cuts, or type exact
+  start and end times to the millisecond, then download a zip
 - Export the current mix
 - Failures and CPU fallbacks are shown in the UI with the real error message
 
@@ -19,7 +21,8 @@ instrument and play along.
 ![Song view](docs/screenshots/song-view.png)
 ![Album splitter](docs/screenshots/album-splitter.png)
 
-These are design mockups from [design/ui](design/ui), not captures of the running app.
+The Library and Song view images are design mockups from [design/ui](design/ui). The Album
+splitter image is a capture of the running app.
 
 ## Run locally
 

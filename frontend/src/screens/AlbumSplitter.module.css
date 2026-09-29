@@ -38,8 +38,8 @@
   flex: 1;
 }
 
-.audio {
-  inline-size: 100%;
+.wide {
+  max-width: none;
 }
 
 .actions {
