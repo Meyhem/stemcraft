@@ -4,6 +4,7 @@
 import type { ComponentType } from 'react';
 
 import type { TheoryTool } from '../api/client';
+import { Arpeggios } from './tools/Arpeggios';
 import { ChordFinder } from './tools/ChordFinder';
 import { ChordsInKey } from './tools/ChordsInKey';
 import { NoteFinder } from './tools/NoteFinder';
@@ -28,6 +29,7 @@ export const TOOLS: readonly ToolDef[] = [
   { slug: 'note-finder', label: 'Note finder', group: 'Find', Component: NoteFinder },
   { slug: 'scale-positions', label: 'Scale positions', group: 'Shapes', Component: ScalePositions },
   { slug: 'triads', label: 'Triads & inversions', group: 'Shapes', Component: Triads },
+  { slug: 'arpeggios', label: 'Arpeggios', group: 'Shapes', Component: Arpeggios },
   { slug: 'chords-in-key', label: 'Chords in a key', group: 'Harmony', Component: ChordsInKey },
 ];
 
