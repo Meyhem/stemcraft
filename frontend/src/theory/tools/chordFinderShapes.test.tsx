@@ -25,3 +25,19 @@ test('chord finder on bass shows arpeggio shapes in play order', async () => {
   expect([...card.querySelectorAll('[data-cell]')].map((d) => d.textContent)).toEqual(['1', '2', '3', '4', '5']);
   expect(container.querySelector('[data-cell="s3f5"][data-marker="root"]')).not.toBeNull();
 });
+
+test('a bass arpeggio that spans five frets is drawn whole, every note inside the card', async () => {
+  // C dim7 from the E string sits on frets 7-11, the widest a bass shape gets.
+  renderTool('/theory/chord-finder?root=C&q=dim7');
+  const title = await screen.findByText('From the root on the E string');
+  const card = title.closest('div')!.parentElement!;
+  const dots = [...card.querySelectorAll('[data-cell]')];
+  expect(dots.map((d) => d.textContent)).toEqual(['1', '2', '3', '4', '5']);
+  expect(dots.map((d) => d.getAttribute('data-cell')!.replace(/^s\d+f/, ''))).toContain('11');
+  const width = Number(card.querySelector('svg')!.getAttribute('viewBox')!.split(' ')[2]);
+  for (const circle of card.querySelectorAll('[data-cell] circle')) {
+    const cx = Number(circle.getAttribute('cx'));
+    expect(cx).toBeGreaterThan(0);
+    expect(cx).toBeLessThan(width - 18);
+  }
+});

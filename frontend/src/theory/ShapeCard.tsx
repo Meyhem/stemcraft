@@ -15,7 +15,8 @@ export function cardStart(frets: readonly number[]): number {
   if (fretted.length === 0) return 1;
   const hi = Math.max(...fretted);
   if (hi <= SPAN) return 1;
-  return Math.max(1, Math.min(Math.min(...fretted) - 1, hi - SPAN + 1));
+  // hi - SPAN + 1 is the last window that still holds hi; never start above the lowest fretted note.
+  return Math.max(1, Math.min(Math.min(...fretted), hi - SPAN + 1));
 }
 
 export function ShapeCard({
