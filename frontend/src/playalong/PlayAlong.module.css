@@ -35,3 +35,55 @@
   font-weight: 600;
   color: var(--ds-text-3);
 }
+
+.loopBars {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-2);
+}
+
+.barValue {
+  min-width: 48px;
+  text-align: center;
+  font: 600 var(--ds-t-lg) / 1 var(--ds-mono);
+}
+
+.to {
+  color: var(--ds-text-2);
+  font-size: var(--ds-t-sm);
+}
+
+.ribbon {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 3px;
+}
+
+.cell {
+  min-height: var(--ds-hit-setup);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-input);
+  color: var(--ds-text-2);
+  font: 600 var(--ds-t-sm) / 1 var(--ds-font);
+  cursor: pointer;
+}
+
+.cell[data-in-loop='true'] {
+  background: color-mix(in srgb, var(--ds-accent) 12%, var(--ds-raised));
+}
+
+.cell[data-current='true'] {
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
+}
+
+.cellBar {
+  font: 500 11px var(--ds-mono);
+  color: var(--ds-text-3);
+}
