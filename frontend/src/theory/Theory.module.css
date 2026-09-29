@@ -337,3 +337,62 @@
   align-items: center;
   gap: var(--ds-2);
 }
+
+/* ---- shape cards (voicings, arpeggios) ---- */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--ds-3);
+}
+
+.shapeCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+  padding: var(--ds-3);
+}
+
+.shapeCardCurrent {
+  border-color: var(--ds-accent);
+}
+
+.mono {
+  font: 400 var(--ds-t-xs) / 1 var(--ds-mono);
+  color: var(--ds-text-3);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-2);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-3);
+  padding: var(--ds-2) var(--ds-3);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-btn);
+}
+
+.listRow[aria-current='true'] {
+  border-color: var(--ds-accent);
+}
+
+.names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ds-3);
+}

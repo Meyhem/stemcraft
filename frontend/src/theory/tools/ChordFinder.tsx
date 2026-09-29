@@ -7,11 +7,14 @@ import { useState, type FormEvent } from 'react';
 import { DEFAULT_THEORY } from '../../api/client';
 import { chordHomes, chordInfo, chordSymbol, pcOf, pretty, QUALITIES, rootName, type ChordInfo } from '../../music/spell';
 import { neckFrets } from '../../music/tuning';
+import { bassArpeggios, guitarVoicings } from '../../music/voicings';
 import { Button } from '../../ui';
+import { orderDots, voicingDots } from '../chordDots';
 import { ChipRow, HelpBox, NoteChips, NotePicker, ToolHeader } from '../controls';
 import { noteDots } from '../neckDots';
 import { useSelection } from '../selection';
 import styles from '../Theory.module.css';
+import { ShapeCard } from '../ShapeCard';
 import { TheoryNeck } from '../TheoryNeck';
 import { useTheoryDoc } from '../TheoryDoc';
 import { useChosenSong } from '../useChosenSong';
@@ -46,6 +49,8 @@ export function ChordFinder() {
   const notes = chord.extraBass ? [...chord.notes, chord.extraBass] : chord.notes;
   const homes = chordHomes(chord);
   const frets = neckFrets(inst);
+  const voicings = inst.kind === 'guitar' ? guitarVoicings(inst, chord) : [];
+  const arpeggios = inst.kind === 'bass' ? bassArpeggios(inst, chord) : [];
 
   const typeChord = (event: FormEvent) => {
     event.preventDefault();
@@ -117,6 +122,26 @@ export function ChordFinder() {
           dots={noteDots(inst, notes, { lo: 0, hi: frets, labels: 'interval' })}
         />
       </div>
+      {inst.kind === 'guitar' ? (
+        <>
+          <span className={styles.cap}>voicings · {voicings.length}</span>
+          {voicings.length === 0 && <p className={styles.dimText}>No playable voicing of {pretty(chord.symbol)} in this tuning.</p>}
+          <div className={styles.cards}>
+            {voicings.map((v) => (
+              <ShapeCard key={v.tab} title={v.label} subtitle={v.tab} instrument={inst} dots={voicingDots(inst, chord, v)} />
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <span className={styles.cap}>arpeggio shapes</span>
+          <div className={styles.cards}>
+            {arpeggios.map((a) => (
+              <ShapeCard key={a.label} title={a.label} subtitle="play order" instrument={inst} dots={orderDots(inst, pcOf(chord.root)!, a.cells)} />
+            ))}
+          </div>
+        </>
+      )}
       <HelpBox>
         <b>{pretty(chord.symbol)}</b>: {notes.map((n) => `${pretty(n.name)} (${n.interval})`).join(', ')}.{' '}
         {homes.length > 0 ? (
