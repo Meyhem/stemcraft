@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, expect, test, vi } from 'vitest';
@@ -90,4 +90,23 @@ test('typing in the url form does not affect the upload form state', async () =>
   renderImport(async () => new Response('{}', { status: 201 }));
   await userEvent.type(screen.getAllByLabelText(/^title$/i)[1]!, 'Only URL Title');
   expect((screen.getAllByLabelText(/^title$/i)[0]! as HTMLInputElement).value).toBe('');
+});
+
+test('dropping a file on the zone arms the submit button', async () => {
+  // The submit is disabled until a file is chosen. Before the drop zone existed the
+  // only way to choose one was the file picker, so this asserts the drop path is wired
+  // to the same state -- not merely that a dashed border is on screen.
+  renderImport(async () => new Response('{}', { status: 201 }));
+
+  expect(screen.getByRole('button', { name: /import file/i })).toBeDisabled();
+
+  const zone = document.querySelector('.drop')!;
+  const dropEvent = new Event('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(dropEvent, 'dataTransfer', {
+    value: { files: [new File(['b'], 'dropped.flac', { type: 'audio/flac' })] },
+  });
+  fireEvent(zone, dropEvent);
+
+  expect(await screen.findByText('dropped.flac')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /import file/i })).toBeEnabled();
 });

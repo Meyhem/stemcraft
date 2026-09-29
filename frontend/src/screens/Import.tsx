@@ -6,6 +6,7 @@ import { type FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useCreateSongFromUpload, useCreateSongFromUrl } from '../api/queries';
+import { Banner, Button, DropZone, Panel, TextField } from '../ui';
 import styles from './Import.module.css';
 
 export function Import() {
@@ -40,81 +41,85 @@ export function Import() {
   }
 
   return (
-    <section>
+    <section className={styles.screen}>
       <h1>Import</h1>
       <div className={styles.forms}>
-        <form className={styles.form} onSubmit={handleUpload}>
-          <h2>From a file</h2>
-          <div className={styles.field}>
-            <label htmlFor="upload-file">Audio or video file</label>
-            <input
+        <Panel className={styles.form}>
+          <form className={styles.inner} onSubmit={handleUpload}>
+            <h2>From a file</h2>
+            <DropZone
               id="upload-file"
-              type="file"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              label="Audio or video file"
+              file={file}
+              onFile={setFile}
+              hint="Anything ffmpeg can decode, including video containers."
             />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="upload-title">Title</label>
-            <input
+            <TextField
               id="upload-title"
+              label="Title"
               placeholder="From the file's tags, if present"
               value={uploadTitle}
               onChange={(e) => setUploadTitle(e.target.value)}
             />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="upload-artist">Artist</label>
-            <input
+            <TextField
               id="upload-artist"
+              label="Artist"
               value={uploadArtist}
               onChange={(e) => setUploadArtist(e.target.value)}
             />
-          </div>
-          <button className={styles.submit} type="submit" disabled={!file || uploadSong.isPending}>
-            {uploadSong.isPending ? 'Importing…' : 'Import file'}
-          </button>
-          {/* N-08: the server's real message, not a generic failure notice. */}
-          {uploadSong.isError && <p className={styles.error}>{String(uploadSong.error)}</p>}
-        </form>
+            <Button
+              className={styles.submit}
+              type="submit"
+              variant="primary"
+              disabled={!file || uploadSong.isPending}
+            >
+              {uploadSong.isPending ? 'Importing…' : 'Import file'}
+            </Button>
+            {/* N-08: the server's real message, not a generic failure notice. */}
+            {uploadSong.isError && (
+              <Banner tone="error" title="Import failed" trace={String(uploadSong.error)} />
+            )}
+          </form>
+        </Panel>
 
-        <form className={styles.form} onSubmit={handleUrl}>
-          <h2>From a URL</h2>
-          <div className={styles.field}>
-            <label htmlFor="url-value">URL</label>
-            <input
+        <Panel className={styles.form}>
+          <form className={styles.inner} onSubmit={handleUrl}>
+            <h2>From a URL</h2>
+            <TextField
               id="url-value"
+              label="URL"
               type="url"
               placeholder="https://…"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
             />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="url-title">Title</label>
-            <input
+            <TextField
               id="url-title"
+              label="Title"
               required
+              hint="A URL import has nothing to probe before the download runs."
               value={urlTitle}
               onChange={(e) => setUrlTitle(e.target.value)}
             />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="url-artist">Artist</label>
-            <input
+            <TextField
               id="url-artist"
+              label="Artist"
               value={urlArtist}
               onChange={(e) => setUrlArtist(e.target.value)}
             />
-          </div>
-          <button
-            className={styles.submit}
-            type="submit"
-            disabled={!url || !urlTitle || urlSong.isPending}
-          >
-            {urlSong.isPending ? 'Importing…' : 'Import from URL'}
-          </button>
-          {urlSong.isError && <p className={styles.error}>{String(urlSong.error)}</p>}
-        </form>
+            <Button
+              className={styles.submit}
+              type="submit"
+              variant="primary"
+              disabled={!url || !urlTitle || urlSong.isPending}
+            >
+              {urlSong.isPending ? 'Importing…' : 'Import from URL'}
+            </Button>
+            {urlSong.isError && (
+              <Banner tone="error" title="Import failed" trace={String(urlSong.error)} />
+            )}
+          </form>
+        </Panel>
       </div>
     </section>
   );
