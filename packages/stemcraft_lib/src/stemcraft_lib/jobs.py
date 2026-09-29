@@ -415,16 +415,30 @@ def reclaim_expired(conn: sqlite3.Connection, *, now: float | None = None) -> li
     """Requeue jobs whose worker died holding the lease. Progress and steps
     reset because the job re-runs from the start (idempotent by re-derivation)."""
     at = time.time() if now is None else now
-    rows = conn.execute(
-        "UPDATE jobs SET state = 'queued', progress = 0, lease_until = NULL, started_at = NULL, "
-        "device = NULL WHERE state = 'running' AND lease_until IS NOT NULL AND lease_until < ? "
-        "RETURNING id, steps",
-        (at,),
-    ).fetchall()
-    for row in rows:
-        if row["steps"]:
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        rows = conn.execute(
+            "UPDATE jobs SET state = 'queued', progress = 0, lease_until = NULL, "
+            "started_at = NULL, device = NULL WHERE state = 'running' "
+            "AND lease_until IS NOT NULL AND lease_until < ? RETURNING id, kind, steps",
+            (at,),
+        ).fetchall()
+        for row in rows:
+            if row["steps"]:
+                fresh = job_steps.reset(json.loads(row["steps"]))
+            else:
+                # A row from before the schema-v2 migration. An undeclared kind
+                # keeps NULL steps; run_one then fails that job loudly.
+                try:
+                    fresh = job_steps.seed(row["kind"])
+                except job_steps.UnknownJobKind:
+                    continue
             conn.execute(
                 "UPDATE jobs SET steps = ? WHERE id = ? AND state = 'queued'",
-                (json.dumps(job_steps.reset(json.loads(row["steps"]))), row["id"]),
+                (json.dumps(fresh), row["id"]),
             )
+        conn.execute("COMMIT")
+    except BaseException:
+        conn.execute("ROLLBACK")
+        raise
     return [r["id"] for r in rows]

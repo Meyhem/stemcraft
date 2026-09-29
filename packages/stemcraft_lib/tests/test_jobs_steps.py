@@ -154,3 +154,23 @@ def test_a_half_migrated_database_is_finished_not_refused(tmp_path):
     _v1_database(path, with_steps_column=True)
     conn = connect(path)
     assert conn.execute("PRAGMA user_version").fetchone()[0] == JOBS_SCHEMA_VERSION == 2
+
+
+def test_reclaiming_a_running_v1_row_seeds_its_missing_steps(tmp_path):
+    # A job that was RUNNING when the upgrade happened has NULL steps; reclaim
+    # must give it the declared ones so the re-run does not fail at step one.
+    path = tmp_path / "j.sqlite"
+    _v1_database(path)
+    old = sqlite3.connect(path)
+    old.execute(
+        "INSERT INTO jobs (kind, payload, state, lease_until) VALUES ('import', '{}', 'running', 1)"
+    )
+    old.commit()
+    old.close()
+
+    conn = connect(path)
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()[0]
+    assert reclaim_expired(conn) == [job_id]
+    requeued = get_job(conn, job_id)
+    assert requeued.state == "queued"
+    assert requeued.steps == job_steps.seed("import")

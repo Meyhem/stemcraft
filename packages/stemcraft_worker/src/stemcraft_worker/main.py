@@ -11,6 +11,7 @@ import threading
 import time
 import traceback
 
+from stemcraft_lib import job_steps
 from stemcraft_lib import jobs as jobs_db
 from stemcraft_lib.config import settings
 from stemcraft_lib.deps import DependencyError, assert_ready
@@ -52,13 +53,16 @@ def run_one(
     renewer.start()
     try:
         fn = get_kind(job.kind)
+        # Rows queued before the schema-v2 migration have no steps; seed them
+        # here. An undeclared kind raises UnknownJobKind into the fail() below.
+        steps = job.steps or job_steps.seed(job.kind)
         ctx = JobContext(
             conn=conn,
             job_id=job.id,
             payload=job.payload,
             device=device,
             worker_state=worker_state,
-            steps=job.steps,
+            steps=steps,
         )
         result = fn(ctx)
         # D-17: close the last step; a declared step that never ran is a bug in

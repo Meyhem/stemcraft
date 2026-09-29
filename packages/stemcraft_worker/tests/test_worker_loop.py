@@ -229,3 +229,46 @@ def test_probe_reports_its_tick_step(conn):
     job_id = enqueue(conn, kind="probe", payload={"steps": 2, "step_seconds": 0.01})
     run_one(conn, device="cpu")
     assert _states(get_job(conn, job_id)) == [("tick", "done")]
+
+
+def _v1_row(path, kind, payload="{}"):
+    import sqlite3
+
+    old = sqlite3.connect(path)
+    old.executescript(
+        "CREATE TABLE jobs (id INTEGER PRIMARY KEY, song_id TEXT, kind TEXT, payload TEXT,"
+        " state TEXT, cancel_requested INTEGER DEFAULT 0, progress REAL DEFAULT 0,"
+        " device TEXT, lease_until REAL, created_at REAL, started_at REAL,"
+        " finished_at REAL, error TEXT, result TEXT); PRAGMA user_version = 1;"
+    )
+    old.execute(
+        "INSERT INTO jobs (kind, payload, state, created_at) VALUES (?, ?, 'queued', 1)",
+        (kind, payload),
+    )
+    old.commit()
+    old.close()
+
+
+def test_a_queued_v1_row_without_steps_is_seeded_and_runs_to_done(tmp_path):
+    import stemcraft_worker.kinds.probe  # noqa: F401  (registers on import)
+
+    path = tmp_path / "old.sqlite"
+    _v1_row(path, "probe", '{"steps": 1, "step_seconds": 0.01}')
+    conn = connect(path)
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()[0]
+    assert get_job(conn, job_id).steps == []
+    assert run_one(conn, device="cpu") == job_id
+    done = get_job(conn, job_id)
+    assert done.state == "done", done.error
+    assert _states(done) == [("tick", "done")]
+
+
+def test_an_undeclared_kind_without_steps_fails_loudly_and_does_not_crash(tmp_path):
+    path = tmp_path / "old.sqlite"
+    _v1_row(path, "zzz_undeclared")
+    conn = connect(path)
+    job_id = conn.execute("SELECT id FROM jobs").fetchone()[0]
+    assert run_one(conn, device="cpu") == job_id
+    failed = get_job(conn, job_id)
+    assert failed.state == "failed"
+    assert "zzz_undeclared" in failed.error
