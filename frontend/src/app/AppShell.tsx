@@ -11,6 +11,7 @@ const NAV = [
   { to: '/import', label: 'Import' },
   { to: '/splitter', label: 'Album splitter' },
   { to: '/jobs', label: 'Job queue' },
+  { to: '/theory', label: 'Theory' },
 ];
 
 export function AppShell() {

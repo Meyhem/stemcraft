@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 
+import { DEFAULT_THEORY } from '../api/client';
 import { AppRoutes } from './routes';
 
 // The Song view builds a real playback engine, which needs Web Audio: jsdom has
@@ -81,6 +82,7 @@ beforeEach(() => {
     vi.fn(async (url: string) => {
       if (url === '/api/songs') return new Response(JSON.stringify({ songs: [songEntry] }));
       if (url === '/api/songs/01ABC') return new Response(JSON.stringify(songEntry));
+      if (url === '/api/theory') return new Response(JSON.stringify(DEFAULT_THEORY));
       // Not analyzed in this fixture's sense that matters here -- the smoke
       // test only checks that each route renders its screen, not analysis
       // content, so a 404 (the "not analyzed yet" case) is a fine default.
@@ -106,6 +108,8 @@ test.each([
   // Exact match: the screen also has an "Exports" h2 for past files (Task 6),
   // which /export/i would ambiguously match too.
   ['/songs/01ABC/export', /^export$/i],
+  // D-19: lazy-loaded, and /theory redirects to the last tool (Scale finder by default).
+  ['/theory', /^scale finder$/i],
 ])('%s renders its screen', async (path, heading) => {
   renderAt(path);
   expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();

@@ -14,6 +14,10 @@ import type { ImportLinkState } from '../screens/import/importLink';
 import { SongScope } from '../session/SongScope';
 import { AppShell } from './AppShell';
 
+// D-19: the Theory tab and tonal load only when the tab is opened, keeping the
+// main bundle under Vite's 500 kB warning.
+const Theory = lazy(() => import('../screens/Theory').then((m) => ({ default: m.Theory })));
+
 // Task 8: dev-only manual verification page for the playback engine (R-01).
 // The `import.meta.env.DEV` check must gate the dynamic import() itself, not
 // just the JSX that renders it — Vite/Rollup constant-fold `DEV` to `false` in
@@ -53,6 +57,9 @@ export function AppRoutes() {
               editor. */}
           <Route path="splitter/:albumId" element={<AlbumSplitter />} />
           <Route path="jobs" element={<JobQueue />} />
+          {/* D-19: the tool is in the path, the shared selection in the query string. */}
+          <Route path="theory" element={<Suspense fallback={null}><Theory /></Suspense>} />
+          <Route path="theory/:tool" element={<Suspense fallback={null}><Theory /></Suspense>} />
           {/* D-18: one session per song, above the screens that play it, so
               switching between them never stops playback. */}
           <Route path="songs/:songId" element={<SongScope />}>
