@@ -8,7 +8,7 @@
 //
 // Needs the API (8000) and the Vite dev server (5173) running, and google-chrome on PATH.
 //
-//   node scripts/capture-screens.mjs library=/ song-view=/songs/<id> play-along=/songs/<id>/play album-splitter=/splitter/<id> job-queue=/jobs
+//   node scripts/capture-screens.mjs library=/ song-view=/songs/<id> play-along=/songs/<id>/play album-splitter=/splitter/<id> job-queue=/jobs "theory=/theory/scale-finder?root=A&scale=minor-pentatonic"
 //
 // Each argument is name=path; the PNG is written to docs/screenshots/<name>.png. Pages are
 // loaded and looked at; the play-along capture also presses Space to play and pause, to get
@@ -29,19 +29,24 @@ const READY = {
   library: 'main li, [class*="card"]',
   'song-view': '[data-testid="bass-canvas"]',
   'play-along': '[data-testid="neck-canvas"]',
+  theory: '[data-cell]', // the neck's dots (SVG); the tab is a lazy chunk, so 'body' is too early
   'album-splitter': '[data-testid="album-canvas"]',
   'job-queue': '[data-testid="job-stats"]',
 };
 
-// Screens taller than the default viewport: the play-along neck sits below the pickers.
-const HEIGHTS = { 'play-along': 1330 };
+// Screens taller than the default viewport: the play-along neck sits below the pickers;
+// the Theory rail's instrument footer (tuning, left-handed) sits below the fold at 900.
+const HEIGHTS = { 'play-along': 1330, theory: 960 };
 
 // Screens that only show their point once playing: press Space, let a few bars go by,
 // press Space again so the frame is still. (The neck is empty before the first bar.)
 const PLAY_MS = { 'play-along': 7000 };
 
 const shots = process.argv.slice(2).map((arg) => {
-  const [name, path] = arg.split('=');
+  // Split on the FIRST '=' only: a path may carry a query string (theory=/theory/x?root=A).
+  const eq = arg.indexOf('=');
+  const name = arg.slice(0, eq);
+  const path = arg.slice(eq + 1);
   if (!name || !path) throw new Error(`expected name=path, got ${arg}`);
   return { name, path };
 });
