@@ -8,7 +8,7 @@
 //
 // Needs the API (8000) and the Vite dev server (5173) running, and google-chrome on PATH.
 //
-//   node scripts/capture-screens.mjs library=/ song-view=/songs/<id> album-splitter=/splitter/<id>
+//   node scripts/capture-screens.mjs library=/ song-view=/songs/<id> album-splitter=/splitter/<id> job-queue=/jobs
 //
 // Each argument is name=path; the PNG is written to docs/screenshots/<name>.png. Pages are
 // only loaded and looked at -- nothing is clicked, so no song or album is modified.
@@ -27,6 +27,7 @@ const READY = {
   library: 'main li, [class*="card"]',
   'song-view': '[data-testid="bass-canvas"]',
   'album-splitter': '[data-testid="album-canvas"]',
+  'job-queue': '[data-testid="job-stats"]',
 };
 
 const shots = process.argv.slice(2).map((arg) => {

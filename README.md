@@ -16,6 +16,8 @@ instrument and play along.
   drag, add and delete cuts, or type exact start and end times to the millisecond, then
   download a zip
 - Export the current mix
+- Job queue screen with all-time stats: passed and failed counts and the average duration per
+  job kind and device
 - Failures and CPU fallbacks are shown in the UI with the real error message
 
 ## Screens
@@ -23,9 +25,10 @@ instrument and play along.
 ![Library](docs/screenshots/library.png)
 ![Song view](docs/screenshots/song-view.png)
 ![Album splitter](docs/screenshots/album-splitter.png)
+![Job queue](docs/screenshots/job-queue.png)
 
-All three are captures of the running app, made with
-`node scripts/capture-screens.mjs library=/ song-view=/songs/<id> album-splitter=/splitter/<id>`
+All four are captures of the running app, made with
+`node scripts/capture-screens.mjs library=/ song-view=/songs/<id> album-splitter=/splitter/<id> job-queue=/jobs`
 (API and dev server running; it only loads the pages). The design system these follow —
 tokens, components and screen mockups — is in [design/ui](design/ui) (build it with
 `python3 design/ui/build.py`), with its rules in [design/ui-spec.md](design/ui-spec.md).
@@ -82,7 +85,16 @@ STEMCRAFT_DIST_DIR=frontend/dist uv run stemcraft-api
 
 Open <http://localhost:8000>.
 
+## Deploy
+
+`ops/install.sh` installs two systemd user units, `stemcraft-api` and `stemcraft-worker`, that
+start at boot and restart on failure. `git pull && ops/install.sh` redeploys. Start with
+`ops/install.sh --dry-run`, which changes nothing. See [docs/deploy.md](docs/deploy.md) for
+requirements, rollback, logs and what has been verified.
+
 ## More
+
+- [docs/deploy.md](docs/deploy.md): install, deploy and rollback runbook
 
 - [docs/running.md](docs/running.md): verified transcript of running the whole system
 - [design/domain-spec.md](design/domain-spec.md): what the product is
