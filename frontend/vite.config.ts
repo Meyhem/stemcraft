@@ -19,5 +19,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
+    // Vitest hashes CSS-module class names by default (`styles.primary` comes back as
+    // '_primary_2b6b9a'), so the src/ui/*.test.tsx assertions -- written against the
+    // literal names the design system uses -- cannot match. 'non-scoped' resolves
+    // `.primary` to 'primary'. Verified against this Vitest version.
+    css: { include: [/tokens\.css/], modules: { classNameStrategy: 'non-scoped' } },
   },
 });

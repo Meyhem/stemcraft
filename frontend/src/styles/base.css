@@ -1,0 +1,85 @@
+/* The global base layer. A port of the "base" block at the top of
+   design/ui/src/components.css, which is the design system's authority for it.
+   Everything else the design system defines lands as a React primitive in src/ui/
+   (D-16: CSS modules), but this block cannot -- it styles the document itself.
+
+   Before this file existed the app imported tokens.css alone, so `body` kept the UA
+   background (transparent over a white canvas, an 8px white frame around the app),
+   the UA font (Times New Roman), UA heading sizes (36px/27px, on no scale at all),
+   and the UA focus ring, which is close to invisible on a #0B0C0E ground. */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html,
+body { margin: 0; }
+
+html { background: var(--ds-ground); }
+
+body {
+  background: var(--ds-ground);
+  color: var(--ds-text);
+  font: 400 var(--ds-t-md) / var(--ds-lh-md) var(--ds-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Deliberate addition, absent from the design system source: its reference pages style
+   every control explicitly, so they never needed this. The app has raw <input> and
+   <button> elements in places, and form controls do not inherit font from an
+   ancestor -- without this they render Arial 13.33px regardless of what body says. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* The one focus treatment for the whole app. --ds-accent is the token's documented
+   job ("focus rings, selected chrome, links"). */
+:focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}
+
+/* Headings carry no UA margin: every screen lays itself out with flex/grid `gap`, so
+   a UA margin is a second, invisible spacing system fighting the first. */
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+pre { margin: 0; }
+
+h1 { font: 600 var(--ds-t-xl) / var(--ds-lh-xl) var(--ds-font); }
+h2 { font: 600 var(--ds-t-lg) / var(--ds-lh-lg) var(--ds-font); }
+h3 { font: 600 var(--ds-t-md) / var(--ds-lh-md) var(--ds-font); }
+
+/* U-04: one place that defines what a numeral looks like. Global rather than a module
+   because it is applied to arbitrary spans inside screen markup, exactly as the design
+   system uses it. */
+.num {
+  font-family: var(--ds-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.t-display { font-size: var(--ds-t-display); line-height: var(--ds-lh-display); font-weight: 600; }
+.t-xl { font-size: var(--ds-t-xl); line-height: var(--ds-lh-xl); font-weight: 600; }
+.t-lg { font-size: var(--ds-t-lg); line-height: var(--ds-lh-lg); font-weight: 600; }
+.t-md { font-size: var(--ds-t-md); line-height: var(--ds-lh-md); }
+.t-sm { font-size: var(--ds-t-sm); line-height: var(--ds-lh-sm); }
+.t-xs { font-size: var(--ds-t-xs); line-height: var(--ds-lh-xs); }
+
+.dim { color: var(--ds-text-2); }
+.dim3 { color: var(--ds-text-3); }
+
+.cap {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--ds-t-xs);
+  font-weight: 600;
+  color: var(--ds-text-3);
+}
