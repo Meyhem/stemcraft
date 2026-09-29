@@ -83,6 +83,36 @@ describe('StemLane', () => {
     expect(screen.getByRole('group', { name: /bass/i })).toHaveAttribute('data-silenced', 'true');
   });
 
+  it('paints the waveform with the stem\'s concrete colour, never a var() string', () => {
+    // wavesurfer draws on a canvas, which cannot resolve CSS variables: handed
+    // 'var(--ds-bass)' it ignores the colour and fills black on a near-black lane.
+    // Load-bearing: the test defines the token, so a component that passed the literal
+    // string through would fail on the string, and one that resolved the wrong token
+    // would fail on the value.
+    document.documentElement.style.setProperty('--ds-bass', '#4FC3B0');
+    document.documentElement.style.setProperty('--ds-text-2', '#9BA3AE');
+    try {
+      renderLane();
+      const options = createWaveSurfer.mock.calls[0]![0];
+      expect(options.waveColor).toBe('#4FC3B0');
+      expect(options.progressColor).toBe('#4FC3B0');
+    } finally {
+      document.documentElement.style.removeProperty('--ds-bass');
+      document.documentElement.style.removeProperty('--ds-text-2');
+    }
+  });
+
+  it('falls back to a legible colour, not black, when the stem token is undefined', () => {
+    document.documentElement.style.setProperty('--ds-text-2', '#9BA3AE');
+    try {
+      renderLane();
+      const options = createWaveSurfer.mock.calls[0]![0];
+      expect(options.waveColor).toBe('#9BA3AE');
+    } finally {
+      document.documentElement.style.removeProperty('--ds-text-2');
+    }
+  });
+
   it('constructs wavesurfer from precomputed peaks and duration, never a URL or media element (invariant #7)', () => {
     renderLane({ durationSeconds: 42.5 });
     expect(createWaveSurfer).toHaveBeenCalledOnce();
