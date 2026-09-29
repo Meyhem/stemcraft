@@ -120,3 +120,12 @@ def test_rerunning_analyze_is_idempotent(conn, songs_dir, data_dir):
     second = (song_dir / "analysis.json").read_bytes()
 
     assert first == second
+
+
+def test_analyze_records_its_four_steps(conn, songs_dir, data_dir):
+    song, _ = _make_analyzable_song(songs_dir)
+    job_id = enqueue(conn, kind="analyze", song_id=song.id, payload={"song_id": song.id})
+    run_one(conn, device="cpu")
+    assert [(s["id"], s["state"]) for s in get_job(conn, job_id).steps] == [
+        ("key", "done"), ("beats", "done"), ("chords", "done"), ("write", "done"),
+    ]

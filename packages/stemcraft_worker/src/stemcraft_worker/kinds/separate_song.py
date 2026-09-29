@@ -76,27 +76,31 @@ def run(ctx: JobContext) -> dict:
     if ctx.worker_state is None:
         raise RuntimeError("separate requires a loaded Separator (JobContext.worker_state)")
     separator = ctx.worker_state.separator
+    ctx.step("load")
     wav_tensor = _load_wav_tensor(audio_wav)
 
     def on_progress(info: dict) -> None:
         if ctx.cancelled():
             raise JobCancelled
         if info.get("state") == "end" and info.get("audio_length"):
-            ctx.progress(min(0.95, info["segment_offset"] / info["audio_length"]))
+            ctx.progress(info["segment_offset"] / info["audio_length"])
 
+    ctx.step("separate")
     separator.update_parameter(shifts=0, callback=on_progress, callback_arg={})
     _, stems = separator.separate_tensor(wav_tensor, sr=SAMPLE_RATE)
 
+    ctx.step("write")
     stems_dir = song_dir / "stems"
     near_silent: dict[str, bool] = {}
-    for name in STEM_NAMES:
+    for index, name in enumerate(STEM_NAMES):
+        ctx.detail(f"{name} ({index + 1} of {len(STEM_NAMES)})")
         stem_tensor = stems[name]
         near_silent[name] = float(stem_tensor.abs().max()) < NEAR_SILENT_THRESHOLD
         wav_path = stems_dir / f"{name}.wav"
         _write_stem_wav(stem_tensor, separator.samplerate, wav_path)
         ffmpeg.encode_opus(wav_path, stems_dir / f"{name}.opus")
+        ctx.progress((index + 1) / len(STEM_NAMES))
 
-    ctx.progress(1.0)
     jobs_db.enqueue(ctx.conn, kind="analyze", song_id=song_id, payload={"song_id": song_id})
     return {"near_silent": near_silent}
 

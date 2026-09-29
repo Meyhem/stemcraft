@@ -178,3 +178,27 @@ def test_url_source_downloads_then_decodes(conn, songs_dir, http_fixture_server,
     assert list(song_dir.glob("original.*"))
     assert (song_dir / "audio.wav").is_file()
     assert (song_dir / "peaks.json").is_file()
+    assert [s["state"] for s in get_job(conn, job_id).steps] == ["done", "done", "done"]
+
+
+def test_an_upload_import_skips_download_and_runs_the_rest(conn, songs_dir):
+    song = new_song(title="T", artist="A", source_kind="upload", source_value="original.mp3")
+    song_dir = create_song_dir(songs_dir, song)
+    _fixture_mp3(song_dir / "original.mp3")
+
+    job_id = enqueue(conn, kind="import", song_id=song.id, payload={"song_id": song.id})
+    run_one(conn, device="cpu")
+
+    steps = get_job(conn, job_id).steps
+    assert [(s["id"], s["state"]) for s in steps] == [
+        ("download", "skipped"), ("decode", "done"), ("peaks", "done"),
+    ]
+    assert steps[0]["detail"] == "uploaded file"
+
+
+def test_an_import_for_a_missing_song_fails_on_its_first_step(conn, songs_dir):
+    job_id = enqueue(conn, kind="import", song_id="nope", payload={"song_id": "nope"})
+    run_one(conn, device="cpu")
+    job = get_job(conn, job_id)
+    assert job.state == "failed"
+    assert job.steps[0]["state"] == "failed"

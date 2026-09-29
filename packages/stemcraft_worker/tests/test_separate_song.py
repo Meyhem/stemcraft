@@ -152,3 +152,15 @@ def test_cancel_mid_separation_lands_as_cancelled_not_failed(
     cancelled = get_job(conn, job_id)
     assert cancelled.state == "cancelled"
     assert not (song_dir / "stems").exists() or list((song_dir / "stems").iterdir()) == []
+    assert [s["state"] for s in cancelled.steps] == ["done", "cancelled", "pending"]
+
+
+def test_separate_records_load_separate_and_write_steps(conn, songs_dir, worker_state):
+    song, _ = _make_song(songs_dir)
+    job_id = enqueue(conn, kind="separate", song_id=song.id, payload={"song_id": song.id})
+    run_one(conn, device="cpu", worker_state=worker_state)
+    steps = get_job(conn, job_id).steps
+    assert [(s["id"], s["state"]) for s in steps] == [
+        ("load", "done"), ("separate", "done"), ("write", "done"),
+    ]
+    assert steps[2]["detail"] == "other (4 of 4)"

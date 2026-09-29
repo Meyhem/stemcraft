@@ -43,19 +43,22 @@ def run(ctx: JobContext) -> dict:
             raise RuntimeError(
                 f"song {song.id} has no original.* on disk and its source is not a url"
             )
+        ctx.step("download")
         original = ytdlp.download(song.source.value, song_dir)
-    ctx.progress(0.1)
+    else:
+        # A retry after a crash finds the download already on disk (§6).
+        ctx.skip("download", "uploaded file" if song.source.kind != "url" else "already downloaded")
     if ctx.cancelled():
         raise JobCancelled
 
+    ctx.step("decode")
     audio_wav = song_dir / "audio.wav"
     ffmpeg.decode_to_wav(original, audio_wav, sample_rate=SAMPLE_RATE)
-    ctx.progress(0.7)
     if ctx.cancelled():
         raise JobCancelled
 
+    ctx.step("peaks")
     atomic_write_json(song_dir / "peaks.json", peaks_module.compute_peaks(audio_wav))
-    ctx.progress(1.0)
 
     jobs_db.enqueue(ctx.conn, kind="separate", song_id=song.id, payload={"song_id": song.id})
 

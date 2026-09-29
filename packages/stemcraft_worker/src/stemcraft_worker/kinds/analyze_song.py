@@ -39,31 +39,31 @@ def run(ctx: JobContext) -> dict:
     if not derive_files(song_dir).has_stems:
         raise RuntimeError(f"song {song_id} has no separated stems to analyze")
 
+    ctx.step("key")
     key_candidates = detect_key(
         [song_dir / "stems" / "bass.wav", song_dir / "stems" / "other.wav"],
         sample_rate=SAMPLE_RATE,
     )
-    ctx.progress(0.3)
     if ctx.cancelled():
         raise JobCancelled
 
+    ctx.step("beats")
     raw_grid = detect_beats(audio_wav, sample_rate=SAMPLE_RATE)
-    ctx.progress(0.6)
     if ctx.cancelled():
         raise JobCancelled
 
+    ctx.step("chords")
     frame_chords = recognize_frames(audio_wav)
     total_samples = _wav_sample_count(audio_wav)
     chords = align_to_bars(frame_chords, raw_grid.downbeats, total_samples, sample_rate=SAMPLE_RATE)
-    ctx.progress(0.95)
 
+    ctx.step("write")
     analysis = Analysis(
         key_candidates=key_candidates,
         beat_grid=BeatGrid(bpm=raw_grid.bpm, beats=raw_grid.beats, downbeats=raw_grid.downbeats),
         chords=chords,
     )
     write_analysis(song_dir, analysis)
-    ctx.progress(1.0)
 
     top = key_candidates[0]
     return {"bpm": raw_grid.bpm, "top_key": f"{top.tonic} {top.mode}", "bar_count": len(chords)}
