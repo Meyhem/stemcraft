@@ -96,10 +96,11 @@ and let pydantic defaults fill the new field.
   last-write-wins.
 - `Loop` and `active_loop` are unchanged. The Play along loop steppers and ribbon
   write `active_loop` exactly as Song view's Set A / Set B do: the existing name is
-  kept (`""` if none), and a loop is at least one bar long. `end_bar` is
-  **exclusive** in the stored loop, as it is today. The steppers and ribbon show
-  **inclusive** bars ("5 to 8" is stored as `start_bar: 5, end_bar: 9`). The Loop
-  toggle is the same arm/disarm action as Song view's Loop button.
+  kept (`""` if none), and a loop is at least one bar long. Stored bars are
+  **0-based** and `end_bar` is **exclusive**, as today. The steppers and ribbon show
+  **1-based inclusive** bars, like the ruler: "5 to 8" is stored as
+  `start_bar: 4, end_bar: 8`. The Loop toggle is the same arm/disarm action as Song
+  view's Loop button.
 - **Nothing derived is stored.** Resolved key, transposed chords, notes and fret
   positions are recomputed from analysis + recipe on every change.
 
@@ -115,7 +116,10 @@ interface BarNotes { bar: number; chord: string; notes: PatternNote[];
                      substitution: string | null; empty: 'no_chord' | 'unclassified' | null }
 ```
 
-**Chord parsing** (BTC labels, `root:quality[/degree]`):
+**Chord parsing** (BTC labels, `root:quality[/degree]`). As `recognize.py` emits them
+today, a bare root (`C#`) is major, roots are sharp-spelled, the 14 qualities are `min maj
+dim aug min6 maj6 min7 minmaj7 maj7 7 dim7 hdim7 sus2 sus4`, and no slash is emitted. The
+slash form is still parsed, so a future chord model or transcription source works unchanged.
 - The third is 4 semitones (`maj`, `aug`, `7`, `maj7`, `maj6`, `9`…) or 3 (`min`, `dim`,
   `min7`, `hdim7`, `dim7`, `min6`…). `sus2`/`sus4` use 2/5 in place of the third.
 - The fifth is 7, or 6 for `dim`/`hdim7`/`dim7`, or 8 for `aug`.
