@@ -1,0 +1,40 @@
+/* The Song view's one time axis: ruler, chord row and the four stem lanes are
+   rows of a single horizontally scrolling canvas (SongView's .scroller), so a
+   chord, its bar line and the waveform under it scroll together. Every row
+   starts with the same 200px head that stays put while the content scrolls.
+
+   The head is opaque and sits above the loop/playhead overlay (z-index 2), so
+   the overlay passes *under* it rather than drawing across the labels. */
+
+.row {
+  display: flex;
+  flex: none;
+}
+
+.head {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  width: 200px; /* LANE_HEAD_PX in music/timeScale.ts -- the px maths depends on it */
+  flex: none;
+  background: var(--ds-surface);
+  border-right: 1px solid var(--ds-border);
+}
+
+/* Row captions ("Bar", "Chords"): small caps, receding. */
+.caption {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 var(--ds-4);
+  font: 600 var(--ds-t-xs) / 1 var(--ds-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+}
+
+/* A row's scrolling content. Its width is set inline from the TimeScale. */
+.content {
+  position: relative;
+  flex: none;
+}

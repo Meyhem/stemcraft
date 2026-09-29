@@ -12,14 +12,30 @@
 //     the other two only at the engine edge, in `effectiveGain`.
 //   * Moving the cursor releases an armed loop first, visibly (U-06), and at
 //     the engine *before* the seek (D-06).
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+  type WheelEvent,
+} from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import { ApiError, songMedia, type Loop, type Song, type StemMix } from '../api/client';
+import {
+  ApiError,
+  songMedia,
+  type ChordSegment,
+  type Loop,
+  type Song,
+  type StemMix,
+} from '../api/client';
 import { useAnalysis, useSong, useUpdateSong } from '../api/queries';
 import { EngineController, STEM_ORDER, type StemName } from '../engine/EngineController';
 import { sampleIndex, type SampleIndex } from '../engine/types';
 import { barAt, barStart, buildGrid, snapToBar } from '../music/grid';
+import { LANE_HEAD_PX, timeScale, type Zoom } from '../music/timeScale';
 import { ChordStrip } from '../songview/ChordStrip';
 import { RightRail } from '../songview/RightRail';
 import { StemLane } from '../songview/StemLane';
@@ -29,6 +45,8 @@ import styles from './SongView.module.css';
 
 /** Shared identity, so resetting solo on navigation is not a re-render. */
 const NO_SOLO: ReadonlySet<StemName> = new Set<StemName>();
+/** Stable identity, so a song with no analysis does not re-merge every render. */
+const NO_CHORDS: ChordSegment[] = [];
 
 /**
  * Mute, solo and gain collapse into the one number the engine takes. D6-04:
@@ -88,6 +106,14 @@ export function SongView() {
   // they stay frozen on the old position. Bumping this is how a seek tells them
   // to paint one more frame.
   const [seekNonce, setSeekNonce] = useState(0);
+  // View state, not recipe: how the time axis is drawn never reaches song.json.
+  const [zoom, setZoom] = useState<Zoom>('1x');
+  const [follow, setFollow] = useState(true);
+  // The time axis scroll container, as state so Timeline's follow painter is
+  // handed the element once it exists, and its visible content width (minus
+  // the sticky head column), which is what Fit fits the song into.
+  const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(0);
 
   const entry = songQuery.data;
   const fetchedSong = entry?.song ?? null;
@@ -451,6 +477,50 @@ export function SongView() {
     [applyRecipe],
   );
 
+  // ---- time axis view -----------------------------------------------------
+
+  // Re-measured on resize only -- a handful of renders, never one per frame.
+  // jsdom has no ResizeObserver; there the width stays 0 and Fit renders at 1x.
+  useEffect(() => {
+    if (!scroller) return;
+    const measure = () => setViewportWidth(Math.max(0, scroller.clientWidth - LANE_HEAD_PX));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, [scroller]);
+
+  const durationSamples = engine?.durationSamples ?? 0;
+  const scale = useMemo(
+    () => timeScale({ durationSamples, grid, zoom, viewportWidth }),
+    [durationSamples, grid, zoom, viewportWidth],
+  );
+
+  const handleFollowToggle = useCallback(() => setFollow((on) => !on), []);
+
+  // Scrolling the axis by hand while playing means "let me look elsewhere":
+  // follow would snap the view straight back, so it switches off -- visibly,
+  // the toggle unlights. Only gestures that are unambiguously the user's count
+  // (a horizontal wheel/trackpad swipe, a press on the scrollbar itself), never
+  // the scroll events follow's own paging fires.
+  const releaseFollow = useCallback(() => {
+    if (latest.current.playing) setFollow(false);
+  }, []);
+  const handleAxisWheel = useCallback(
+    (event: WheelEvent<HTMLDivElement>) => {
+      if (event.deltaX !== 0 || event.shiftKey) releaseFollow();
+    },
+    [releaseFollow],
+  );
+  const handleAxisPointerDown = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      // Only the scrollbar targets the scroller itself: the canvas fills it.
+      if (event.target === event.currentTarget) releaseFollow();
+    },
+    [releaseFollow],
+  );
+
   // ---- render -------------------------------------------------------------
 
   const timelineLoop = useMemo(
@@ -464,6 +534,8 @@ export function SongView() {
   // A 404 from analysis is "not analyzed yet" (the normal state for a song that
   // has only been separated), not a failure: the screen still plays, with no
   // bars. Any other error keeps the loud N-08 treatment.
+  const chords = analysisQuery.data?.chords ?? NO_CHORDS;
+
   const notAnalyzedYet = analysisQuery.error instanceof ApiError && analysisQuery.error.status === 404;
 
   if (songQuery.isPending) return <p className={styles.note}>Loading song&hellip;</p>;
@@ -542,42 +614,63 @@ export function SongView() {
 
         {engine && song && (
           <>
-            <Timeline
-              grid={grid}
-              durationSamples={engine.durationSamples}
-              loop={timelineLoop}
-              loopArmed={loopArmed}
-              getPosition={getPosition}
-              playing={playing}
-              seekNonce={seekNonce}
-              onScrub={handleScrub}
-            />
-
-            <div className={styles.lanes}>
-              {engine.stemSummaries.map((summary) => (
-                <StemLane
-                  key={summary.name}
-                  summary={summary}
-                  durationSeconds={engine.durationSeconds}
-                  muted={song.mix[summary.name]?.muted ?? false}
-                  soloed={soloed.has(summary.name)}
-                  gainDb={song.mix[summary.name]?.gain_db ?? 0}
-                  anySoloed={soloed.size > 0}
-                  onMuteToggle={() => handleMuteToggle(summary.name)}
-                  onSoloToggle={() => handleSoloToggle(summary.name)}
-                  onGainChange={(db) => handleGainChange(summary.name, db)}
+            {/* One time axis: ruler, chords and the four lanes are rows of a
+                single horizontally scrolling canvas, so a chord, its bar line
+                and the waveform under it always move together. */}
+            <div
+              ref={setScroller}
+              data-testid="time-axis-scroller"
+              className={styles.scroller}
+              onWheel={handleAxisWheel}
+              onPointerDown={handleAxisPointerDown}
+            >
+              <div
+                data-testid="time-axis"
+                className={styles.axis}
+                style={{ width: `${LANE_HEAD_PX + scale.contentWidth}px` }}
+              >
+                <Timeline
+                  grid={grid}
+                  durationSamples={engine.durationSamples}
+                  scale={scale}
+                  loop={timelineLoop}
+                  loopArmed={loopArmed}
+                  getPosition={getPosition}
+                  playing={playing}
+                  seekNonce={seekNonce}
+                  onScrub={handleScrub}
+                  scroller={scroller}
+                  follow={follow}
                 />
-              ))}
-            </div>
 
-            <ChordStrip
-              chords={analysisQuery.data?.chords ?? []}
-              grid={grid}
-              durationSamples={engine.durationSamples}
-              getPosition={getPosition}
-              playing={playing}
-              seekNonce={seekNonce}
-            />
+                <ChordStrip
+                  chords={chords}
+                  scale={scale}
+                  compact={zoom === 'fit'}
+                  getPosition={getPosition}
+                  playing={playing}
+                  seekNonce={seekNonce}
+                />
+
+                <div className={styles.lanes}>
+                  {engine.stemSummaries.map((summary) => (
+                    <StemLane
+                      key={summary.name}
+                      summary={summary}
+                      durationSeconds={engine.durationSeconds}
+                      width={scale.contentWidth}
+                      muted={song.mix[summary.name]?.muted ?? false}
+                      soloed={soloed.has(summary.name)}
+                      gainDb={song.mix[summary.name]?.gain_db ?? 0}
+                      anySoloed={soloed.size > 0}
+                      onMuteToggle={() => handleMuteToggle(summary.name)}
+                      onSoloToggle={() => handleSoloToggle(summary.name)}
+                      onGainChange={(db) => handleGainChange(summary.name, db)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
 
             <div className={styles.transport}>
               <Transport
@@ -599,6 +692,11 @@ export function SongView() {
                 onSetLoopEnd={handleSetLoopEnd}
                 onNudgeBars={handleNudgeBars}
                 onMuteLane={handleMuteLane}
+                chords={chords}
+                zoom={zoom}
+                onZoomChange={setZoom}
+                follow={follow}
+                onFollowToggle={handleFollowToggle}
               />
             </div>
           </>

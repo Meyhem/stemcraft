@@ -163,15 +163,16 @@ describe('SongView', () => {
     expect(screen.getByRole('button', { name: /arm loop/i })).toHaveAttribute('aria-pressed', 'true');
 
     const track = screen.getByTestId('timeline-track');
+    // The ruler is the time axis content: 16 bars at 1x (56 px/bar) = 896 px.
     vi.spyOn(track, 'getBoundingClientRect').mockReturnValue({
-      left: 0, width: 1000, top: 0, height: 40, right: 1000, bottom: 40, x: 0, y: 0,
+      left: 0, width: 896, top: 0, height: 28, right: 896, bottom: 28, x: 0, y: 0,
       toJSON: () => ({}),
     } as DOMRect);
     // Wrapped in act() only so React flushes the resulting state update inside
     // the test's own tick: a raw dispatchEvent is how the stubbed rect above is
     // made to matter, and what is asserted below is unchanged.
     act(() => {
-      track.dispatchEvent(new MouseEvent('click', { clientX: 500, bubbles: true }));
+      track.dispatchEvent(new MouseEvent('click', { clientX: 448, bubbles: true }));
     });
 
     await waitFor(() =>
@@ -233,7 +234,8 @@ describe('SongView', () => {
     mockFetch({ '/api/songs/abc123/analysis': 404 });
     renderSongView();
     expect(await screen.findByRole('button', { name: /^play$/i })).toBeInTheDocument();
-    expect(screen.getByText(/no beat grid/i)).toBeInTheDocument();
+    // The ruler row stays and says why it has no bars.
+    expect(screen.getByText('Bars need analysis to have run')).toBeInTheDocument();
   });
 
   it('surfaces a failed autosave verbatim, rather than editing into the void (N-08)', async () => {
@@ -259,13 +261,14 @@ describe('SongView', () => {
     await waitFor(() => expect(screen.getByTestId('bar-readout')).toHaveTextContent('1'));
 
     const track = screen.getByTestId('timeline-track');
+    // The ruler is the time axis content: 16 bars at 1x (56 px/bar) = 896 px.
     vi.spyOn(track, 'getBoundingClientRect').mockReturnValue({
-      left: 0, width: 1000, top: 0, height: 40, right: 1000, bottom: 40, x: 0, y: 0,
+      left: 0, width: 896, top: 0, height: 28, right: 896, bottom: 28, x: 0, y: 0,
       toJSON: () => ({}),
     } as DOMRect);
     act(() => {
-      // Halfway: 768 000 samples in, which is downbeat 8 -- bar 9 on screen.
-      track.dispatchEvent(new MouseEvent('click', { clientX: 500, bubbles: true }));
+      // Halfway (448 of 896 px): 768 000 samples in, which is downbeat 8 -- bar 9 on screen.
+      track.dispatchEvent(new MouseEvent('click', { clientX: 448, bubbles: true }));
     });
 
     expect(engine.seek).toHaveBeenCalledWith(768_000);
@@ -274,7 +277,7 @@ describe('SongView', () => {
     expect(screen.getByRole('button', { name: /^play$/i })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('bar-readout')).toHaveTextContent('9'));
     await waitFor(() =>
-      expect(document.querySelector('[class*="playhead"]')).toHaveStyle({ left: '50%' }),
+      expect(screen.getByTestId('playhead')).toHaveStyle({ left: '448px' }),
     );
   });
 
@@ -285,5 +288,51 @@ describe('SongView', () => {
     );
     renderSongView();
     expect(await screen.findByRole('alert')).toHaveTextContent('Unable to decode audio data');
+  });
+
+  it('puts the chord row directly under the bar ruler, above the lanes, and nowhere else', async () => {
+    renderSongView();
+    const vocals = await screen.findByRole('group', { name: 'vocals stem' });
+    const other = screen.getByRole('group', { name: 'other stem' });
+    const ruler = screen.getByTestId('ruler-row');
+    const chordRows = screen.getAllByTestId('chord-row');
+    expect(chordRows).toHaveLength(1);
+    const chords = chordRows[0]!;
+    const follows = (a: Node, b: Node) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(ruler, chords)).toBe(true);
+    expect(follows(chords, vocals)).toBe(true);
+    // The old strip at the bottom is gone: no chord label after the last lane.
+    const afterLanes = Array.from(document.querySelectorAll('[aria-label="G major"]')).filter((el) =>
+      follows(other, el),
+    );
+    expect(afterLanes).toEqual([]);
+    // One scroll container holds the ruler, the chords and every lane.
+    const scroller = screen.getByTestId('time-axis-scroller');
+    for (const el of [ruler, chords, vocals, other]) expect(scroller).toContainElement(el);
+  });
+
+  it('zoom changes the time axis content width, and every waveform with it', async () => {
+    renderSongView();
+    await screen.findByRole('group', { name: 'vocals stem' });
+    const axis = screen.getByTestId('time-axis');
+    // Default 1x: 16 bars at 56 px, plus the 200 px sticky head column.
+    await waitFor(() => expect(axis.style.width).toBe(`${200 + 896}px`));
+    expect(screen.getByRole('button', { name: '1×' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('vocals-wave').style.width).toBe('896px');
+
+    await userEvent.click(screen.getByRole('button', { name: '2×' }));
+    expect(axis.style.width).toBe(`${200 + 1792}px`);
+    expect(screen.getByTestId('timeline-track').style.width).toBe('1792px');
+    expect(screen.getByTestId('bass-wave').style.width).toBe('1792px');
+    expect(screen.getByLabelText('G major').style.width).toBe('112px');
+  });
+
+  it('follows the playhead by default, and the toggle turns it off', async () => {
+    renderSongView();
+    const follow = await screen.findByRole('button', { name: 'Follow playhead' });
+    expect(follow).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(follow);
+    expect(follow).toHaveAttribute('aria-pressed', 'false');
   });
 });

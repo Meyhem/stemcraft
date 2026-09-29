@@ -1,7 +1,6 @@
-/* UI spec §6, screen 3: the performing surface on the left -- timeline, four
-   full-height stem lanes, chord strip, transport, in that order so the chords
-   sit against the transport in one reading zone -- and a 320 px setup-tier rail
-   on the right. Tokens only; the rail width is the one literal the layout owns. */
+/* UI spec §6, screen 3: the performing surface on the left -- one scrolling
+   time axis (bar ruler, chord row directly beneath it, four full-height stem
+   lanes), then the transport -- and a 320 px setup-tier rail on the right. Tokens only; the rail width is the one literal the layout owns. */
 .page {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -52,19 +51,58 @@
   align-items: center;
 }
 
-/* Four full-height lanes: the column takes every pixel the timeline, chord
-   strip and transport leave, and shares it equally (mockup: .stem-row). */
+/* The time axis: one horizontal scroll container holding the bar ruler, the
+   chord row and the four lanes as rows of one canvas, so they scroll together
+   and a chord stays on its bar line and over its audio. Vertically it grows to
+   its content (flex-basis auto, no shrink) and then takes the slack, so the
+   page -- not this box -- scrolls vertically, and nothing is clipped. */
+.scroller {
+  flex: 1 0 auto;
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+  background: var(--ds-ground);
+  scrollbar-color: var(--ds-border-strong) var(--ds-ground);
+}
+
+.scroller::-webkit-scrollbar {
+  height: var(--ds-3);
+}
+
+.scroller::-webkit-scrollbar-track {
+  background: var(--ds-ground);
+  border-top: 1px solid var(--ds-border);
+}
+
+.scroller::-webkit-scrollbar-thumb {
+  background: var(--ds-border-strong);
+  border-radius: var(--ds-r-pill);
+  border: 3px solid var(--ds-ground);
+}
+
+.scroller::-webkit-scrollbar-thumb:hover {
+  background: var(--ds-text-3);
+}
+
+/* The canvas: exactly head column + content width (set inline from the
+   TimeScale), and the containing block of Timeline's grid/loop/playhead
+   overlay, which spans every row. */
+.axis {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Four full-height lanes: the column takes every pixel the ruler and chord
+   row leave, and shares it equally (mockup: .stem-row). */
 .lanes {
   display: flex;
   flex-direction: column;
-  gap: var(--ds-2);
-  flex: 1;
-  min-height: 0;
-}
-
-.lanes > * {
-  flex: 1;
-  min-height: 0;
+  flex: 1 0 auto;
 }
 
 /* The transport stays reachable while the lanes scroll: it is the one control

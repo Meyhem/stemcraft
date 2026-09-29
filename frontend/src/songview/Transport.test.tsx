@@ -36,6 +36,11 @@ function renderTransport(over: Partial<Parameters<typeof Transport>[0]> = {}) {
     onSetLoopEnd: vi.fn(),
     onNudgeBars: vi.fn(),
     onMuteLane: vi.fn(),
+    chords: [],
+    zoom: '1x' as const,
+    onZoomChange: vi.fn(),
+    follow: true,
+    onFollowToggle: vi.fn(),
     ...over,
   };
   render(<Transport {...props} />);
@@ -135,5 +140,47 @@ describe('Transport', () => {
     expect(screen.getByRole('button', { name: /set a/i })).toBeEnabled();
     await userEvent.keyboard('b');
     expect(props.onSetLoopEnd).not.toHaveBeenCalled();
+  });
+
+  it('offers Fit / 1× / 2× zoom, showing the current one pressed', async () => {
+    const props = renderTransport({ zoom: '1x' });
+    const zoom = screen.getByRole('group', { name: 'Zoom' });
+    expect(zoom).toHaveTextContent('Fit1×2×');
+    expect(screen.getByRole('button', { name: '1×' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Fit' })).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(screen.getByRole('button', { name: 'Fit' }));
+    expect(props.onZoomChange).toHaveBeenCalledWith('fit');
+    await userEvent.click(screen.getByRole('button', { name: '2×' }));
+    expect(props.onZoomChange).toHaveBeenCalledWith('2x');
+  });
+
+  it('toggles follow-playhead, reporting its state through aria-pressed', async () => {
+    const props = renderTransport({ follow: false });
+    const follow = screen.getByRole('button', { name: 'Follow playhead' });
+    expect(follow).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(follow);
+    expect(props.onFollowToggle).toHaveBeenCalledOnce();
+  });
+
+  it('reads out the current chord and the next change, merged and spelled for display', () => {
+    const at = (bar: number, chord: string) => ({
+      bar,
+      start_sample: bar * 96_000,
+      end_sample: (bar + 1) * 96_000,
+      chord,
+    });
+    renderTransport({
+      chords: [at(0, 'G:min'), at(1, 'G:min'), at(2, 'Bb:maj'), at(3, 'F:maj')],
+      getPosition: () => sampleIndex(50_000),
+    });
+    // Bar 2 is Gm again: the next *change* is B♭, not the repeated Gm.
+    expect(screen.getByTestId('chord-readout')).toHaveTextContent('Gm');
+    expect(screen.getByTestId('chord-next')).toHaveTextContent('→ B♭');
+  });
+
+  it('reads out a dash with no chord chart', () => {
+    renderTransport({ chords: [] });
+    expect(screen.getByTestId('chord-readout')).toHaveTextContent('--');
+    expect(screen.getByTestId('chord-next')).toBeEmptyDOMElement();
   });
 });

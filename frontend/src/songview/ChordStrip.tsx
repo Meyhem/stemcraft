@@ -1,24 +1,35 @@
-// UI spec §5, "Chord strip": runs under the timeline, read at a glance from
-// ~1.5 m while playing. Segments position by their own start_sample/end_sample
-// (the analysis already aligned them to bars) as a percentage of the song's
-// sample length, same convention as Timeline. The current-chord highlight is
-// painted from this component's own rAF loop into a ref, same pattern as
-// Timeline's playhead and reading the same engine clock -- never React state,
-// which at 60 fps would re-render a tree containing four canvases sixty times
-// a second.
-import { useCallback, useRef } from 'react';
+// UI spec §5, "Chord strip" -- now the second row of the Song view's time axis,
+// directly under the bar ruler, read at a glance from ~1.5 m while playing.
+// Runs of the same chord are merged into one segment (music/chords.ts), and
+// segments are positioned in px by the shared TimeScale, the same mapping as
+// the ruler and the waveforms, so a chord change sits on its bar line.
+//
+// The current-chord highlight is painted from this component's own rAF loop
+// into a data attribute via refs, same pattern as Timeline's playhead and
+// reading the same engine clock -- never React state, which at 60 fps would
+// re-render a tree containing four canvases sixty times a second.
+import { useCallback, useMemo, useRef } from 'react';
 
 import type { ChordSegment } from '../api/client';
-import { sampleIndex, type SampleIndex } from '../engine/types';
-import type { Grid } from '../music/grid';
-import { percentOf } from '../music/percent';
+import type { SampleIndex } from '../engine/types';
+import { chordIndexAt, chordLabelFits, displayChord, mergeChords } from '../music/chords';
+import { xOf, type TimeScale } from '../music/timeScale';
 import { usePlayhead } from './usePlayhead';
+import axis from './Axis.module.css';
 import styles from './ChordStrip.module.css';
 
+// Kept exported from here: this is where the chord spelling was first defined.
+export { formatChord } from '../music/chords';
+
+/** px sizes of --ds-t-lg and --ds-t-sm, for the label-fit estimate only. */
+const LABEL_PX = { regular: 24, compact: 15 };
+
 export interface ChordStripProps {
+  /** The analysis's per-bar segments; merged into runs here. */
   chords: ChordSegment[];
-  grid: Grid | null;
-  durationSamples: SampleIndex;
+  scale: TimeScale;
+  /** Fit zoom: smaller type, so more labels fit. */
+  compact: boolean;
   getPosition(): SampleIndex;
   playing: boolean;
   /**
@@ -28,106 +39,72 @@ export interface ChordStripProps {
   seekNonce: number;
 }
 
-/**
- * "G:maj" -> "G", "E:min" -> "Em", "C:maj7" -> "Cmaj7", "N" -> no chord,
- * "X" -> unclassifiable. The wire format is BTC's; this is the reading of it.
- * Both N and X are rendered as marks with labels rather than as blanks -- a gap
- * in the strip would read as a rendering bug instead of as "the model had
- * nothing to say here" (N-08's spirit applied to a display).
- */
-export function formatChord(chord: string): { text: string; label: string } {
-  if (chord === 'N') return { text: '–', label: 'no chord' };
-  if (chord === 'X') return { text: '?', label: 'unclassified' };
-  const [root, quality] = chord.split(':');
-  if (!quality) return { text: chord, label: chord };
-  if (quality === 'maj') return { text: root!, label: `${root} major` };
-  if (quality === 'min') return { text: `${root}m`, label: `${root} minor` };
-  return { text: `${root}${quality}`, label: `${root} ${quality}` };
-}
-
 export function ChordStrip({
   chords,
-  grid,
-  durationSamples,
+  scale,
+  compact,
   getPosition,
   playing,
   seekNonce,
 }: ChordStripProps) {
+  const segments = useMemo(() => mergeChords(chords), [chords]);
   const segmentRefs = useRef<(HTMLDivElement | null)[]>([]);
   const currentIndex = useRef<number>(-1);
 
-  const findCurrent = useCallback(
-    (position: SampleIndex) => {
-      // Segments are in ascending order. Rather than rescan the whole array
-      // every frame, walk from last frame's answer -- the playhead almost
-      // always advances by a hair between ticks, so this is O(1) amortized in
-      // realistic playback, matching Timeline's painter (and barAt's own
-      // walk-from-the-last-answer discipline for the same reason).
-      if (chords.length === 0) return -1;
-      let i = currentIndex.current >= 0 ? currentIndex.current : 0;
-      while (i + 1 < chords.length && position >= sampleIndex(chords[i + 1]!.start_sample)) {
-        i++;
-      }
-      while (i > 0 && position < sampleIndex(chords[i]!.start_sample)) {
-        i--;
-      }
-      return position >= sampleIndex(chords[i]!.start_sample) ? i : -1;
-    },
-    [chords],
-  );
-
   const paint = useCallback(
     (position: SampleIndex) => {
-      const next = findCurrent(position);
-      if (next === currentIndex.current) return;
+      const next = chordIndexAt(segments, position);
+      // Checks the element, not just last frame's index: a new chord list
+      // mounts fresh segments at "false" while the index may be unchanged,
+      // and an index-only diff would then leave the current chord unlit.
       const prevEl = currentIndex.current >= 0 ? segmentRefs.current[currentIndex.current] : null;
-      if (prevEl) prevEl.dataset.current = 'false';
+      if (prevEl && currentIndex.current !== next) prevEl.dataset.current = 'false';
       const nextEl = next >= 0 ? segmentRefs.current[next] : null;
-      if (nextEl) nextEl.dataset.current = 'true';
+      if (nextEl && nextEl.dataset.current !== 'true') nextEl.dataset.current = 'true';
       currentIndex.current = next;
     },
-    [findCurrent],
+    [segments],
   );
   usePlayhead(getPosition, paint, playing, seekNonce);
 
-  const pct = useCallback(
-    (position: number) => percentOf(durationSamples, position),
-    [durationSamples],
-  );
-
-  if (chords.length === 0) {
-    return (
-      <div className={styles.strip}>
-        <p className={styles.note}>No chord chart for this song yet.</p>
-      </div>
-    );
-  }
+  const fontPx = compact ? LABEL_PX.compact : LABEL_PX.regular;
 
   return (
-    <div className={styles.strip} data-testid="chord-strip">
-      <div className={styles.track}>
-        {chords.map((segment, i) => {
-          const { text, label } = formatChord(segment.chord);
-          const left = pct(segment.start_sample);
-          const width = Math.max(0, pct(segment.end_sample) - pct(segment.start_sample));
-          return (
-            <div
-              key={`${segment.start_sample}-${i}`}
-              ref={(el) => {
-                segmentRefs.current[i] = el;
-              }}
-              className={styles.segment}
-              data-current="false"
-              style={{ left: `${left}%`, width: `${width}%` }}
-              aria-label={label}
-            >
-              {text}
-            </div>
-          );
-        })}
-        {grid?.bars.map((bar, i) => (
-          <span key={`bar-${i}`} className={styles.barTick} style={{ left: `${pct(bar)}%` }} />
-        ))}
+    <div className={`${axis.row} ${styles.row}`} data-testid="chord-row">
+      <div className={`${axis.head} ${axis.caption} ${styles.head}`}>Chords</div>
+      <div
+        className={`${axis.content} ${styles.track}`}
+        data-compact={compact ? 'true' : 'false'}
+        style={{ width: `${scale.contentWidth}px` }}
+      >
+        {segments.length === 0 ? (
+          <p className={styles.note}>
+            No chord chart for this song yet &mdash; it appears after analysis.
+          </p>
+        ) : (
+          segments.map((segment, i) => {
+            const { text, label } = displayChord(segment.chord);
+            const left = xOf(scale, segment.start_sample);
+            const width = Math.max(0, xOf(scale, segment.end_sample) - left);
+            const quiet = segment.chord === 'N' || segment.chord === 'X';
+            return (
+              <div
+                key={`${segment.start_sample}-${i}`}
+                ref={(el) => {
+                  segmentRefs.current[i] = el;
+                }}
+                className={styles.segment}
+                data-current="false"
+                data-quiet={quiet ? 'true' : 'false'}
+                style={{ left: `${left}px`, width: `${width}px` }}
+                aria-label={label}
+                title={label}
+              >
+                {chordLabelFits(text, width, fontPx) && <span className={styles.label}>{text}</span>}
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

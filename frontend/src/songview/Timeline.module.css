@@ -1,50 +1,80 @@
-/* UI spec §5, "Timeline": bar ruler, beat grid (faint), downbeat grid (bright),
+/* UI spec §5, "Timeline": the bar ruler row, and the overlay shared by every
+   row of the time axis -- beat grid (faint), bar and phrase lines (brighter),
    A-B region, playhead. Token-only -- no hex, no raw px outside the 1px/2px
-   hairlines the spec calls for explicitly. */
+   hairlines and the ruler's 28px row height, which has no token. */
 
-.timeline {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-2);
+.row {
+  height: 28px;
 }
 
-.note {
-  margin: 0;
-  font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-font);
-  color: var(--ds-text-2);
+.head,
+.track {
+  border-bottom: 1px solid var(--ds-border);
 }
 
 .track {
-  position: relative;
-  height: var(--ds-hit-perform);
   background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
+  cursor: pointer;
 }
 
-.beat {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--ds-border);
-}
-
-.bar {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--ds-border-strong);
+.note {
+  position: sticky;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding-left: var(--ds-4);
+  font: 400 var(--ds-t-xs) / 1 var(--ds-font);
+  color: var(--ds-text-3);
+  white-space: nowrap;
 }
 
 .barLabel {
   position: absolute;
-  top: var(--ds-1);
-  left: var(--ds-1);
-  font: 400 var(--ds-t-xs) / 1 var(--ds-mono);
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-left: var(--ds-1);
+  font: 600 var(--ds-t-xs) / 1 var(--ds-mono);
   font-variant-numeric: tabular-nums; /* U-04 */
-  color: var(--ds-text-2);
+  color: var(--ds-text-3);
   white-space: nowrap;
+}
+
+/* Every 4th bar is a phrase downbeat: the numbers you count by. */
+.barLabel[data-phrase='true'] {
+  color: var(--ds-text-2);
+}
+
+/* Spans the content area of every row, from the ruler to the last lane. Sits
+   under the sticky heads (z-index 3) and lets every click through to the
+   ruler beneath it. */
+.overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.line[data-line='beat'] {
+  background: color-mix(in srgb, var(--ds-text) 5%, transparent);
+}
+
+.line[data-line='bar'] {
+  background: color-mix(in srgb, var(--ds-text) 10%, transparent);
+}
+
+.line[data-line='phrase'] {
+  background: color-mix(in srgb, var(--ds-text) 22%, transparent);
 }
 
 /* U-06: the A-B region is the armed/disarmed signal. Scrubbing disarms the
@@ -54,15 +84,36 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  background: color-mix(in srgb, var(--ds-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--ds-accent) 10%, transparent);
   border-left: 2px solid var(--ds-accent);
   border-right: 2px solid var(--ds-accent);
 }
 
+.tag {
+  position: absolute;
+  top: var(--ds-1);
+  left: 0;
+  padding: 0 var(--ds-1);
+  background: var(--ds-accent);
+  color: var(--ds-on-accent);
+  font: 700 var(--ds-t-xs) / var(--ds-lh-xs) var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+}
+
+.tagEnd {
+  left: auto;
+  right: 0;
+}
+
 .region[data-armed='false'] {
-  background: color-mix(in srgb, var(--ds-text-3) 18%, transparent);
+  background: color-mix(in srgb, var(--ds-text-3) 12%, transparent);
   border-left-color: var(--ds-text-3);
   border-right-color: var(--ds-text-3);
+}
+
+.region[data-armed='false'] .tag {
+  background: var(--ds-text-3);
+  color: var(--ds-ground);
 }
 
 /* U-05: positioned only by usePlayhead's rAF loop writing to this element's
@@ -73,6 +124,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
+  margin-left: -1px;
   background: var(--ds-text);
   will-change: left;
 }

@@ -35,6 +35,7 @@ function renderLane(over: Partial<Parameters<typeof StemLane>[0]> = {}) {
   const props = {
     summary: summary(),
     durationSeconds: 120,
+    width: 896,
     muted: false,
     soloed: false,
     gainDb: 0,
@@ -44,8 +45,8 @@ function renderLane(over: Partial<Parameters<typeof StemLane>[0]> = {}) {
     onGainChange: vi.fn(),
     ...over,
   };
-  render(<StemLane {...props} />);
-  return props;
+  const utils = render(<StemLane {...props} />);
+  return { ...props, ...utils, props };
 }
 
 describe('StemLane', () => {
@@ -121,6 +122,21 @@ describe('StemLane', () => {
     expect(typeof options.duration).toBe('number');
     expect(options).not.toHaveProperty('url');
     expect(options).not.toHaveProperty('media');
+  });
+
+  it('makes the waveform exactly the time axis content width, so it aligns with the bars', () => {
+    renderLane({ width: 896 });
+    expect(createWaveSurfer.mock.calls[0]![0]).toMatchObject({ width: 896, interact: false });
+    expect(screen.getByTestId('bass-wave').style.width).toBe('896px');
+  });
+
+  it('resizes the waveform on a zoom change in place, without rebuilding it', () => {
+    const { rerender, props } = renderLane({ width: 896 });
+    const instance = createWaveSurfer.mock.results[0]!.value as { setOptions: ReturnType<typeof vi.fn> };
+    rerender(<StemLane {...props} width={1792} />);
+    expect(createWaveSurfer).toHaveBeenCalledOnce();
+    expect(instance.setOptions).toHaveBeenLastCalledWith({ width: 1792 });
+    expect(screen.getByTestId('bass-wave').style.width).toBe('1792px');
   });
 
   it('emits gain changes in dB', async () => {

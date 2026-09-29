@@ -1,16 +1,25 @@
 // UI spec §5 "Transport bar" and §7 (keyboard). Performance tier throughout:
 // 56 px targets, mono tabular numerals (U-04), and an untouched tempo or pitch
 // renders muted so the eye finds the one that is not at its default.
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import type { ChordSegment } from '../api/client';
+import { chordIndexAt, displayChord, mergeChords } from '../music/chords';
 import { barAt, type Grid } from '../music/grid';
+import type { Zoom } from '../music/timeScale';
 import type { SampleIndex } from '../engine/types';
-import { Button } from '../ui';
+import { Button, Segmented } from '../ui';
 import { usePlayhead } from './usePlayhead';
 import styles from './Transport.module.css';
 
 const TEMPO_STEP = 0.05; // UI spec §7: up/down arrows move 5%
 const NO_BARS = 'Bars need analysis to have run';
+
+const ZOOM_OPTIONS = [
+  { value: 'fit', label: 'Fit' },
+  { value: '1x', label: '1×' },
+  { value: '2x', label: '2×' },
+] as const;
 
 export interface TransportProps {
   playing: boolean;
@@ -35,6 +44,12 @@ export interface TransportProps {
   onSetLoopEnd(): void;
   onNudgeBars(delta: number): void;
   onMuteLane(index: number): void;
+  /** The analysis's per-bar chord segments, for the current/next readout. */
+  chords: ChordSegment[];
+  zoom: Zoom;
+  onZoomChange(zoom: Zoom): void;
+  follow: boolean;
+  onFollowToggle(): void;
 }
 
 export function Transport({
@@ -56,8 +71,16 @@ export function Transport({
   onSetLoopEnd,
   onNudgeBars,
   onMuteLane,
+  chords,
+  zoom,
+  onZoomChange,
+  follow,
+  onFollowToggle,
 }: TransportProps) {
   const barRef = useRef<HTMLSpanElement | null>(null);
+  const chordRef = useRef<HTMLSpanElement | null>(null);
+  const nextChordRef = useRef<HTMLSpanElement | null>(null);
+  const segments = useMemo(() => mergeChords(chords), [chords]);
 
   // Derived, never a prop: `grid === null` *is* "analysis hasn't run", and a
   // second prop saying the same thing is a second source of truth a caller can
@@ -70,8 +93,17 @@ export function Transport({
       // 1-indexed on screen; barAt returns -1 before the first downbeat.
       const bar = grid ? barAt(grid, position) : -1;
       barRef.current.textContent = bar >= 0 ? String(bar + 1) : '--';
+      // The chord readout, from the same frame: what is sounding and what
+      // comes next -- the merged list, so "next" is the next *change*.
+      const i = chordIndexAt(segments, position);
+      const now = segments[i];
+      const next = segments[i + 1];
+      if (chordRef.current) chordRef.current.textContent = now ? displayChord(now.chord).text : '--';
+      if (nextChordRef.current) {
+        nextChordRef.current.textContent = next ? `→ ${displayChord(next.chord).text}` : '';
+      }
     },
-    [grid],
+    [grid, segments],
   );
   usePlayhead(getPosition, paint, playing, seekNonce);
 
@@ -149,6 +181,16 @@ export function Transport({
         --
       </span>
 
+      <div className={styles.readout}>
+        <span className={styles.caption}>Chord</span>
+        <span className={styles.chord}>
+          <span data-testid="chord-readout" ref={chordRef}>
+            --
+          </span>{' '}
+          <span className={styles.nextChord} data-testid="chord-next" ref={nextChordRef} />
+        </span>
+      </div>
+
       <label className={styles.slider}>
         Tempo
         <input
@@ -221,6 +263,19 @@ export function Transport({
       >
         Set B
       </Button>
+
+      {/* View controls: hands-free setup, so the setup tier (40px). */}
+      <div className={styles.view}>
+        <div className={styles.readout}>
+          <span className={styles.caption} aria-hidden="true">
+            Zoom
+          </span>
+          <Segmented label="Zoom" value={zoom} options={ZOOM_OPTIONS} onChange={onZoomChange} />
+        </div>
+        <Button aria-pressed={follow} onClick={onFollowToggle}>
+          Follow playhead
+        </Button>
+      </div>
     </div>
   );
 }

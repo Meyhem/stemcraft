@@ -1,12 +1,11 @@
+/* One row of the Song view's time axis (Axis.module.css): a sticky 200px
+   controls head, then the waveform at the axis's content width. Rows share
+   hairlines rather than each being a rounded panel, so the bar grid overlay
+   reads as one continuous surface from the ruler to the last lane. */
 .lane {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: var(--ds-3);
-  align-items: center;
-  padding: var(--ds-2);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-r-panel);
-  background: var(--ds-surface);
+  display: flex;
+  flex: 1 0 auto;
+  border-bottom: 1px solid var(--ds-border);
 }
 
 /* U-01/U-03: a muted lane drops to 28% so the mute is visible across a room. */
@@ -22,7 +21,9 @@
 .controls {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: var(--ds-2);
+  padding: var(--ds-2) var(--ds-3);
 }
 
 .name {
@@ -86,6 +87,10 @@
 
 .waveWrap {
   position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  background: var(--ds-ground);
 }
 
 .wave {

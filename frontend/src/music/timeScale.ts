@@ -62,9 +62,12 @@ export function timeScale({ durationSamples, grid, zoom, viewportWidth }: TimeSc
   return { pxPerSample, pxPerBar, contentWidth: Math.round(duration * pxPerSample) };
 }
 
-/** Content-space x of a sample position. */
+/**
+ * Content-space x of a sample position, to 1/100 px: sub-pixel enough for
+ * alignment, and free of float noise ("112.00000000000001px") in the DOM.
+ */
 export function xOf(scale: TimeScale, position: number): number {
-  return position * scale.pxPerSample;
+  return Math.round(position * scale.pxPerSample * 100) / 100;
 }
 
 /** The sample under content-space x, clamped to the song. */

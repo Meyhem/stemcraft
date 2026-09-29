@@ -77,3 +77,39 @@
 .slider output[data-default='true'] {
   color: var(--ds-text-3);
 }
+
+/* Chord and zoom readouts: a caps caption over the value. */
+.readout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+  flex: none;
+}
+
+.caption {
+  font: 600 var(--ds-t-xs) / 1 var(--ds-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+}
+
+/* Painted by usePlayhead's rAF loop via refs -- no transition. min-width keeps
+   the row from reflowing every chord change. */
+.chord {
+  min-width: 6ch;
+  font: 600 var(--ds-t-lg) / var(--ds-lh-lg) var(--ds-font);
+  color: var(--ds-text);
+  white-space: nowrap;
+}
+
+.nextChord {
+  font-weight: 400;
+  color: var(--ds-text-3);
+}
+
+.view {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-3);
+  margin-left: auto;
+}

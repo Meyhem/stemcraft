@@ -6,6 +6,10 @@
 // peaks and an explicit duration, so it has no URL to fetch and no media element
 // to start, and its own cursor is switched off -- the playhead belongs to
 // Timeline, driven by the engine clock (U-05).
+//
+// A lane is one row of the Song view's scrolling time axis: the controls are
+// the row's sticky 200px head, and the waveform is exactly the axis's content
+// width, so it lines up with the bar ruler and the chord row above it.
 import type { CSSProperties } from 'react';
 import { useEffect, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
@@ -13,6 +17,7 @@ import WaveSurfer from 'wavesurfer.js';
 import type { StemName } from '../engine/EngineController';
 import type { StemSummary } from '../engine/stemPeaks';
 import { Button } from '../ui';
+import axis from './Axis.module.css';
 import styles from './StemLane.module.css';
 
 const STEM_COLOR: Record<StemName, string> = {
@@ -41,6 +46,8 @@ function resolveColor(cssVar: string): string {
 export interface StemLaneProps {
   summary: StemSummary;
   durationSeconds: number;
+  /** The time axis content width in px (TimeScale.contentWidth). */
+  width: number;
   muted: boolean;
   soloed: boolean;
   gainDb: number;
@@ -53,6 +60,7 @@ export interface StemLaneProps {
 export function StemLane({
   summary,
   durationSeconds,
+  width,
   muted,
   soloed,
   gainDb,
@@ -62,6 +70,12 @@ export function StemLane({
   onGainChange,
 }: StemLaneProps) {
   const container = useRef<HTMLDivElement | null>(null);
+  const waveSurfer = useRef<WaveSurfer | null>(null);
+  // Read at construction only (not an effect dependency): later changes go
+  // through setOptions below, so a zoom resizes the waveform in place instead
+  // of tearing it down and rebuilding it.
+  const latestWidth = useRef(width);
+  latestWidth.current = width;
   const { name, envelope, nearSilent } = summary;
   const silenced = muted || (anySoloed && !soloed);
 
@@ -78,9 +92,18 @@ export function StemLane({
       progressColor: color,
       peaks: [envelope],
       duration: durationSeconds,
+      width: latestWidth.current,
     });
-    return () => ws.destroy();
+    waveSurfer.current = ws;
+    return () => {
+      waveSurfer.current = null;
+      ws.destroy();
+    };
   }, [name, envelope, durationSeconds]);
+
+  useEffect(() => {
+    waveSurfer.current?.setOptions({ width });
+  }, [width]);
 
   return (
     <div
@@ -94,7 +117,7 @@ export function StemLane({
       // range input without a stem-conditional class per lane.
       style={{ '--lane-hue': STEM_COLOR[name] } as CSSProperties}
     >
-      <div className={styles.controls}>
+      <div className={`${axis.head} ${styles.controls}`}>
         <span className={styles.name}>{name}</span>
         <div className={styles.buttons}>
           <Button
@@ -136,8 +159,8 @@ export function StemLane({
         </label>
       </div>
 
-      <div className={styles.waveWrap}>
-        <div ref={container} className={styles.wave} />
+      <div className={styles.waveWrap} style={{ width: `${width}px` }}>
+        <div ref={container} data-testid={`${name}-wave`} className={styles.wave} style={{ width: `${width}px` }} />
         {nearSilent && (
           <span className={styles.pill}>
             near-silent &mdash; this song has no {name} the model could find

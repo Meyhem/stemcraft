@@ -1,33 +1,33 @@
-/* UI spec §5, "Chord strip": runs under the timeline, read at a glance from
-   ~1.5 m while playing. Token-only -- no hex, no raw px outside the 1px
-   hairline the bar ticks share with Timeline. No transition/animation on the
+/* UI spec §5, "Chord strip": the second row of the time axis, under the bar
+   ruler, read at a glance from ~1.5 m while playing. Token-only -- no hex, no
+   raw px outside the 1px hairlines. No transition/animation on the
    current-chord highlight: it is painted by usePlayhead's rAF loop via a ref. */
 
-.strip {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-2);
+.row {
+  height: var(--ds-7);
 }
 
-.note {
-  margin: 0;
-  font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-font);
-  color: var(--ds-text-2);
+.head,
+.track {
+  border-bottom: 1px solid var(--ds-border-strong);
 }
 
 .track {
-  position: relative;
-  height: var(--ds-7);
   background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
+  overflow: hidden;
 }
 
-.barTick {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--ds-border);
+.note {
+  position: sticky;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  margin: 0;
+  padding-left: var(--ds-4);
+  font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-font);
+  color: var(--ds-text-3);
+  white-space: nowrap;
 }
 
 .segment {
@@ -36,19 +36,30 @@
   bottom: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-right: 1px solid var(--ds-border);
-  font: 700 var(--ds-t-md) / 1 var(--ds-mono);
-  font-variant-numeric: tabular-nums; /* U-04 */
-  color: var(--ds-text-2);
+  padding-left: var(--ds-2);
+  border-left: 1px solid var(--ds-border);
   overflow: hidden;
   white-space: nowrap;
+  color: var(--ds-text-2);
 }
 
-/* The read-at-a-glance signal: current chord is the accent, everything else
-   recedes. No transition -- this flips instantly, once per frame, from the
-   rAF loop, never from a CSS-eased state change. */
+.label {
+  font: 600 var(--ds-t-lg) / 1 var(--ds-font);
+}
+
+.track[data-compact='true'] .label {
+  font-size: var(--ds-t-sm);
+}
+
+/* "N" / "X": the model had nothing to say here. Present, but receding. */
+.segment[data-quiet='true'] {
+  color: var(--ds-text-3);
+}
+
+/* The read-at-a-glance signal: the current chord lifts, everything else
+   recedes. No transition -- this flips instantly, from the rAF loop, never
+   from a CSS-eased state change. */
 .segment[data-current='true'] {
-  background: color-mix(in srgb, var(--ds-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--ds-accent) 16%, transparent);
   color: var(--ds-text);
 }
