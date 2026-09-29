@@ -538,6 +538,39 @@ test('a strings setting that is neither preset shows neither as chosen', async (
   expect(screen.getByRole('button', { name: 'E + A only' })).toHaveAttribute('aria-pressed', 'false');
 });
 
+test('the low-two-strings setting follows a change of instrument: E + A on bass is E + A on guitar, not D + G', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const { puts } = renderTool('/theory/fretboard-quiz', { theory: fb({ strings: [3, 2] }) });
+  await screen.findByText(/^Find every /);
+  expect(screen.getByRole('button', { name: 'E + A only' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.change(screen.getByRole('combobox', { name: 'Instrument' }), { target: { value: 'guitar6' } });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(600);
+  });
+  expect(puts.at(-1)?.quiz.settings.fretboard.strings).toEqual([5, 4]);
+  expect(screen.getByRole('button', { name: 'E + A only' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('strings the new instrument lacks become all strings, not a focus with no such string', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const guitar = { kind: 'guitar' as const, strings: 6, tuning: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'], left_handed: false };
+  const { puts } = renderTool('/theory/fretboard-quiz', { theory: { ...fb({ strings: [5, 0] }), instrument: guitar } });
+  await screen.findByText(/^Find every /);
+  fireEvent.change(screen.getByRole('combobox', { name: 'Instrument' }), { target: { value: 'bass4' } });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(600);
+  });
+  expect(puts.at(-1)?.quiz.settings.fretboard.strings).toEqual([]);
+  expect(screen.getByRole('button', { name: 'All strings' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.queryByRole('alert')).toBeNull();
+});
+
+test('a fret range that reaches past this neck reads as its every-fret chip', async () => {
+  renderTool('/theory/fretboard-quiz', { theory: fb({ frets: [0, 17] }) }); // saved on a guitar; this is a bass
+  await screen.findByText(/^Find every /);
+  expect(screen.getByRole('button', { name: `Frets 0–${MAX_FRET}` })).toHaveAttribute('aria-pressed', 'true');
+});
+
 // ---------------------------------------------------------------- when there is nothing to ask (N-08)
 
 test('a focus with no such string says so and offers to widen it', async () => {

@@ -144,6 +144,22 @@ export function focusRows(inst: Instrument, focus: FretboardFocus): number[] {
   return [...new Set(wanted)].filter((s) => Number.isInteger(s) && s >= 0 && s < count);
 }
 
+/**
+ * A practise focus carried over to another instrument (another kind or string count). Rows count from the highest
+ * string, so the same rows are other strings there: the low two strings stay the low two, rows the new instrument
+ * does not have make it every string, and a range to the end of the neck stays one to the end of the new neck. Any
+ * other setting is kept as it is. Returned unchanged when the instrument is the same (a new tuning, left-handed).
+ */
+export function focusFor<T extends { strings: number[]; frets: [number, number] }>(settings: T, from: Instrument, to: Instrument): T {
+  if (from.kind === to.kind && from.strings === to.strings) return settings;
+  const was = rowMidi(from).length;
+  const now = rowMidi(to).length;
+  const lowTwo = settings.strings.length === 2 && settings.strings.includes(was - 1) && settings.strings.includes(was - 2);
+  const strings = lowTwo ? [now - 1, now - 2] : settings.strings.some((r) => r >= now) ? [] : settings.strings;
+  const frets: [number, number] = settings.frets[1] >= neckFrets(from) ? [settings.frets[0], neckFrets(to)] : settings.frets;
+  return { ...settings, strings, frets };
+}
+
 /** Throws the accurate `QuizFocusError` when the strings or the fret range leave no cell at all. */
 function checkFocus(inst: Instrument, focus: FretboardFocus): void {
   if (focusRows(inst, focus).length === 0) throw new QuizFocusError('strings');

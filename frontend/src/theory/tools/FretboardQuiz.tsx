@@ -312,7 +312,8 @@ export function FretboardQuiz() {
         />
         <Segmented<string>
           label="Frets"
-          value={settings.frets.join('-')}
+          // A range to the end of the neck or past it (saved on a longer neck) is the every-fret chip: that is what is asked.
+          value={settings.frets[0] === 0 && settings.frets[1] >= frets ? `0-${frets}` : settings.frets.join('-')}
           onChange={(v) => setSettings({ frets: v.split('-').map(Number) as [number, number] })}
           options={fretOptions.map(([lo, top]) => ({ value: `${lo}-${top}`, label: `Frets ${lo}–${top}` }))}
         />

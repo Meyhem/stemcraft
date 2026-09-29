@@ -6,6 +6,7 @@ import {
   QuizFocusError,
   cellKey,
   focusCells,
+  focusFor,
   fretboardQuestion,
   heatmap,
   mulberry32,
@@ -23,7 +24,7 @@ import {
   type Answer,
 } from './quiz';
 import { chordInfo } from './spell';
-import { DEFAULT_INSTRUMENT, PRESETS, neckFrets, type Instrument } from './tuning';
+import { DEFAULT_INSTRUMENT, PRESETS, instrumentFor, neckFrets, type Instrument } from './tuning';
 
 const bass4 = DEFAULT_INSTRUMENT;
 const at = '2026-09-29T00:00:00Z';
@@ -117,6 +118,32 @@ describe('fretboard questions', () => {
     expect(q.window[1] - q.window[0]).toBe(3);
     for (const c of q.targets) expect(c.fret >= q.window[0] && c.fret <= q.window[1]).toBe(true);
     expect(q.targets.length).toBeGreaterThan(0);
+  });
+});
+
+describe('practise settings on another instrument', () => {
+  const guitar = instrumentFor('guitar6', false);
+  const bass5 = instrumentFor('bass5', false);
+  const f = (strings: number[], frets: [number, number] = [0, 5]) => ({ mode: 'name-note' as const, strings, frets, accidentals: false });
+
+  test('the low two strings stay the low two; rows the new instrument lacks become every string; others are kept', () => {
+    expect(focusFor(f([3, 2]), bass4, guitar).strings).toEqual([5, 4]);
+    expect(focusFor(f([2, 3]), bass4, bass5).strings).toEqual([4, 3]);
+    expect(focusFor(f([5, 4]), guitar, bass4).strings).toEqual([3, 2]);
+    expect(focusFor(f([5, 0]), guitar, bass4).strings).toEqual([]);
+    expect(focusFor(f([0, 1]), guitar, bass4).strings).toEqual([0, 1]);
+    expect(focusFor(f([]), guitar, bass4).strings).toEqual([]);
+  });
+
+  test('every fret stays every fret on the new neck; a narrower range is kept', () => {
+    expect(focusFor(f([], [0, 17]), guitar, bass4).frets).toEqual([0, 15]);
+    expect(focusFor(f([], [0, 15]), bass4, guitar).frets).toEqual([0, 17]);
+    expect(focusFor(f([], [0, 12]), bass4, guitar).frets).toEqual([0, 12]);
+  });
+
+  test('a new tuning or left-handedness on the same instrument changes nothing', () => {
+    const settings = f([3, 2], [0, 15]);
+    expect(focusFor(settings, bass4, { ...bass4, tuning: ['D1', 'A1', 'D2', 'G2'], left_handed: true })).toBe(settings);
   });
 });
 
