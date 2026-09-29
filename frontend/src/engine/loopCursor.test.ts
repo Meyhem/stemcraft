@@ -670,3 +670,35 @@ describe('metronome', () => {
     expect(Math.max(...outL.slice(20))).toBeGreaterThan(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Loop end moved before the cursor while playing ("End bar earlier")
+// ---------------------------------------------------------------------------
+
+test('a cursor already past the loop end snaps to the start instead of spiking', () => {
+  const length = 20_000;
+  const amplitude = 0.25;
+  const stems = fourStems((i) => (i === 0 ? sineStem(length, 110, amplitude, 0) : zeroStem(length)));
+  const startFrame = 2000;
+  const endFrame = 2600;
+  const crossfadeFrames = 480;
+  const params: MixParams = {
+    gains: [1, 0, 0, 0],
+    readRate: 1,
+    loop: { startFrame, endFrame },
+    crossfadeFrames,
+    playing: true,
+    lengthFrames: length,
+    metronome: null,
+  };
+  // The cursor sits several hundred frames beyond the (just shortened) loop end.
+  const cursor: CursorState = { position: endFrame + 400, ended: false };
+  const outLeft = new Float32Array(4000);
+  const outRight = new Float32Array(4000);
+  renderBlock(stems, params, cursor, outLeft, outRight);
+  let peak = 0;
+  for (const v of outLeft) peak = Math.max(peak, Math.abs(v));
+  expect(peak).toBeLessThanOrEqual(amplitude + 1e-6);
+  expect(cursor.position).toBeGreaterThanOrEqual(startFrame);
+  expect(cursor.position).toBeLessThan(endFrame);
+});

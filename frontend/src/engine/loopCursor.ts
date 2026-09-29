@@ -123,6 +123,11 @@ export function renderBlock(
     const { startFrame, endFrame } = loop;
     const tailStart = endFrame - params.crossfadeFrames;
 
+    // The loop end was moved before the cursor (e.g. "End bar earlier" mid-play).
+    // Without this the crossfade weight t runs far above 1 and spikes. Snap the
+    // read cursor to the loop start; the time-stretcher is never seeked (D-06).
+    if (pos >= endFrame) pos = startFrame;
+
     if (pos < tailStart || params.crossfadeFrames <= 0) {
       const [l, r] = readStereoMix(stems, params.gains, pos);
       outLeft[i] = l;
