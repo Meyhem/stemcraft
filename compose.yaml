@@ -1,0 +1,41 @@
+# Stemcraft on Docker: `docker compose up -d --build`. See "Run with Docker" in README.md.
+# Host needs an NVIDIA driver (CUDA 12.8+ for the RTX 5080) and nvidia-container-toolkit.
+# Create ./data ./songs ./albums yourself first, or Docker makes them root-owned.
+
+x-common: &common
+  restart: unless-stopped
+  # Files written to the bind mounts belong to you, not root.
+  user: "${UID:-1000}:${GID:-1000}"
+  environment:
+    STEMCRAFT_SKIP_YTDLP_UPDATE: ${STEMCRAFT_SKIP_YTDLP_UPDATE:-0}
+  volumes:
+    - ${STEMCRAFT_DATA:-./data}:/data
+    - ${STEMCRAFT_SONGS:-./songs}:/songs
+    - ${STEMCRAFT_ALBUMS:-./albums}:/albums
+
+services:
+  api:
+    <<: *common
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    ports:
+      - "${STEMCRAFT_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+
+  worker:
+    <<: *common
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
