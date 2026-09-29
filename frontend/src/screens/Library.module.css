@@ -31,7 +31,11 @@
   border-radius: var(--ds-r-panel);
 }
 
+/* The card's primary navigation, so a setup-tier target (U-03), not a bare text line. */
 .title {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ds-hit-setup);
   align-self: flex-start;
   font-size: var(--ds-t-md);
   color: var(--ds-text);

@@ -84,6 +84,14 @@
   color: var(--ds-text-2);
 }
 
+/* The card's primary navigation, so a setup-tier target (U-03), not a bare text line. */
+.albumTitle {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ds-hit-setup);
+  font-size: var(--ds-t-md);
+}
+
 .delete {
   align-self: flex-start;
   margin-top: auto;

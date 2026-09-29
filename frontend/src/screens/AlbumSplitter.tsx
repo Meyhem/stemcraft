@@ -208,7 +208,9 @@ function AlbumPicker() {
           <li key={entry.dir} className={styles.card}>
             {entry.album ? (
               <>
-                <TextLink to={`/splitter/${entry.album.id}`}>{entry.album.title}</TextLink>
+                <TextLink className={styles.albumTitle} to={`/splitter/${entry.album.id}`}>
+                  {entry.album.title}
+                </TextLink>
                 <span className={styles.artist}>{entry.album.artist}</span>
                 <Chip tone={STATE_TONE[entry.state ?? ''] ?? 'neutral'} dot>
                   {entry.state}

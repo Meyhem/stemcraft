@@ -5,6 +5,7 @@
 
 .bar {
   display: flex;
+  flex-wrap: wrap; /* wrap rather than overflow when the row runs out of room */
   align-items: center;
   gap: var(--ds-3);
   padding: var(--ds-2) var(--ds-3);
@@ -18,12 +19,18 @@
    text buttons stay compact so the bar does not overflow. Two-class selectors so these
    win over the primitive's rules whatever order the stylesheets load in. */
 .bar > .play {
+  /* flex: none -- without it the bar, a flex row, shrinks this fixed-width button below
+     its 56px performance target as soon as the row runs out of room. */
+  flex: none;
   width: var(--ds-hit-perform);
   padding: 0;
   font-size: var(--ds-t-lg);
 }
 
 .bar > .action {
+  /* flex: none -- the explicit min-width below replaces the browser's content-based
+     minimum, so without this a full row squeezes the button under its own label. */
+  flex: none;
   min-width: var(--ds-hit-perform);
   padding-inline: var(--ds-3);
   font-size: var(--ds-t-sm);
