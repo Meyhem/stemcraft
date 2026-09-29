@@ -482,3 +482,171 @@ test('the unload guard is taken again after StrictMode’s simulated unmount', a
   await waitFor(() => expect(s.puts).toHaveLength(1));
   await waitFor(() => expect(unloadPrompted()).toBe(false));
 });
+
+// ---------------------------------------------------------------- returning while the GET is slow (Probes K, E2)
+
+/** The app's client (staleTime 5 s) and fake time, so that the cached document is stale a few seconds after leaving. */
+function slowGetWorld() {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 5000, refetchOnWindowFocus: false } } });
+  const puts: TheoryDoc[] = [];
+  let held: ((status: number) => void) | null = null;
+  let heldSince = 0; // how many GETs have been asked for
+  let answered = 0;
+  let putStatus = 200;
+  let fileText: TheoryDoc = DEFAULT_THEORY;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        puts.push(JSON.parse(String(init.body)));
+        return putStatus === 200 ? new Response(String(init.body)) : new Response('disk full', { status: putStatus });
+      }
+      const status = await new Promise<number>((resolve) => {
+        held = resolve;
+        heldSince += 1;
+      });
+      return status === 200 ? new Response(JSON.stringify(fileText)) : new Response(JSON.stringify({ detail: 'theory.json: broken' }), { status });
+    }),
+  );
+  return {
+    client,
+    puts,
+    setPutStatus: (n: number) => (putStatus = n),
+    setFile: (doc: TheoryDoc) => (fileText = doc),
+    /** Answers the GET being held. */
+    answerGet: async (status = 200) => {
+      const before = answered;
+      await waitFor(() => expect(heldSince).toBeGreaterThan(before));
+      answered = heldSince;
+      await act(async () => held!(status));
+    },
+    pastStale: () => vi.setSystemTime(Date.now() + 6000),
+    wait: (ms: number) => act(async () => vi.advanceTimersByTimeAsync(ms)),
+  };
+}
+
+const three = [answer(1, '2026-03-01T00:00:10.000Z'), answer(2, '2026-03-01T00:00:20.000Z'), answer(3, '2026-03-01T00:00:30.000Z')];
+const withAnswers = (list: QuizAnswer[]) => (d: TheoryDoc): TheoryDoc => ({ ...d, quiz: { ...d.quiz, history: [...d.quiz.history, ...list] } });
+
+/** A first visit whose save of `three` failed, then left. */
+async function leaveWithKeptRound(w: ReturnType<typeof slowGetWorld>) {
+  w.setPutStatus(500);
+  const first = mount(w.client);
+  await w.wait(0);
+  await w.answerGet();
+  await screen.findByText('scale-finder');
+  act(() => hook.update(withAnswers(three), { now: true }));
+  await waitFor(() => expect(screen.getByTestId('save-error')).toHaveTextContent('disk full'));
+  first.unmount();
+  await w.wait(0);
+  w.puts.length = 0;
+  w.setPutStatus(200);
+  w.pastStale();
+}
+
+test('Probe K: a save from the stale cached document does not clear the kept answers; they go out with the edits, once the GET answers', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const w = slowGetWorld();
+  await leaveWithKeptRound(w);
+  mount(w.client); // the GET is slow: the cached document is on screen meanwhile
+  await screen.findByText('scale-finder');
+  act(() => hook.update(tool('triads'))); // the player moves on to another tool
+  await w.wait(1500);
+  expect(w.puts).toHaveLength(0); // nothing is written from the cached document
+  expect(unloadPrompted()).toBe(true);
+  await w.answerGet();
+  await waitFor(() => expect(w.puts).toHaveLength(1));
+  expect(w.puts[0]!.quiz.history).toHaveLength(3);
+  expect(w.puts[0]!.last_tool).toBe('triads'); // the edit made during the wait is not lost
+  await waitFor(() => expect(unloadPrompted()).toBe(false));
+});
+
+test('Probe K: a setting changed during the wait survives the kept document being applied', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const w = slowGetWorld();
+  await leaveWithKeptRound(w);
+  mount(w.client);
+  await screen.findByText('scale-finder');
+  act(() => hook.update((d) => ({ ...d, instrument: { ...d.instrument, left_handed: true } })));
+  act(() => hook.update(tool('note-finder'), { now: true }));
+  await w.answerGet();
+  await waitFor(() => expect(w.puts).toHaveLength(1));
+  expect(w.puts[0]!.instrument.left_handed).toBe(true);
+  expect(w.puts[0]!.last_tool).toBe('note-finder');
+  expect(w.puts[0]!.quiz.history).toHaveLength(3);
+});
+
+test('Probe E2: the file became unreadable while away: no PUT from the cached document, a round played on it included, and the kept answers stay kept', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const w = slowGetWorld();
+  await leaveWithKeptRound(w);
+  mount(w.client);
+  await screen.findByText('scale-finder');
+  act(() => hook.update(withAnswers([answer(9, '2026-03-02T00:00:00.000Z')]), { now: true })); // a round's save
+  await w.wait(1500);
+  expect(w.puts).toHaveLength(0);
+  await w.answerGet(500); // the GET fails: theory.json can't be read
+  await waitFor(() => expect(screen.getByTestId('load-error')).toHaveTextContent('broken'));
+  expect(hook.doc).toBeNull();
+  await w.wait(1500);
+  expect(w.puts).toHaveLength(0);
+  expect(unloadPrompted()).toBe(true);
+
+  // The file is readable again on the next visit: the kept answers, and the ones played meanwhile, all go out.
+  cleanup();
+  await w.wait(0);
+  w.pastStale();
+  mount(w.client);
+  await w.wait(0);
+  await w.answerGet();
+  await waitFor(() => expect(w.puts).toHaveLength(1));
+  expect(w.puts[0]!.quiz.history).toHaveLength(4);
+});
+
+test('a refetch that fails takes the document away and blocks every save until a reset or a read that works (U-09)', async () => {
+  const w = slowGetWorld();
+  mount(w.client);
+  await w.answerGet();
+  await screen.findByText('scale-finder');
+  act(() => void w.client.invalidateQueries({ queryKey: ['theory'] }));
+  await w.wait(0);
+  await w.answerGet(500);
+  await waitFor(() => expect(screen.getByTestId('load-error')).toHaveTextContent('broken'));
+  expect(hook.doc).toBeNull();
+  act(() => hook.update(tool('triads'), { now: true }));
+  await w.wait(1500);
+  expect(w.puts).toHaveLength(0);
+
+  let reset!: Promise<void>;
+  act(() => {
+    reset = hook.resetToDefaults(); // the confirmed reset is still allowed; it re-reads the file afterwards
+  });
+  await waitFor(() => expect(w.puts).toHaveLength(1));
+  expect(w.puts[0]).toEqual(DEFAULT_THEORY);
+  await w.answerGet();
+  await act(async () => reset);
+  expect(hook.doc).toEqual(DEFAULT_THEORY);
+});
+
+test('a refetch that fails while this tab has unsaved changes keeps them in memory, and they go out after a read that works', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const w = slowGetWorld();
+  w.setPutStatus(500);
+  mount(w.client);
+  await w.answerGet();
+  await screen.findByText('scale-finder');
+  act(() => hook.update(tool('triads'), { now: true }));
+  await waitFor(() => expect(screen.getByTestId('save-error')).toHaveTextContent('disk full'));
+  act(() => void w.client.invalidateQueries({ queryKey: ['theory'] }));
+  await w.wait(0);
+  await w.answerGet(500);
+  await waitFor(() => expect(hook.doc).toBeNull());
+  expect(unloadPrompted()).toBe(true);
+  w.setPutStatus(200);
+  act(() => void w.client.invalidateQueries({ queryKey: ['theory'] }));
+  await w.wait(0);
+  await w.answerGet();
+  await waitFor(() => expect(w.puts.at(-1)?.last_tool).toBe('triads'));
+  await waitFor(() => expect(hook.doc?.last_tool).toBe('triads'));
+});

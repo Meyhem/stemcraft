@@ -853,3 +853,62 @@ test('after leaving with a kept round the warning stays until it is saved, then 
   await waitFor(() => expect(back.puts).toHaveLength(1));
   await waitFor(() => expect(unloadPrompted()).toBe(false));
 });
+
+test('Probe E2: a round played on the cached document while the file cannot be read is not saved over it, and the kept round stays kept', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 5000, refetchOnWindowFocus: false } } });
+  const puts: TheoryDoc[] = [];
+  let putStatus = 500;
+  let getStatus = 200;
+  let asked = 0;
+  let answer!: () => void;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        puts.push(JSON.parse(String(init.body)));
+        return putStatus === 200 ? new Response(String(init.body)) : new Response('disk full', { status: putStatus });
+      }
+      asked += 1;
+      if (asked > 1) await new Promise<void>((resolve) => (answer = resolve)); // the second visit's GET is slow
+      return getStatus === 200 ? new Response(JSON.stringify(DEFAULT_THEORY)) : new Response(JSON.stringify({ detail: 'theory.json: broken' }), { status: getStatus });
+    }),
+  );
+  const mountRound = () =>
+    render(
+      <QueryClientProvider client={client}>
+        <TheoryDocProvider>
+          <Ready>
+            <Probe />
+            <p>ready</p>
+          </Ready>
+        </TheoryDocProvider>
+      </QueryClientProvider>,
+    );
+  const firstVisit = mountRound();
+  await screen.findByText('ready');
+  for (let i = 0; i < ROUND; i++) record(i);
+  await screen.findByText('ready');
+  await waitFor(() => expect(puts).toHaveLength(1)); // the failed save
+  firstVisit.unmount();
+  puts.length = 0;
+  vi.setSystemTime(Date.now() + 6000);
+
+  putStatus = 200;
+  getStatus = 500; // and the file became unreadable while the player was away
+  mountRound();
+  await screen.findByText('ready'); // the cached document, while the GET is slow
+  for (let i = 0; i < ROUND; i++) record(i);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1500);
+  });
+  expect(puts).toHaveLength(0);
+  await waitFor(() => expect(asked).toBe(2));
+  await act(async () => answer());
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1500);
+  });
+  expect(puts).toHaveLength(0);
+  expect(unloadPrompted()).toBe(true);
+});

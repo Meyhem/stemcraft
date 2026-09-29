@@ -94,7 +94,14 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   const savedRev = useRef(0);
   const guard = useRef({}); // this provider's hold on the unload guard
   const lastError = useRef<string | null>(null);
-  const applied = useRef(false);
+  // A kept document (see `unsaved`) this mount has not applied yet. Until it is, nothing may be saved: the document
+  // on screen is the cached one, and a save of it would clear the kept answers without carrying them. Edits made
+  // meanwhile are remembered as functions and re-applied on top of the kept document.
+  const awaitingKept = useRef(unsaved !== null);
+  const edits = useRef<((doc: TheoryDoc) => TheoryDoc)[]>([]);
+  const waiting = () => awaitingKept.current && unsaved !== null;
+  // Set by Reset to defaults, the one write allowed over a file that could not be read.
+  const overridden = useRef(false);
 
   // One save at a time. A save asked for while one runs is remembered and run
   // once more, with the newest document, when the current one finishes; only
@@ -103,7 +110,12 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   const running = useRef<Promise<string | null> | null>(null);
   const again = useRef(false);
 
-  const doc = local ?? query.data ?? null;
+  // A refetch that fails leaves TanStack holding the old data, but the file can no longer be read: no document is
+  // offered, and nothing is saved over it (U-09), until a reset or a read that works.
+  const unreadable = query.isError && !overridden.current;
+  const blocked = useRef(false);
+  blocked.current = unreadable;
+  const doc = unreadable ? null : local ?? query.data ?? null;
 
   // The server's document is the base until the player edits. A layout effect,
   // so the ref is set before any child's effect asks `update` for it.
@@ -128,6 +140,7 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   const save = useCallback((): Promise<string | null> => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
+    if (waiting()) return Promise.resolve(null); // sent after the kept document is applied, with the edits on top
     if (running.current) {
       again.current = true;
       return running.current;
@@ -142,7 +155,7 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
         try {
           client.setQueryData(KEY, await api.put<TheoryDoc>('/api/theory', body));
           savedRev.current = Math.max(savedRev.current, sent);
-          if (rev.current <= savedRev.current) clearUnsaved();
+          if (rev.current <= savedRev.current && !waiting()) clearUnsaved();
           error = null;
         } catch (caught) {
           error = caught instanceof Error ? caught.message : String(caught);
@@ -166,11 +179,14 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   const update = useCallback<TheoryDocState['update']>(
     (change, options) => {
       const base = latest.current;
-      if (!base) return;
+      if (!base || blocked.current) return;
       const next = change(base);
+      if (waiting()) edits.current.push(change);
       latest.current = next;
       rev.current += 1;
-      if (gone.current) keepUnsaved(next); // a change made while the tab is going: held until it is saved
+      // A change made while the tab is going (a quiz's last flush): held until it is saved. Before a kept document is
+      // applied it goes on top of that one, not of the cached document the change was made to.
+      if (gone.current) keepUnsaved(waiting() ? edits.current.reduce((d, edit) => edit(d), unsaved!) : next);
       warnIfUnsaved();
       setLocal(next);
       if (timer.current) clearTimeout(timer.current);
@@ -186,15 +202,33 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   // Retry. The kept document wins, but its answers are merged with the file's, since another browser tab may
   // have added some meanwhile. A layout effect, so it shows no flash of the fetched document.
   useLayoutEffect(() => {
-    if (!query.data || query.isFetching || query.isError || applied.current || !unsaved) return;
-    applied.current = true;
-    const merged: TheoryDoc = { ...unsaved, quiz: { ...unsaved.quiz, history: mergeHistory(query.data.quiz.history, unsaved.quiz.history) } };
+    if (!query.data || query.isFetching || query.isError || !waiting() || !unsaved) return;
+    const kept: TheoryDoc = { ...unsaved, quiz: { ...unsaved.quiz, history: mergeHistory(query.data.quiz.history, unsaved.quiz.history) } };
+    const merged = edits.current.reduce((d, edit) => edit(d), kept);
+    awaitingKept.current = false;
+    edits.current = [];
     latest.current = merged;
     rev.current += 1;
     warnIfUnsaved();
     setLocal(merged);
     void save();
   }, [query.data, query.isFetching, query.isError, save, warnIfUnsaved]);
+
+  // The file became unreadable while this tab held changes of its own that no save has carried: they are kept in
+  // memory, like a tab's left behind, and go out after a read that works (the layout effect above).
+  useEffect(() => {
+    if (!query.isError || awaitingKept.current || overridden.current) return;
+    if (rev.current > savedRev.current && latest.current) {
+      keepUnsaved(latest.current);
+      awaitingKept.current = true;
+      edits.current = [];
+    }
+  }, [query.isError]);
+
+  // Once the file reads again, a reset is over and the file's word is final again.
+  useEffect(() => {
+    if (!query.isError) overridden.current = false;
+  }, [query.isError]);
 
   // Leaving the tab with a change pending or in flight still saves it. If that fails there is no provider left to
   // show a banner, so the message goes to the console and the document is kept for the next tab (N-08). React runs
@@ -209,6 +243,14 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
       gone.current = true;
       warnIfUnsaved();
       const dirtyNow = rev.current > savedRev.current;
+      // Not yet applied: the kept document stays, with this mount's edits on top; the cached one is not what to keep.
+      if (waiting() && unsaved) {
+        keepUnsaved(edits.current.reduce((d, edit) => edit(d), unsaved));
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = null;
+        if (dirtyNow) leave(null);
+        return;
+      }
       if (dirtyNow && latest.current) keepUnsaved(latest.current);
       if (timer.current) void save();
       else if (!running.current && dirtyNow) {
@@ -223,6 +265,9 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   const resetToDefaults = useCallback(async () => {
     latest.current = DEFAULT_THEORY;
     rev.current += 1;
+    overridden.current = true;
+    awaitingKept.current = false;
+    edits.current = [];
     clearUnsaved();
     warnIfUnsaved();
     setLocal(DEFAULT_THEORY);
