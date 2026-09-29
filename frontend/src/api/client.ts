@@ -82,6 +82,20 @@ export interface Job {
   result: Record<string, unknown> | null;
 }
 
+// Mirrors stemcraft_lib.jobs.JobStats / KindDuration (GET /api/jobs/stats).
+export interface KindDuration {
+  kind: string;
+  device: string | null;
+  count: number;
+  avg_seconds: number;
+}
+
+export interface JobStats {
+  passed: number;
+  failed: number;
+  durations: KindDuration[];
+}
+
 // Mirrors packages/stemcraft_lib/src/stemcraft_lib/song.py (Song, StemMix,
 // Playback, Loop, Source) — the API's song.json, serialized as-is.
 export interface StemMix {

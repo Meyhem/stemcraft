@@ -3,6 +3,7 @@
 import { useCancelJob, useEnqueueProbe, useJobs } from '../api/queries';
 import type { Job } from '../api/client';
 import { Banner, Button, Chip, EmptyState, ProgressBar, Table, jobStateTone } from '../ui';
+import { JobStats } from './JobStats';
 import styles from './JobQueue.module.css';
 
 function duration(job: Job): string {
@@ -85,6 +86,9 @@ export function JobQueue() {
             trace={job.error}
           />
         ))}
+
+      {/* Mockup order: live queue and failures first, all-time stats below. */}
+      <JobStats />
     </section>
   );
 }

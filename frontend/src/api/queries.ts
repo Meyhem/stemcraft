@@ -15,6 +15,7 @@ import {
   type ExportRequest,
   type Health,
   type Job,
+  type JobStats,
   type PeaksDoc,
   type Proposals,
   type QueuedExport,
@@ -77,6 +78,15 @@ export function useJobs(active = false) {
     queryKey: queryKeys.jobs(active),
     queryFn: () => api.get<{ jobs: Job[] }>(`/api/jobs${active ? '?active=true' : ''}`),
     select: (data) => data.jobs,
+  });
+}
+
+// Under ['jobs', ...] on purpose: the job stream invalidates that prefix on every job
+// event, so the stats refresh when a job finishes without any wiring of their own.
+export function useJobStats() {
+  return useQuery({
+    queryKey: ['jobs', 'stats'] as const,
+    queryFn: () => api.get<JobStats>('/api/jobs/stats'),
   });
 }
 

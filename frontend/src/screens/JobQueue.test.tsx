@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, test, vi } from 'vitest';
 
@@ -23,7 +23,11 @@ const job = {
 };
 
 function renderQueue(jobs: unknown[]) {
-  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ jobs })));
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) =>
+    String(input).includes('/api/jobs/stats')
+      ? new Response(JSON.stringify({ passed: 0, failed: 0, durations: [] }))
+      : new Response(JSON.stringify({ jobs })),
+  );
   vi.stubGlobal('fetch', fetchMock);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -40,6 +44,11 @@ test('renders kind, state, device and progress', async () => {
   expect(screen.getByText('running')).toBeInTheDocument();
   expect(screen.getByText('cpu')).toBeInTheDocument();
   expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42');
+});
+
+test('shows the all-time stats below the queue', async () => {
+  renderQueue([job]);
+  expect(await screen.findByTestId('job-stats')).toBeInTheDocument();
 });
 
 test('shows the real error text for a failed job', async () => {
@@ -72,8 +81,10 @@ test('a failed job and a done job never share a chip tone', async () => {
     { ...job, id: 2, kind: 'analyze', state: 'done', progress: 1 },
   ]);
 
-  expect(await screen.findByText('failed')).toHaveClass('chip', 'error');
-  expect(screen.getByText('done')).toHaveClass('chip', 'ok');
+  // The stats row also carries a "failed" label, so scope the lookup to the table.
+  const table = within(await screen.findByRole('table'));
+  expect(table.getByText('failed')).toHaveClass('chip', 'error');
+  expect(table.getByText('done')).toHaveClass('chip', 'ok');
 });
 
 test('a job with no recorded device shows a dash, not an empty chip', async () => {

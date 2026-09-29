@@ -1,0 +1,40 @@
+.caption {
+  margin: 0 0 var(--ds-3);
+  font-size: var(--ds-t-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--ds-4);
+}
+
+.stat {
+  padding: var(--ds-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+}
+
+/* U-04: tabular figures, so a changing count does not jitter. */
+.value {
+  font: 600 var(--ds-t-xl) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.ok {
+  color: var(--ds-ok);
+}
+
+.error {
+  color: var(--ds-error);
+}
+
+.label {
+  font-size: var(--ds-t-sm);
+  color: var(--ds-text-2);
+}
