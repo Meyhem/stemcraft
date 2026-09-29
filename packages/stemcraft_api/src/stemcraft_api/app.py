@@ -16,7 +16,7 @@ from stemcraft_lib.config import settings
 from stemcraft_lib.deps import assert_ready
 
 from . import ws
-from .routes import albums, health, jobs, songs
+from .routes import albums, health, jobs, songs, theory
 
 log = logging.getLogger("stemcraft.api")
 
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(songs.router)
     app.include_router(albums.router)
     app.include_router(jobs.router)
+    app.include_router(theory.router)
     app.include_router(ws.router)
 
     cfg = settings()
