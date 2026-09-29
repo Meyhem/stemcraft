@@ -84,3 +84,48 @@ export function columnHeights(
   }
   return out;
 }
+
+/** How close (px) the pointer must be to a cut to grab it rather than start a gesture. */
+export const GRAB_PX = 8;
+/** Pointer travel (px) that turns a press on bare waveform from a click into a drag. */
+export const DRAG_THRESHOLD_PX = 4;
+
+/**
+ * The cuts a press at content x `x` grabs: every cut within GRAB_PX, nearest first. More
+ * than one means the cuts overlap on screen (two cuts 2 px apart at whole-album zoom);
+ * pickCut resolves that from the direction of the drag.
+ */
+export function cutsNear(cutXs: number[], x: number, grabPx = GRAB_PX): number[] {
+  return cutXs
+    .map((cx, index) => ({ index, distance: Math.abs(cx - x) }))
+    .filter(({ distance }) => distance <= grabPx)
+    .sort((a, b) => a.distance - b.distance || a.index - b.index)
+    .map(({ index }) => index);
+}
+
+/**
+ * Of several grabbed cuts, the one a drag in direction `dx` can actually move: the
+ * rightmost when dragging right, the leftmost when dragging left. Taking the nearest
+ * instead would pick a cut pinned against its neighbour and nothing would move -- which
+ * reads as "the cut is not draggable".
+ */
+export function pickCut(candidates: number[], dx: number): number {
+  if (candidates.length === 1 || dx === 0) return candidates[0]!;
+  return dx > 0 ? Math.max(...candidates) : Math.min(...candidates);
+}
+
+/** px/s and scrollLeft that fit the samples [from, to] (either order) to the viewport. */
+export function zoomToRange(
+  from: number,
+  to: number,
+  sampleRate: number,
+  viewportWidth: number,
+  fit: number,
+): { pxPerSecond: number; scrollLeft: number } {
+  const [low, high] = from <= to ? [from, to] : [to, from];
+  const seconds = Math.max(1 / sampleRate, (high - low) / sampleRate);
+  const pxPerSecond = clampZoom(viewportWidth / seconds, fit);
+  // Centre the range: if it was clamped at max zoom it no longer fills the view.
+  const centre = ((low + high) / 2 / sampleRate) * pxPerSecond;
+  return { pxPerSecond, scrollLeft: Math.max(0, Math.round(centre - viewportWidth / 2)) };
+}

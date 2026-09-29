@@ -10,8 +10,9 @@ instrument and play along.
 - Sample-accurate seamless loops on the beat grid, with optional count-in
 - Beat, key and chord analysis, plus a fretboard view
 - Album splitter: cut a full album rip into tagged MP3s. Silence detection proposes cuts;
-  you play, zoom and pan a full-length waveform, drag, add and delete cuts, or type exact
-  start and end times to the millisecond, then download a zip
+  on a full-length waveform you play, zoom with the wheel or by dragging across a range,
+  drag, add and delete cuts, or type exact start and end times to the millisecond, then
+  download a zip
 - Export the current mix
 - Failures and CPU fallbacks are shown in the UI with the real error message
 

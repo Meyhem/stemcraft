@@ -204,7 +204,11 @@ describe('AlbumSplitter', () => {
       renderWith(readyAlbum);
       await screen.findByRole('slider', { name: /split point 1/i });
       // A quarter of the way in — before the existing boundary at half.
-      fireEvent.click(screen.getByTestId('album-waveform'), { clientX: 250, clientY: 80 });
+      // A press and release without movement is a click on the waveform: add a cut.
+      const content = screen.getByTestId('album-waveform');
+      for (const type of ['pointerdown', 'pointerup']) {
+        fireEvent(content, new MouseEvent(type, { bubbles: true, clientX: 250, clientY: 80, button: 0 }));
+      }
       await waitFor(() => expect(putBody().split_points).toEqual([SR * 150, SR * 300]));
       expect(putBody().tracks.map((track) => track.title)).toEqual(['One', '', 'Two']);
     } finally {

@@ -32,6 +32,18 @@ function boxAt(left: number, width: number) {
   } as DOMRect);
 }
 
+// jsdom has no PointerEvent, and the Event testing-library synthesises for one drops
+// clientX. A MouseEvent named `pointer*` is what React listens for and carries the
+// coordinates. y 80 is on the waveform, below the 24 px ruler strip.
+function pointer(element: Element, type: string, clientX: number, clientY = 80) {
+  fireEvent(element, new MouseEvent(type, { bubbles: true, clientX, clientY, button: 0 }));
+}
+function drag(element: Element, fromX: number, toX: number, clientY = 80) {
+  pointer(element, 'pointerdown', fromX, clientY);
+  pointer(element, 'pointermove', toX, clientY);
+  pointer(element, 'pointerup', toX, clientY);
+}
+
 describe('WaveformMarkers', () => {
   beforeEach(() => {
     props.onTogglePlay.mockClear();
@@ -107,48 +119,6 @@ describe('WaveformMarkers', () => {
     expect(props.onMove).toHaveBeenCalledWith(0, 1);
   });
 
-  it('clamps a drag to the edge inside the album', () => {
-    // jsdom implements no part of the pointer-capture API, so the two calls
-    // the drag makes have to exist before the real handler can run at all.
-    const captured = new Set<number>();
-    const element = Element.prototype as unknown as {
-      setPointerCapture?: (id: number) => void;
-      hasPointerCapture?: (id: number) => boolean;
-      releasePointerCapture?: (id: number) => void;
-    };
-    element.setPointerCapture = (id) => void captured.add(id);
-    element.hasPointerCapture = (id) => captured.has(id);
-    element.releasePointerCapture = (id) => void captured.delete(id);
-
-    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-      left: 0,
-      width: 100,
-      right: 100,
-      top: 0,
-      bottom: 0,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    } as DOMRect);
-    try {
-      render(<WaveformMarkers {...props} />);
-      const marker = screen.getByRole('slider', { name: /split point/i });
-      // jsdom has no PointerEvent, and the Event testing-library synthesises
-      // for one drops clientX. A MouseEvent named `pointermove` is what React
-      // is listening for and carries the coordinate.
-      fireEvent(marker, new MouseEvent('pointerdown', { bubbles: true, clientX: 50 }));
-      // Dragged off the left edge of the container entirely.
-      fireEvent(marker, new MouseEvent('pointermove', { bubbles: true, clientX: -400 }));
-      expect(props.onMove).toHaveBeenCalledWith(0, 1);
-    } finally {
-      rect.mockRestore();
-      delete element.setPointerCapture;
-      delete element.hasPointerCapture;
-      delete element.releasePointerCapture;
-    }
-  });
-
   it('will not drag a boundary across its neighbour', () => {
     render(<WaveformMarkers {...props} splitPoints={[240000, 242000]} />);
     const first = screen.getByRole('slider', { name: /split point 1/i });
@@ -168,23 +138,13 @@ describe('WaveformMarkers', () => {
   it('rounds a pointer position to a whole sample before reporting it (invariant 4)', () => {
     // A width that does not divide the album evenly: 3/7 of 480000 is
     // 205714.2857…, so an unrounded implementation would hand on a float.
-    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-      left: 0,
-      width: 7,
-      right: 7,
-      top: 0,
-      bottom: 0,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    } as DOMRect);
+    const rect = boxAt(0, 7);
     try {
-      render(<WaveformMarkers {...props} />);
-      fireEvent.click(screen.getByTestId('album-waveform'), { clientX: 3, clientY: 60 });
-      const [sample] = props.onAdd.mock.calls.at(-1)!;
-      expect(Number.isInteger(sample)).toBe(true);
-      expect(sample).toBe(205714);
+      render(<WaveformMarkers {...props} splitPoints={[]} />);
+      const content = screen.getByTestId('album-waveform');
+      pointer(content, 'pointerdown', 3);
+      pointer(content, 'pointerup', 3);
+      expect(props.onAdd).toHaveBeenCalledWith(205714);
     } finally {
       rect.mockRestore();
     }
@@ -195,17 +155,122 @@ describe('WaveformMarkers', () => {
     try {
       render(<WaveformMarkers {...props} />);
       const content = screen.getByTestId('album-waveform');
-      fireEvent.click(content, { clientX: 25, clientY: 10 });
+      pointer(content, 'pointerdown', 25, 10);
+      pointer(content, 'pointerup', 25, 10);
       expect(props.onScrub).toHaveBeenCalledWith(120000);
       expect(props.onAdd).not.toHaveBeenCalled();
-      fireEvent.click(content, { clientX: 25, clientY: 80 });
+      pointer(content, 'pointerdown', 25);
+      pointer(content, 'pointerup', 25);
       expect(props.onAdd).toHaveBeenCalledWith(120000);
       expect(props.onScrub).toHaveBeenCalledTimes(1);
     } finally {
       rect.mockRestore();
     }
   });
+});
 
+describe('WaveformMarkers dragging cuts', () => {
+  beforeEach(() => {
+    props.onMove.mockClear();
+    props.onAdd.mockClear();
+  });
+
+  it('drags a cut grabbed within reach of its line, not only on the line itself', () => {
+    const rect = boxAt(0, 100); // the cut at 5 s sits at x = 50
+    try {
+      render(<WaveformMarkers {...props} />);
+      drag(screen.getByTestId('album-waveform'), 55, 75);
+      expect(props.onMove).toHaveBeenLastCalledWith(0, 360000); // 75 % of 480000
+      expect(props.onAdd).not.toHaveBeenCalled();
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
+  it('clamps a drag to the edge inside the album', () => {
+    const rect = boxAt(0, 100);
+    try {
+      render(<WaveformMarkers {...props} />);
+      drag(screen.getByTestId('album-waveform'), 50, -400);
+      expect(props.onMove).toHaveBeenLastCalledWith(0, 1);
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
+  it('moves the cut that CAN move when two overlap on screen, chosen by drag direction', () => {
+    // Two cuts 480 samples apart are the same pixel at this width. Dragging right must
+    // move the right one; picking the left one would be pinned against its neighbour
+    // and nothing would visibly happen.
+    const rect = boxAt(0, 100);
+    try {
+      render(<WaveformMarkers {...props} splitPoints={[240000, 240480]} />);
+      drag(screen.getByTestId('album-waveform'), 50, 80);
+      expect(props.onMove).toHaveBeenLastCalledWith(1, 384000);
+      props.onMove.mockClear();
+      drag(screen.getByTestId('album-waveform'), 50, 20);
+      expect(props.onMove).toHaveBeenLastCalledWith(0, 96000);
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
+  it('does not add a cut at the end of a drag', () => {
+    const rect = boxAt(0, 100);
+    try {
+      render(<WaveformMarkers {...props} />);
+      drag(screen.getByTestId('album-waveform'), 50, 70);
+      expect(props.onAdd).not.toHaveBeenCalled();
+    } finally {
+      rect.mockRestore();
+    }
+  });
+});
+
+describe('WaveformMarkers drag to zoom', () => {
+  beforeEach(() => props.onAdd.mockClear());
+
+  it('shows the selection while dragging and zooms to fit it on release', () => {
+    // jsdom has no layout, so the viewport width is given explicitly: 200 px.
+    const width = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 200 });
+    const rect = boxAt(0, 200);
+    try {
+      render(<WaveformMarkers {...props} splitPoints={[]} />);
+      const content = screen.getByTestId('album-waveform');
+      expect(content.style.width).toBe('200px'); // 10 s fitted into 200 px
+      pointer(content, 'pointerdown', 40);
+      pointer(content, 'pointermove', 80);
+      expect(screen.getByTestId('album-selection').style.width).toBe('40px');
+      pointer(content, 'pointerup', 80);
+      // 40 px of 200 is 2 s; 2 s across 200 px is 100 px/s -> the album is 1000 px wide.
+      expect(content.style.width).toBe('1000px');
+      expect(screen.queryByTestId('album-selection')).toBeNull();
+      expect(props.onAdd).not.toHaveBeenCalled();
+    } finally {
+      rect.mockRestore();
+      if (width) Object.defineProperty(HTMLElement.prototype, 'clientWidth', width);
+      else delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+    }
+  });
+
+  it('a press that moves less than the threshold is still a click that adds a cut', () => {
+    const rect = boxAt(0, 100);
+    try {
+      render(<WaveformMarkers {...props} splitPoints={[]} />);
+      const content = screen.getByTestId('album-waveform');
+      pointer(content, 'pointerdown', 20);
+      pointer(content, 'pointermove', 22);
+      pointer(content, 'pointerup', 22);
+      expect(props.onAdd).toHaveBeenCalledWith(105600); // 22 % of 480000
+      expect(screen.queryByTestId('album-selection')).toBeNull();
+    } finally {
+      rect.mockRestore();
+    }
+  });
+});
+
+describe('WaveformMarkers playback', () => {
   it('places the playhead in px from the audio clock', () => {
     // No layout in jsdom: 25 px/s fit fallback -> 10 s is 250 px, 2.5 s is 62.5 px.
     render(<WaveformMarkers {...props} getPlayheadSample={() => 120000} />);
@@ -255,10 +320,10 @@ describe('WaveformMarkers zoom', () => {
     expect(width()).toBe(10 * 100); // 10 s at 100 px/s
   });
 
-  it('ctrl+wheel zooms, and the page is not zoomed with it', () => {
+  it('the plain wheel zooms, and the page does not scroll with it', () => {
     render(<WaveformMarkers {...props} />);
     const before = width();
-    const event = new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, cancelable: true, bubbles: true });
+    const event = new WheelEvent('wheel', { deltaY: -100, cancelable: true, bubbles: true });
     act(() => {
       screen.getByTestId('album-scroller').dispatchEvent(event);
     });
@@ -266,9 +331,22 @@ describe('WaveformMarkers zoom', () => {
     expect(width()).toBeGreaterThan(before);
   });
 
-  it('a plain wheel is left to the browser when there is nothing to pan', () => {
+  it('shift+wheel pans instead of zooming', () => {
     render(<WaveformMarkers {...props} />);
-    const event = new WheelEvent('wheel', { deltaY: 100, cancelable: true, bubbles: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    const scroller = screen.getByTestId('album-scroller');
+    const before = width();
+    const event = new WheelEvent('wheel', { deltaY: 120, shiftKey: true, cancelable: true, bubbles: true });
+    act(() => {
+      scroller.dispatchEvent(event);
+    });
+    expect(width()).toBe(before);
+    expect(scroller.scrollLeft).toBe(120);
+  });
+
+  it('a sideways trackpad swipe is left to the browser to pan natively', () => {
+    render(<WaveformMarkers {...props} />);
+    const event = new WheelEvent('wheel', { deltaX: 100, deltaY: 5, cancelable: true, bubbles: true });
     screen.getByTestId('album-scroller').dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
   });

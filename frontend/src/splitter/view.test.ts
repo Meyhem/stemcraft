@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   clampZoom,
   columnHeights,
+  cutsNear,
+  pickCut,
+  zoomToRange,
   fitPxPerSecond,
   MAX_PX_PER_SECOND,
   scrollLeftAfterZoom,
@@ -61,5 +64,36 @@ describe('columnHeights', () => {
   it('is all zero for a silent or empty envelope, not NaN', () => {
     expect([...columnHeights([0, 0], 2, 1, 0, 2)]).toEqual([0, 0]);
     expect([...columnHeights([], 2, 1, 0, 2)]).toEqual([0, 0]);
+  });
+});
+
+describe('grabbing cuts', () => {
+  it('grabs the nearest cut within reach, and nothing out of reach', () => {
+    expect(cutsNear([100, 300], 105)).toEqual([0]);
+    expect(cutsNear([100, 300], 200)).toEqual([]);
+  });
+  it('returns every overlapping cut, nearest first', () => {
+    expect(cutsNear([100, 102, 300], 103)).toEqual([1, 0]);
+  });
+  it('resolves overlapping cuts by the drag direction', () => {
+    expect(pickCut([1, 0], 5)).toBe(1);
+    expect(pickCut([1, 0], -5)).toBe(0);
+    expect(pickCut([1, 0], 0)).toBe(1); // no movement yet: nearest
+    expect(pickCut([4], -5)).toBe(4);
+  });
+});
+
+describe('zoomToRange', () => {
+  it('fits the selected range to the viewport', () => {
+    // 60 s selected (120..180 s) across 600 px -> 10 px/s, starting at 1200 px.
+    const z = zoomToRange(180 * 48000, 120 * 48000, 48000, 600, 0.1);
+    expect(z.pxPerSecond).toBe(10);
+    expect(z.scrollLeft).toBe(1200);
+  });
+  it('caps at max zoom and centres a range too short to fill the view', () => {
+    // 1 s at 600 px would be 600 px/s; capped to 100, centred on 150.5 s.
+    const z = zoomToRange(150 * 48000, 151 * 48000, 48000, 600, 0.1);
+    expect(z.pxPerSecond).toBe(MAX_PX_PER_SECOND);
+    expect(z.scrollLeft).toBe(Math.round(150.5 * 100 - 300));
   });
 });

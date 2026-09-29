@@ -14,6 +14,7 @@
 import {
   Fragment,
   type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -30,11 +31,15 @@ import { formatTimestamp, SAMPLE_RATE } from './time';
 import {
   clampZoom,
   columnHeights,
+  cutsNear,
+  DRAG_THRESHOLD_PX,
   fitPxPerSecond,
+  pickCut,
   scrollLeftAfterZoom,
   tickInterval,
   tickLabel,
   ZOOM_STEP,
+  zoomToRange,
 } from './view';
 import styles from './WaveformMarkers.module.css';
 
@@ -266,8 +271,8 @@ export function WaveformMarkers({
     [fit, pxPerSecond],
   );
 
-  // Non-passive, so ctrl+wheel can stop the browser zooming the page and a plain wheel
-  // can pan instead of scrolling the screen. A React onWheel is passive and could not.
+  // Non-passive, so the wheel can zoom the waveform instead of scrolling the page (and
+  // ctrl+wheel instead of zooming it). A React onWheel is passive and could not.
   const zoomToRef = useRef(zoomTo);
   zoomToRef.current = zoomTo;
   useEffect(() => {
@@ -275,21 +280,22 @@ export function WaveformMarkers({
     if (!scroller) return;
     const onWheel = (event: WheelEvent) => {
       manualUntil.current = performance.now() + FOLLOW_PAUSE_MS;
-      if (event.ctrlKey || event.metaKey) {
-        event.preventDefault();
-        const rect = scroller.getBoundingClientRect();
-        zoomToRef.current(
-          live.current.pxPerSecond * Math.exp(-event.deltaY * 0.01),
-          event.clientX - rect.left,
-        );
-      } else if (scroller.scrollWidth > scroller.clientWidth) {
-        // Vertical wheel (or shift+wheel) pans; a native horizontal swipe is left alone.
-        const delta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : 0;
-        if (delta !== 0) {
-          event.preventDefault();
-          scroller.scrollLeft += delta;
-        }
+      const horizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY);
+      if (horizontal) return; // a trackpad's sideways swipe pans natively
+      event.preventDefault();
+      if (event.shiftKey) {
+        // Shift+wheel pans. Some platforms already swap the axis for shift; either way
+        // the vertical delta is what arrives here.
+        scroller.scrollLeft += event.deltaY;
+        return;
       }
+      // Plain (or ctrl) wheel zooms around the pointer.
+      const rect = scroller.getBoundingClientRect();
+      zoomToRef.current(
+        // ~1.3x per mouse-wheel notch (deltaY ~100); a trackpad's small deltas zoom smoothly.
+        live.current.pxPerSecond * Math.exp(-event.deltaY * 0.0025),
+        event.clientX - rect.left,
+      );
     };
     scroller.addEventListener('wheel', onWheel, { passive: false });
     return () => scroller.removeEventListener('wheel', onWheel);
@@ -344,6 +350,119 @@ export function WaveformMarkers({
   }
 
   const centre = () => (scrollerRef.current?.clientWidth ?? 0) / 2;
+
+  // ---- pointer gestures on the waveform ---------------------------------
+  //
+  // One handler owns every press on the waveform, so the gestures cannot fight:
+  //   * on the ruler strip: a click seeks;
+  //   * within GRAB_PX of a cut: drag that cut (overlapping cuts resolved by direction);
+  //   * elsewhere: a click adds a cut, a drag selects a range to zoom to.
+  // The grips themselves take no pointer input (they are the keyboard/screen-reader
+  // face of each cut): hit-testing by distance is what makes a 2 px line grabbable.
+  type Gesture =
+    | { kind: 'seek' }
+    | { kind: 'cut'; candidates: number[]; index: number | null; startX: number }
+    | { kind: 'press'; startX: number }
+    | { kind: 'select'; startX: number };
+  const gesture = useRef<Gesture | null>(null);
+  const [selection, setSelection] = useState<{ from: number; to: number } | null>(null);
+  const [hoverCut, setHoverCut] = useState(false);
+
+  // Content-space x (px) of a pointer, and of each cut.
+  function contentX(clientX: number): number {
+    const rect = contentRef.current?.getBoundingClientRect();
+    return rect ? clientX - rect.left : 0;
+  }
+  // Measured against the same box sampleAt uses, so "near this cut" and "where the cut
+  // moves to" can never disagree.
+  function cutXs(): number[] {
+    const width = contentRef.current?.getBoundingClientRect().width ?? 0;
+    return splitPoints.map((point) => (totalSamples > 0 ? (point / totalSamples) * width : 0));
+  }
+
+  function applyRangeZoom(fromX: number, toX: number) {
+    const scroller = scrollerRef.current;
+    if (!scroller || contentWidth <= 0) return;
+    const toSample = (x: number) => Math.round((Math.min(contentWidth, Math.max(0, x)) / contentWidth) * totalSamples);
+    const next = zoomToRange(toSample(fromX), toSample(toX), SAMPLE_RATE, scroller.clientWidth, fit);
+    manualUntil.current = performance.now() + FOLLOW_PAUSE_MS;
+    if (next.pxPerSecond === pxPerSecond) {
+      scroller.scrollLeft = next.scrollLeft;
+      frame(false);
+    } else {
+      pendingScroll.current = next.scrollLeft;
+      setZoom(next.pxPerSecond);
+    }
+  }
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    if (event.clientY - rect.top < RULER_H) {
+      gesture.current = { kind: 'seek' };
+    } else {
+      const candidates = cutsNear(cutXs(), x);
+      gesture.current =
+        candidates.length > 0
+          ? { kind: 'cut', candidates, index: candidates.length === 1 ? candidates[0]! : null, startX: x }
+          : { kind: 'press', startX: x };
+    }
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    event.preventDefault(); // no text selection while dragging
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const current = gesture.current;
+    const x = contentX(event.clientX);
+    if (!current) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const onWave = event.clientY - rect.top >= RULER_H;
+      setHoverCut(onWave && cutsNear(cutXs(), x).length > 0);
+      return;
+    }
+    if (current.kind === 'cut') {
+      const dx = x - current.startX;
+      if (current.index === null) {
+        if (Math.abs(dx) < 1) return; // wait for a direction before choosing
+        current.index = pickCut(current.candidates, dx);
+        // The grabbed cut takes keyboard focus, so arrow keys fine-tune it afterwards.
+        (contentRef.current?.querySelectorAll<HTMLElement>('[role="slider"]')[current.index])?.focus({
+          preventScroll: true,
+        });
+      }
+      const sample = sampleAt(event.clientX);
+      if (sample !== null) moveTo(current.index, sample);
+    } else if (current.kind === 'press' && Math.abs(x - current.startX) >= DRAG_THRESHOLD_PX) {
+      gesture.current = { kind: 'select', startX: current.startX };
+      setSelection({ from: current.startX, to: x });
+    } else if (current.kind === 'select') {
+      setSelection({ from: current.startX, to: x });
+    }
+  }
+
+  function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    const current = gesture.current;
+    gesture.current = null;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (!current) return;
+    const sample = sampleAt(event.clientX);
+    if (current.kind === 'seek') {
+      if (sample !== null) onScrub(sample);
+    } else if (current.kind === 'press') {
+      if (sample !== null) onAdd(sample);
+    } else if (current.kind === 'select') {
+      setSelection(null);
+      applyRangeZoom(current.startX, contentX(event.clientX));
+    }
+  }
+
+  function handlePointerCancel() {
+    gesture.current = null;
+    setSelection(null);
+  }
 
   return (
     <div className={styles.frame}>
@@ -400,18 +519,26 @@ export function WaveformMarkers({
           ref={contentRef}
           className={styles.content}
           data-testid="album-waveform"
+          data-hover-cut={hoverCut ? 'true' : undefined}
           style={{ width: `${contentWidth}px`, height: `${HEIGHT}px` }}
-          // The ruler strip seeks; the waveform below it adds a boundary. Grips and
-          // their × stop propagation, so this only ever fires for bare background.
-          onClick={(event) => {
-            const sample = sampleAt(event.clientX);
-            if (sample === null) return;
-            const top = event.currentTarget.getBoundingClientRect().top;
-            if (event.clientY - top < RULER_H) onScrub(sample);
-            else onAdd(sample);
-          }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onPointerLeave={() => setHoverCut(false)}
         >
           <canvas ref={canvasRef} className={styles.canvas} data-testid="album-canvas" />
+
+          {selection && (
+            <div
+              className={styles.selection}
+              data-testid="album-selection"
+              style={{
+                left: `${Math.min(selection.from, selection.to)}px`,
+                width: `${Math.abs(selection.to - selection.from)}px`,
+              }}
+            />
+          )}
 
           <div
             ref={playheadRef}
@@ -432,29 +559,15 @@ export function WaveformMarkers({
                 aria-valuetext={formatTimestamp(sample)}
                 className={styles.grip}
                 style={{ left: percent(sample, totalSamples) }}
-                onClick={(event) => event.stopPropagation()}
                 onKeyDown={(event) => handleKeyDown(index, event)}
-                onPointerDown={(event) => {
-                  event.stopPropagation();
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                }}
-                onPointerMove={(event) => {
-                  if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-                  // Measured against the content the marker slides along, not its own box.
-                  const next = sampleAt(event.clientX);
-                  if (next !== null) moveTo(index, next);
-                }}
-                onPointerUp={(event) => {
-                  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                    event.currentTarget.releasePointerCapture(event.pointerId);
-                  }
-                }}
               />
               <button
                 type="button"
                 className={styles.remove}
                 aria-label={`Remove split point ${index + 1}`}
                 style={{ left: percent(sample, totalSamples) }}
+                // Its own press must not start a waveform gesture underneath it.
+                onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
                   event.stopPropagation();
                   onRemove(index);
@@ -467,8 +580,9 @@ export function WaveformMarkers({
         </div>
       </div>
       <p className={styles.hint}>
-        Click the waveform to cut · click the ruler to seek · drag a cut to move it · Ctrl+wheel
-        zooms · wheel pans
+        Click the waveform to add a cut · drag a cut to move it · drag across the waveform to
+        zoom to that range · wheel zooms · Shift+wheel or the scrollbar pans · click the ruler
+        to seek
       </p>
     </div>
   );

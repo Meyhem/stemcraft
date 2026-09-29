@@ -53,6 +53,22 @@
 .content {
   position: relative;
   cursor: crosshair;
+  user-select: none;
+  touch-action: pan-x;
+}
+
+/* Near enough to a cut to grab it (GRAB_PX). */
+.content[data-hover-cut='true'] {
+  cursor: ew-resize;
+}
+
+/* The range a drag will zoom to. */
+.selection {
+  position: absolute;
+  inset-block: 24px 0;
+  background: color-mix(in srgb, var(--ds-accent) 20%, transparent);
+  border-inline: 1px solid var(--ds-accent);
+  pointer-events: none;
 }
 
 .canvas {
@@ -80,8 +96,9 @@
   margin-inline-start: -6px;
   border-inline: 2px solid var(--ds-warn);
   background: color-mix(in srgb, var(--ds-warn) 25%, transparent);
-  cursor: ew-resize;
-  touch-action: none;
+  /* Pointer input is hit-tested by the waveform (GRAB_PX), so overlapping grips never
+     decide which cut moves. The grip stays focusable for the keyboard. */
+  pointer-events: none;
 }
 
 .grip:focus-visible {
