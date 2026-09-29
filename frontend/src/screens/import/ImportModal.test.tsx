@@ -41,8 +41,7 @@ test('the close button returns to the page it was opened over', async () => {
 test('Esc on a direct visit goes to the library', () => {
   renderAt('/import');
   fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true }));
-  expect(screen.getByTestId('path')).toHaveTextContent('/');
-  expect(screen.getByTestId('path')).not.toHaveTextContent('/import');
+  expect(screen.getByTestId('path')).toHaveTextContent(/^\/$/);
 });
 
 test('Cancel closes too', async () => {

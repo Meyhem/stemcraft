@@ -3,3 +3,5 @@
 .strip i[data-state='done'] { background: var(--ds-ok); }
 .strip i[data-state='running'] { background: var(--ds-accent); }
 .strip i[data-state='failed'] { background: var(--ds-error); }
+.strip i[data-state='skipped'] { background: color-mix(in srgb, var(--ds-ok) 40%, transparent); }
+.strip i[data-state='cancelled'] { background: var(--ds-text-3); }

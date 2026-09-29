@@ -218,7 +218,7 @@ assuming it can vary.
    jobs with full tracebacks, all-time stats split by kind **and device**, and full
    history. Rows whose song was deleted keep their `song_id` and render without a link.
    One row per job with a disclosure: expanded, it shows the job's steps (D-17) with a
-   mark (✓ done, ● running with live % and bar, ○ pending, ! failed, dashed – skipped
+   mark (✓ done, numbered ring in the accent colour for the running step with live % and bar, plain numbered ring for pending, ! failed, dashed – skipped
    with reason, ■ cancelled with detail) and a duration each. The running job is
    expanded by default, and collapsed rows show a compact step strip. A failed job's
    traceback sits under the step that failed. `?song=<id>` filters to one song's jobs.

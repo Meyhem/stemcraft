@@ -1,5 +1,5 @@
 // D-17: one step vocabulary for the Job queue and the Import modal. The marks
-// mean the same everywhere: ✓ done, ● running, ○ pending, ! failed, – skipped, ■ cancelled.
+// mean the same everywhere: ✓ done, numbered ring running (accent) or pending, ! failed, – skipped, ■ cancelled.
 import type { JobStep } from '../api/client';
 import { Banner } from './Banner';
 import { ProgressBar } from './ProgressBar';
@@ -36,7 +36,9 @@ function aside(step: JobStep): string {
 }
 
 export function StepList({ steps, error }: StepListProps) {
+  const errorShown = steps.some((step) => step.state === 'failed');
   return (
+    <>
     <ol className={styles.list} aria-label="Steps">
       {steps.map((step, index) => (
         <li
@@ -66,5 +68,7 @@ export function StepList({ steps, error }: StepListProps) {
         </li>
       ))}
     </ol>
+    {error && !errorShown && <Banner tone="error" title="Job failed" trace={error} />}
+    </>
   );
 }

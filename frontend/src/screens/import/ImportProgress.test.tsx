@@ -44,7 +44,9 @@ test("shows each job's live steps and the declared steps of one not queued yet",
   const analyze = within(screen.getByRole('region', { name: 'analyze job' }));
   expect(analyze.getByText(/not queued yet/)).toBeInTheDocument();
   expect(await analyze.findByRole('listitem', { name: 'Key: pending' })).toBeInTheDocument();
+  expect(separate.getByText('running · cuda')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /open song/i })).toBeDisabled();
+  expect(screen.getByText("Closing won't stop the import")).toBeInTheDocument();
   expect(screen.getByRole('link', { name: /open job queue/i })).toHaveAttribute('href', '/jobs?song=s1');
 });
 
@@ -57,6 +59,14 @@ test('a failed import shows its error and says the rest will not run', async () 
   expect(screen.getAllByText(/won't run: import failed/)).toHaveLength(2);
 });
 
+test('a running job without a device is just "running"', async () => {
+  renderProgress([
+    { ...base, id: 5, kind: 'import', state: 'running', device: null, steps: [step('decode', 'Decode to 48 kHz', 'running')] },
+  ]);
+  const imp = within(await screen.findByRole('region', { name: 'import job' }));
+  expect(await imp.findByText('running')).toBeInTheDocument();
+});
+
 test('Open song is a link once analyze is done', async () => {
   renderProgress([
     { ...base, id: 7, kind: 'analyze', state: 'done', steps: [step('key', 'Key', 'done')] },
@@ -64,4 +74,5 @@ test('Open song is a link once analyze is done', async () => {
     { ...base, id: 5, kind: 'import', state: 'done', steps: [step('decode', 'Decode to 48 kHz', 'done')] },
   ]);
   expect(await screen.findByRole('link', { name: /open song/i })).toHaveAttribute('href', '/songs/s1');
+  expect(screen.queryByText("Closing won't stop the import")).not.toBeInTheDocument();
 });

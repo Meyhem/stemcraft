@@ -53,3 +53,31 @@ test('the strip summarises how many steps are done', () => {
   // A skipped step is finished too, so download (skipped) + decode (done) = 2.
   expect(screen.getByRole('img', { name: '2 of 4 steps done' })).toBeInTheDocument();
 });
+
+test('an error with no failed step is still shown, once (N-08)', () => {
+  render(
+    <StepList
+      steps={[step({ id: 'a', label: 'A', state: 'done', started_at: 1, finished_at: 2 })]}
+      error={'Traceback...\nRuntimeError: finish blew up'}
+    />,
+  );
+  expect(screen.getByText(/RuntimeError: finish blew up/)).toBeInTheDocument();
+  expect(screen.getByText('Job failed')).toBeInTheDocument();
+});
+
+test('with a failed step the error is drawn under it and not a second time', () => {
+  render(
+    <StepList
+      steps={[step({ id: 'key', label: 'Key', state: 'failed', started_at: 1, finished_at: 1.6 })]}
+      error={'Traceback...\nRuntimeError: only once'}
+    />,
+  );
+  expect(screen.getAllByText(/RuntimeError: only once/)).toHaveLength(1);
+  expect(screen.queryByText('Job failed')).not.toBeInTheDocument();
+});
+
+test('each strip segment carries its step state', () => {
+  const { container } = render(<StepStrip steps={steps} />);
+  const states = Array.from(container.querySelectorAll('i')).map((i) => i.getAttribute('data-state'));
+  expect(states).toEqual(['skipped', 'done', 'running', 'pending']);
+});

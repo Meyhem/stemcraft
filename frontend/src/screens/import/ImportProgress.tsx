@@ -20,7 +20,9 @@ function Group({ group }: { group: PipelineGroup }) {
         <span className={styles.kind}>{group.kind}</span>
         {group.status === 'job' && (
           <Chip tone={jobStateTone(group.job.state)} dot>
-            {group.job.state === 'running' && group.job.device ? group.job.device : group.job.state}
+            {group.job.state === 'running' && group.job.device
+              ? `running · ${group.job.device}`
+              : group.job.state}
           </Chip>
         )}
         {group.status === 'declared' && <span className={styles.note}>not queued yet</span>}
@@ -49,7 +51,7 @@ export function ImportProgress({ created, onClose }: ImportProgressProps) {
       onClose={onClose}
       footer={
         <>
-          <span className={styles.foot}>Closing won't stop the import</span>
+          {!done && <span className={styles.foot}>Closing won't stop the import</span>}
           <ButtonLink variant="ghost" to={`/jobs?song=${encodeURIComponent(created.songId)}`}>
             Open job queue
           </ButtonLink>
