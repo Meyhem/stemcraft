@@ -1,10 +1,6 @@
 .caption {
+  display: block;
   margin: 0 0 var(--ds-3);
-  font-size: var(--ds-t-xs);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ds-text-3);
 }
 
 .row {
@@ -18,6 +14,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--ds-1);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
 }
 
 /* U-04: tabular figures, so a changing count does not jitter. */

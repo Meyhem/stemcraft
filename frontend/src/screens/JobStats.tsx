@@ -16,7 +16,7 @@ export function formatAverage(seconds: number): string {
 
 function Stat({ value, label, tone }: { value: string; label: string; tone?: 'ok' | 'error' }) {
   return (
-    <div className={`card ${styles.stat}`}>
+    <div className={styles.stat}>
       <span className={`num ${styles.value} ${tone ? styles[tone] : ''}`}>{value}</span>
       <span className={styles.label}>{label}</span>
     </div>
@@ -32,7 +32,7 @@ export function JobStats() {
   const { passed, failed, durations } = stats.data;
   return (
     <section aria-labelledby="job-stats-title">
-      <h2 id="job-stats-title" className={styles.caption}>
+      <h2 id="job-stats-title" className={`cap ${styles.caption}`}>
         stats — all time
       </h2>
       <div className={styles.row} data-testid="job-stats">
