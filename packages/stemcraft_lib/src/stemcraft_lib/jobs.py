@@ -439,6 +439,7 @@ def reclaim_expired(conn: sqlite3.Connection, *, now: float | None = None) -> li
             )
         conn.execute("COMMIT")
     except BaseException:
-        conn.execute("ROLLBACK")
+        if conn.in_transaction:
+            conn.execute("ROLLBACK")
         raise
     return [r["id"] for r in rows]
