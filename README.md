@@ -13,6 +13,12 @@ instrument and play along.
 - Tempo and pitch change without re-separating; stems are never modified
 - Sample-accurate seamless loops on the beat grid, with optional count-in
 - Beat, key and chord analysis, plus a fretboard view
+- Play along screen for bass: a live neck shows what to play in the current and the next
+  bar, with a beat lane underneath showing when. The notes are generated from the chord
+  chart by a pattern you pick (root, root–5th, octave, chord or diatonic triad, 7th; whole
+  to eighth notes; optional chromatic, scale or fifth approach into the next bar), in the
+  detected key or another candidate, and follow the pitch shift. Loop by bar numbers or
+  from the chord ribbon; playback carries on when you switch back to the Song view
 - Album splitter: cut a full album rip into tagged MP3s. Silence detection proposes cuts;
   on a full-length waveform you play, zoom with the wheel or by dragging across a range,
   drag, add and delete cuts, or type exact start and end times to the millisecond, then
@@ -28,6 +34,7 @@ instrument and play along.
 ![Library](docs/screenshots/library.png)
 ![Add song](docs/screenshots/import.png)
 ![Song view](docs/screenshots/song-view.png)
+![Play along](docs/screenshots/play-along.png)
 ![Album splitter](docs/screenshots/album-splitter.png)
 ![Job queue](docs/screenshots/job-queue.png)
 

@@ -8,7 +8,7 @@
 //
 // Needs the API (8000) and the Vite dev server (5173) running, and google-chrome on PATH.
 //
-//   node scripts/capture-screens.mjs library=/ song-view=/songs/<id> album-splitter=/splitter/<id> job-queue=/jobs
+//   node scripts/capture-screens.mjs library=/ song-view=/songs/<id> play-along=/songs/<id>/play album-splitter=/splitter/<id> job-queue=/jobs
 //
 // Each argument is name=path; the PNG is written to docs/screenshots/<name>.png. Pages are
 // only loaded and looked at -- nothing is clicked, so no song or album is modified.
@@ -26,9 +26,17 @@ const [WIDTH, HEIGHT] = [1440, 900];
 const READY = {
   library: 'main li, [class*="card"]',
   'song-view': '[data-testid="bass-canvas"]',
+  'play-along': '[data-testid="neck-canvas"]',
   'album-splitter': '[data-testid="album-canvas"]',
   'job-queue': '[data-testid="job-stats"]',
 };
+
+// Screens taller than the default viewport: the play-along neck sits below the pickers.
+const HEIGHTS = { 'play-along': 1330 };
+
+// Screens that only show their point once playing: press Space, let a few bars go by,
+// press Space again so the frame is still. (The neck is empty before the first bar.)
+const PLAY_MS = { 'play-along': 7000 };
 
 const shots = process.argv.slice(2).map((arg) => {
   const [name, path] = arg.split('=');
@@ -119,8 +127,23 @@ try {
     mobile: false,
   });
   for (const { name, path } of shots) {
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: WIDTH,
+      height: HEIGHTS[name] ?? HEIGHT,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
     await cdp.send('Page.navigate', { url: `${BASE}${path}` });
     await waitFor(cdp, READY[name] ?? 'body');
+    if (PLAY_MS[name]) {
+      const space = (type) =>
+        cdp.send('Input.dispatchKeyEvent', { type, key: ' ', code: 'Space', windowsVirtualKeyCode: 32, text: ' ' });
+      await space('keyDown');
+      await space('keyUp');
+      await sleep(PLAY_MS[name]);
+      await space('keyDown');
+      await space('keyUp');
+    }
     await sleep(1500); // let the canvases paint and fonts settle
     const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
     writeFileSync(join(OUT, `${name}.png`), Buffer.from(data, 'base64'));
