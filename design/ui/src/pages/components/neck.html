@@ -1,0 +1,117 @@
+<!-- @dsCard group="Components" name="Neck & theory controls" subtitle="Any tuning, labels, markers, heatmap; note picker, tool rail, song card (D-19)" viewport="1100x2200" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Neck — Stemcraft</title><style>/* @inject */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--ds-4)}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--ds-3)}
+.grid3 svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:var(--ds-5);flex-wrap:wrap;align-items:center;font-size:var(--ds-t-sm);color:var(--ds-text-2)}
+.legend i{display:inline-block;width:18px;height:18px;border-radius:50%;vertical-align:-4px;margin-right:var(--ds-2)}
+</style></head><body><div class="doc">
+
+<div class="sec"><h1>Neck &amp; theory controls</h1>
+<p class="note">The Theory tab draws every board with one <b>Neck</b> component: any instrument and tuning,
+any fret window, labels by note, interval or degree. The highest string is on top, as a player looks down
+at it. The root takes the bass hue, matching the Scale sheet. Everything the player acts on (the dot to
+play now, a question, a lit picker) is <b>accent</b>, because a lit control is chrome (U-01). Right and
+wrong in a quiz are the vivid <b>ok</b> and <b>error</b> signals.</p></div>
+
+<div class="sec">
+  <h2>Labels: note · interval · none</h2>
+  <div class="neck"><!--@neck inst=bass4 root=A scale=minor_pent frets=12 w=1000 label=name--></div>
+  <div class="neck"><!--@neck inst=bass4 root=A scale=minor_pent frets=12 w=1000 label=interval--></div>
+  <div class="neck"><!--@neck inst=bass4 root=A scale=minor_pent frets=12 w=1000 label=none--></div>
+</div>
+
+<div class="sec">
+  <h2>Instruments and tunings</h2>
+  <p class="note">Open strings sit in their own column left of the nut, so an open note never shares a spot
+  with fret 1. String names are drawn from the tuning, so drop D reads <b>D</b> on the low string.</p>
+  <div class="neck"><!--@neck inst=bass5 root=E scale=minor frets=12 w=1000--></div>
+  <div class="neck"><!--@neck inst=guitar-dropd root=D scale=minor_pent frets=12 w=1000 sh=32 dot=12--></div>
+</div>
+
+<div class="sec">
+  <h2>Position window</h2>
+  <p class="note">One position (a box the hand covers without shifting) is outlined in the accent; notes
+  outside it drop to 28 %. They stay visible so the player sees where the box sits on the neck.</p>
+  <div class="neck"><!--@neck inst=bass4 root=A scale=minor_pent frets=15 w=1000 label=interval window=5-8--></div>
+</div>
+
+<div class="sec">
+  <h2>Zoomed window · voicing cards</h2>
+  <p class="note">When the nut isn't in view, the first fret is numbered. A muted string is a ✕ in the open
+  column or at the window's left edge.</p>
+  <div class="grid3">
+    <div class="panel" style="padding:var(--ds-3)"><div class="row"><b>Open</b><span class="t-xs dim3 num">x02010</span></div>
+      <!--@neck inst=guitar root=A degs=0,3,7,10 frets=5 w=360 sh=26 dot=11 label=interval only=4:0,3:2,2:0,1:1,0:0 marks=5:0:mute--></div>
+    <div class="panel" style="padding:var(--ds-3)"><div class="row"><b>E-shape barre</b><span class="t-xs dim3">fret 5</span></div>
+      <!--@neck inst=guitar root=A degs=0,3,7,10 frets=5 start=4 w=360 sh=26 dot=11 label=interval only=5:5,4:7,3:5,2:5,1:5,0:5--></div>
+    <div class="panel" style="padding:var(--ds-3)"><div class="row"><b>Play order</b><span class="t-xs dim3">arpeggio, bass</span></div>
+      <!--@neck inst=bass4 root=A degs=0,3,7,10 frets=5 start=4 w=360 sh=30 dot=12 only=3:5,3:8,2:7,1:5 marks=3:5:n1,3:8:n2,2:7:n3,1:5:n4--></div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Markers</h2>
+  <div class="neck"><!--@neck inst=bass4 root=G scale=none frets=12 w=1000 sh=44 dot=16 marks=0:0:ok,1:5:ok,3:4:wrong,2:10:q,3:3:accent,0:12:hollow--></div>
+  <div class="legend">
+    <span><i style="background:var(--ds-bass)"></i>root</span>
+    <span><i style="background:var(--ds-raised);border:2px solid var(--ds-bass)"></i>note</span>
+    <span><i style="background:var(--ds-accent)"></i>act on this now</span>
+    <span><i style="border:2px solid var(--ds-accent)"></i>question</span>
+    <span><i style="border:2px dashed var(--ds-text-3)"></i>coming next</span>
+    <span><i style="background:var(--ds-ok)"></i>correct</span>
+    <span><i style="border:2px solid var(--ds-error)"></i>wrong (✕)</span>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Weak-spot heatmap</h2>
+  <p class="note">Each cell is shaded from the last 5 answers at that position: error for weak, ok for
+  strong, fainter the closer to the middle. Positions never asked stay blank. It's calculated from the
+  quiz history and never stored.</p>
+  <div class="neck"><!--@neck inst=bass4 root=C scale=none frets=12 w=1000 heat=2:7:.95,2:8:.9,2:9:.8,2:10:.85,2:11:.7,3:1:.1,3:3:.05,3:5:.2,3:7:.3,3:8:.15,1:2:.4,1:3:.55,1:5:.1,0:2:.6,0:4:.25,0:5:.35,2:2:.1,2:3:.2,2:5:.15--></div>
+</div>
+
+<div class="sec">
+  <h2>Note picker · note chips · help</h2>
+  <div class="notekeys"><button>C</button><button>C♯/D♭</button><button>D</button><button>E♭</button><button>E</button><button>F</button><button>F♯/G♭</button><button>G</button><button>A♭</button><button aria-pressed="true">A</button><button>B♭</button><button>B</button></div>
+  <div class="row wrap" style="gap:var(--ds-2)"><span class="cap" style="width:64px">Common</span><button class="chip chip-lg">Major</button><button class="chip chip-lg">Minor</button><button class="chip chip-lg" aria-pressed="true">Minor pentatonic</button></div>
+  <div class="notechips"><span class="notechip root">A<small>R</small></span><span class="notechip">C<small>♭3</small></span><span class="notechip">D<small>4</small></span><span class="notechip">E<small>5</small></span><span class="notechip">G<small>♭7</small></span></div>
+  <div class="help"><b>A minor pentatonic</b>: five notes, no half steps, so it's hard to hit a wrong note. <b>Fits over:</b> Am, C, Dm, Em, G.</div>
+</div>
+
+<div class="sec">
+  <h2>Tool rail · song card states</h2>
+  <div class="grid2" style="grid-template-columns:auto auto 1fr;align-items:start">
+    <div class="tool-rail" style="height:auto;border:1px solid var(--ds-border);border-radius:var(--ds-r-panel)">
+      <div class="songcard"><span class="cap">from a song</span><b>Tightrope</b><span>G minor · 8 chords · <a style="color:var(--ds-accent)">Load</a></span></div>
+      <span class="cap">Find</span><a aria-current="page">Scale finder</a><a>Chord finder</a>
+      <div class="tool-rail-foot"><span class="cap">instrument</span><button class="btn" style="justify-content:space-between">Bass · 4 string <span class="dim3">▾</span></button>
+        <div class="row"><span>Tuning E A D G</span><a style="color:var(--ds-accent)">change</a></div></div>
+    </div>
+    <div class="col" style="gap:var(--ds-3);width:232px">
+      <div class="songcard songcard-warn"><span class="cap">from a song</span><b>Fortunate Son</b><span style="color:var(--ds-warn)">No analysis yet. The analyze job hasn't run.</span><a style="color:var(--ds-accent)">Pick another song</a></div>
+      <div class="songcard"><span class="cap">from a song</span><span>No song picked.</span><a style="color:var(--ds-accent)">Pick an analysed song</a></div>
+    </div>
+    <div></div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Failures (U-09)</h2>
+  <div class="banner banner-error">
+    <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg></span>
+    <div class="banner-body grow" style="min-width:0"><p class="banner-title" style="color:var(--ds-error)">theory.json can't be read</p>
+      <p class="t-sm dim" style="margin:0">Your settings and quiz history were not loaded, and nothing has been overwritten.</p>
+      <div class="trace">ValidationError: quiz.history.14.ms: Input should be a valid integer [type=int_type, input_value='fast']</div></div>
+    <button class="btn btn-danger">Reset to defaults…</button>
+  </div>
+  <div class="banner banner-warn">
+    <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2l10 18H2L12 2zm-1 8h2v4h-2zm0 5h2v2h-2z"/></svg></span>
+    <div class="banner-body grow"><p class="banner-title" style="color:var(--ds-warn)">Couldn't save: 20 quiz answers are waiting</p>
+      <p class="t-sm dim" style="margin:0">PUT /api/theory failed: connection refused. They're kept here until a save succeeds.</p></div>
+    <button class="btn">Retry</button>
+  </div>
+</div>
+
+</div></body></html>

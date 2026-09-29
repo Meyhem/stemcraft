@@ -1,0 +1,49 @@
+<!-- @dsCard group="Screens" name="Theory · Chord finder" subtitle="Pick or type a chord; notes, intervals, where it lives; guitar voicing cards (D-19)" viewport="1440x1000" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Chord finder — Stemcraft</title><style>/* @inject */
+.vc{flex:1;min-width:0;padding:var(--ds-3);display:flex;flex-direction:column;gap:var(--ds-2)}
+.vc[aria-current=true]{border-color:var(--ds-accent)}
+.vc svg{width:100%;height:auto;display:block}
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <div class="brand"><span class="mark"><i style="height:10px;background:var(--ds-vocals)"></i><i style="height:16px;background:var(--ds-drums)"></i><i style="height:20px;background:var(--ds-bass)"></i><i style="height:13px;background:var(--ds-other)"></i></span>Stemcraft</div>
+  <div class="seg" style="margin-left:var(--ds-5)"><button>Library</button><button>Import</button><button>Album splitter</button><button>Job queue</button><button aria-selected="true">Theory</button></div>
+  <div class="grow"></div>
+</div>
+
+<div class="row" style="align-items:stretch;gap:0;flex:1">
+  <nav class="tool-rail" aria-label="Theory tools">
+    <div class="songcard"><span class="cap">from a song</span><b>Tightrope</b><span>G minor · 8 chords · <a style="color:var(--ds-accent)">Load</a></span></div>
+    <span class="cap">Find</span><a>Scale finder</a><a aria-current="page">Chord finder</a><a>Note finder</a><a>Name that chord</a>
+    <span class="cap">Shapes</span><a>Scale positions</a><a>Triads &amp; inversions</a><a>Arpeggios</a>
+    <span class="cap">Harmony</span><a>Chords in a key</a><a>Circle of fifths</a><a>Progressions</a><a>Scales over a chord</a>
+    <span class="cap">Practice</span><a>Fretboard quiz</a><a>Theory quiz</a>
+    <div class="tool-rail-foot"><span class="cap">instrument</span>
+      <button class="btn" style="justify-content:space-between">Guitar · 6 string <span class="dim3">▾</span></button>
+      <div class="row"><span>Tuning E A D G B E</span><a style="color:var(--ds-accent)">change</a></div>
+      <div class="row"><span>Left-handed</span><span>off</span></div></div>
+  </nav>
+  <main class="main col" style="gap:var(--ds-4)">
+
+    <div class="row"><h1 class="t-lg" style="margin:0">Chord finder</h1><div class="grow"></div>
+      <input class="input" placeholder="or type a chord: Am7, C/E, F#m7b5…" style="width:340px"></div>
+    <div class="col" style="gap:var(--ds-2)"><span class="cap">root</span><div class="notekeys"><button>C</button><button>C♯/D♭</button><button>D</button><button>E♭</button><button>E</button><button>F</button><button>F♯/G♭</button><button>G</button><button>A♭</button><button aria-pressed="true">A</button><button>B♭</button><button>B</button></div></div>
+    <div class="row wrap" style="gap:var(--ds-2)"><span class="cap" style="width:72px">quality</span><button class="chip">maj</button><button class="chip">m</button><button class="chip">7</button><button class="chip">maj7</button><button class="chip" aria-pressed="true">m7</button><button class="chip">m7♭5</button><button class="chip">dim</button><button class="chip">dim7</button><button class="chip">aug</button><button class="chip">sus2</button><button class="chip">sus4</button><button class="chip">6</button><button class="chip">m6</button><button class="chip">9</button><button class="chip">add9</button></div>
+    <div class="row" style="gap:var(--ds-5);align-items:flex-start">
+      <div class="col" style="gap:var(--ds-1)"><span class="t-xl">Am7</span><span class="t-sm dim">A minor seventh</span></div>
+      <div class="notechips"><span class="notechip root">A<small>R</small></span><span class="notechip">C<small>♭3</small></span><span class="notechip">E<small>5</small></span><span class="notechip">G<small>♭7</small></span></div>
+      <div class="grow"></div>
+      <div class="help" style="max-width:380px">An A minor triad plus the <b>♭7</b>: softer and jazzier than plain Am. It's the <b>ii</b> chord in G major and the <b>vi</b> in C major.</div></div>
+    <div class="row"><span class="cap">voicings · 3 of 9</span><div class="grow"></div><button class="btn btn-ghost">Show all 9</button></div>
+    <div class="row" style="gap:var(--ds-3);align-items:stretch">
+      <div class="panel vc" aria-current="true"><div class="row"><b>Open</b><span class="t-xs dim3 num">x02010</span></div>
+        <!--@neck inst=guitar root=A degs=0,3,7,10 frets=5 w=360 sh=26 dot=11 label=interval only=4:0,3:2,2:0,1:1,0:0 marks=5:0:mute--></div>
+      <div class="panel vc"><div class="row"><b>E-shape barre</b><span class="t-xs dim3 num">575555</span></div>
+        <!--@neck inst=guitar root=A degs=0,3,7,10 frets=5 start=4 w=360 sh=26 dot=11 label=interval only=5:5,4:7,3:5,2:5,1:5,0:5--></div>
+      <div class="panel vc"><div class="row"><b>A-shape barre</b><span class="t-xs dim3 num">x-12-14-12-13-12</span></div>
+        <!--@neck inst=guitar root=A degs=0,3,7,10 frets=5 start=11 w=360 sh=26 dot=11 label=interval only=4:12,3:14,2:12,1:13,0:12--></div>
+    </div>
+    <div class="row t-sm" style="gap:var(--ds-2);color:var(--ds-error)"><span>Error state for a typed chord:</span><span class="dim">Don't know "Cmaj13#11b9". Nothing is guessed; the last chord stays shown.</span></div>
+  </main>
+</div>
+</div></body></html>

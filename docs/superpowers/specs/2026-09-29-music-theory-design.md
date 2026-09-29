@@ -1,8 +1,9 @@
 # Music Theory tab: a fretboard reference and practice tool — design
 
 **Status:** approved in brainstorming, 2026-09-29.
-**Mockups:** brainstorm screens `layout.html` (option B chosen) and `tools-v3.html`;
-to be ported to `design/ui/src/pages/screens/theory-*.html`.
+**Mockups:** `design/ui/src/pages/screens/theory-{scale-finder,chord-finder,chords-in-key,fretboard-quiz}.html`
+and `design/ui/src/pages/components/neck.html` (the `Neck` and theory controls). Visual rules:
+U-13 and the Theory rows in `design/ui-spec.md` §5 and §6.
 **Decision:** D-19 in `design/tech-spec-stemcraft.md`.
 
 ## Problem
@@ -291,7 +292,6 @@ Red and green mean wrong and right here, which is the design system's rule for v
   the write goes through the atomic helper; a corrupt file gives a 500 with the message;
   an invalid body gives a 422; history is capped at 2,000; the worker package never
   references `theory.json`.
-- **Design system:** port the mockups to `design/ui/src/pages/screens/theory-*.html`.
 
 ## Build order
 

@@ -1,0 +1,47 @@
+<!-- @dsCard group="Screens" name="Theory · Chords in a key" subtitle="Diatonic chords with numerals and function, chord on the neck, progressions, circle of fifths (D-19)" viewport="1440x1000" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Chords in a key — Stemcraft</title><style>/* @inject */
+.dia{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--ds-2)}
+.dc{background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:var(--ds-r-btn);padding:var(--ds-3) var(--ds-2);display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--ds-text);cursor:pointer;font-family:var(--ds-font)}
+.dc:hover{border-color:var(--ds-border-strong)}
+.dc[aria-pressed=true]{border-color:var(--ds-accent);background:rgba(79,163,255,.1)}
+.dc .rn{font:700 var(--ds-t-sm)/1 var(--ds-mono);color:var(--ds-text-3)} .dc .ch{font:700 var(--ds-t-lg)/1 var(--ds-font)} .dc .fn{font-size:11px;color:var(--ds-text-3)}
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <div class="brand"><span class="mark"><i style="height:10px;background:var(--ds-vocals)"></i><i style="height:16px;background:var(--ds-drums)"></i><i style="height:20px;background:var(--ds-bass)"></i><i style="height:13px;background:var(--ds-other)"></i></span>Stemcraft</div>
+  <div class="seg" style="margin-left:var(--ds-5)"><button>Library</button><button>Import</button><button>Album splitter</button><button>Job queue</button><button aria-selected="true">Theory</button></div>
+  <div class="grow"></div>
+</div>
+
+<div class="row" style="align-items:stretch;gap:0;flex:1">
+  <nav class="tool-rail" aria-label="Theory tools">
+    <div class="songcard"><span class="cap">from a song</span><b>Tightrope</b><span>G minor · 8 chords · <a style="color:var(--ds-accent)">Load</a></span></div>
+    <span class="cap">Find</span><a>Scale finder</a><a>Chord finder</a><a>Note finder</a><a>Name that chord</a>
+    <span class="cap">Shapes</span><a>Scale positions</a><a>Triads &amp; inversions</a><a>Arpeggios</a>
+    <span class="cap">Harmony</span><a aria-current="page">Chords in a key</a><a>Circle of fifths</a><a>Progressions</a><a>Scales over a chord</a>
+    <span class="cap">Practice</span><a>Fretboard quiz</a><a>Theory quiz</a>
+    <div class="tool-rail-foot"><span class="cap">instrument</span>
+      <button class="btn" style="justify-content:space-between">Bass · 4 string <span class="dim3">▾</span></button>
+      <div class="row"><span>Tuning E A D G</span><a style="color:var(--ds-accent)">change</a></div>
+      <div class="row"><span>Left-handed</span><span>off</span></div></div>
+  </nav>
+  <main class="main col" style="gap:var(--ds-4)">
+
+    <div class="row"><h1 class="t-lg" style="margin:0">Chords in a key</h1><div class="grow"></div>
+      <div class="seg"><button aria-selected="true">Triads</button><button>7th chords</button></div></div>
+    <div class="row wrap" style="gap:var(--ds-3)"><span class="cap">key</span><div class="notekeys"><button>C</button><button>C♯/D♭</button><button>D</button><button>E♭</button><button>E</button><button>F</button><button>F♯/G♭</button><button aria-pressed="true">G</button><button>A♭</button><button>A</button><button>B♭</button><button>B</button></div>
+      <div class="seg"><button aria-selected="true">Major</button><button>Minor</button></div></div>
+    <p class="t-sm dim" style="margin:0">Relative minor: <b style="color:var(--ds-text)">E minor</b>, the same chords with a different home.</p>
+    <div class="row" style="gap:var(--ds-5);align-items:flex-start">
+      <div class="col grow" style="gap:var(--ds-4);min-width:0">
+        <div class="dia"><button class="dc"><span class="rn">I</span><span class="ch">G</span><span class="fn">home</span></button><button class="dc"><span class="rn">ii</span><span class="ch">Am</span><span class="fn">sub</span></button><button class="dc"><span class="rn">iii</span><span class="ch">Bm</span><span class="fn">home</span></button><button class="dc" aria-pressed="true"><span class="rn">IV</span><span class="ch">C</span><span class="fn">sub</span></button><button class="dc"><span class="rn">V</span><span class="ch">D</span><span class="fn">tension</span></button><button class="dc"><span class="rn">vi</span><span class="ch">Em</span><span class="fn">home</span></button><button class="dc"><span class="rn">vii°</span><span class="ch">F♯°</span><span class="fn">tension</span></button></div>
+        <div class="row"><b class="t-md">IV · C major</b><span class="t-sm dim">C E G, the "lift away from home" chord</span></div>
+        <div class="neck"><!--@neck inst=bass4 root=C degs=0,4,7 frets=12 w=800 label=interval--></div>
+        <div class="col" style="gap:var(--ds-2)"><span class="cap">common progressions in G</span>
+          <div class="row wrap" style="gap:var(--ds-2)"><button class="chip chip-lg">I–V–vi–IV · G D Em C</button><button class="chip chip-lg">ii–V–I · Am D G</button><button class="chip chip-lg">12-bar blues</button><button class="chip chip-lg">I–vi–IV–V · 50s</button></div></div>
+      </div>
+      <div class="col" style="gap:var(--ds-2);align-items:center"><!--@circle key=G size=300--><span class="t-xs dim3">Click a key to jump. Neighbours share 6 of 7 notes.</span></div>
+    </div>
+  </main>
+</div>
+</div></body></html>

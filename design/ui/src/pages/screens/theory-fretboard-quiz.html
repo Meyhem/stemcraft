@@ -1,0 +1,47 @@
+<!-- @dsCard group="Screens" name="Theory · Fretboard quiz" subtitle="Find the note mid-round: feedback, focus settings, weak-spot heatmap (D-19)" viewport="1440x1250" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fretboard quiz — Stemcraft</title><style>/* @inject */
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <div class="brand"><span class="mark"><i style="height:10px;background:var(--ds-vocals)"></i><i style="height:16px;background:var(--ds-drums)"></i><i style="height:20px;background:var(--ds-bass)"></i><i style="height:13px;background:var(--ds-other)"></i></span>Stemcraft</div>
+  <div class="seg" style="margin-left:var(--ds-5)"><button>Library</button><button>Import</button><button>Album splitter</button><button>Job queue</button><button aria-selected="true">Theory</button></div>
+  <div class="grow"></div>
+</div>
+
+<div class="row" style="align-items:stretch;gap:0;flex:1">
+  <nav class="tool-rail" aria-label="Theory tools">
+    <div class="songcard"><span class="cap">from a song</span><b>Tightrope</b><span>G minor · 8 chords · <a style="color:var(--ds-accent)">Load</a></span></div>
+    <span class="cap">Find</span><a>Scale finder</a><a>Chord finder</a><a>Note finder</a><a>Name that chord</a>
+    <span class="cap">Shapes</span><a>Scale positions</a><a>Triads &amp; inversions</a><a>Arpeggios</a>
+    <span class="cap">Harmony</span><a>Chords in a key</a><a>Circle of fifths</a><a>Progressions</a><a>Scales over a chord</a>
+    <span class="cap">Practice</span><a aria-current="page">Fretboard quiz</a><a>Theory quiz</a>
+    <div class="tool-rail-foot"><span class="cap">instrument</span>
+      <button class="btn" style="justify-content:space-between">Bass · 4 string <span class="dim3">▾</span></button>
+      <div class="row"><span>Tuning E A D G</span><a style="color:var(--ds-accent)">change</a></div>
+      <div class="row"><span>Left-handed</span><span>off</span></div></div>
+  </nav>
+  <main class="main col" style="gap:var(--ds-4)">
+
+    <div class="row"><h1 class="t-lg" style="margin:0">Fretboard quiz</h1><div class="grow"></div>
+      <div class="seg"><button>Name the note</button><button aria-selected="true">Find the note</button><button>Find the interval</button><button>Spell the chord</button></div></div>
+    <div class="panel panel-pad row" style="gap:var(--ds-6)">
+      <div class="col" style="gap:var(--ds-1)"><span class="cap">round <span class="num">14</span> of <span class="num">20</span></span>
+        <span class="t-xl">Find every <span style="color:var(--ds-accent)">G</span> on frets 0–12</span>
+        <span class="t-sm dim">2 found · 3 to go · tap the neck</span></div>
+      <div class="grow"></div>
+      <div class="qstat"><b>12<span class="dim3" style="font-size:var(--ds-t-md)">/13</span></b><span>first-try correct</span></div>
+      <div class="qstat"><b style="color:var(--ds-ok)">7</b><span>streak</span></div>
+      <div class="qstat"><b>2.4s</b><span>avg per note</span></div></div>
+    <div class="neck"><!--@neck inst=bass4 root=G scale=none frets=12 w=1100 sh=46 dot=16 marks=0:0:ok,1:5:ok,3:4:wrong--></div>
+    <div class="row wrap" style="gap:var(--ds-3)"><span class="chip chip-lg chip-error">✕ that's G♯, one fret too high</span><div class="grow"></div>
+      <span class="t-sm dim">practise</span><div class="seg"><button aria-selected="true">All strings</button><button>E + A only</button></div>
+      <div class="seg"><button aria-selected="true">Frets 0–12</button><button>0–5</button><button>0–24</button></div>
+      <div class="seg"><button aria-selected="true">Naturals</button><button>+ sharps/flats</button></div></div>
+    <div class="panel panel-pad col" style="gap:var(--ds-3)">
+      <div class="row"><span class="cap">your weak spots · last 5 answers per position</span><div class="grow"></div><button class="btn btn-ghost">Reset history…</button></div>
+      <div class="neck"><!--@neck inst=bass4 root=C scale=none frets=12 w=1100 sh=34 heat=2:7:.95,2:8:.9,2:9:.8,2:10:.85,2:11:.7,3:1:.1,3:3:.05,3:5:.2,3:7:.3,3:8:.15,1:2:.4,1:3:.55,1:5:.1,0:2:.6,0:4:.25,0:5:.35,2:2:.1,2:3:.2,2:5:.15--></div>
+      <div class="help">You're slowest on the <b>A string, frets 7–11</b>. The next rounds will ask about those more often. <a style="color:var(--ds-accent)">Practise these now</a></div>
+    </div>
+  </main>
+</div>
+</div></body></html>

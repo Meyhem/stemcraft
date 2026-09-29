@@ -1,0 +1,42 @@
+<!-- @dsCard group="Screens" name="Theory · Scale finder" subtitle="Tool rail, note picker, grouped scale chips, one highlighted position (D-19)" viewport="1440x1050" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Scale finder — Stemcraft</title><style>/* @inject */
+.grp .cap{width:72px}
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <div class="brand"><span class="mark"><i style="height:10px;background:var(--ds-vocals)"></i><i style="height:16px;background:var(--ds-drums)"></i><i style="height:20px;background:var(--ds-bass)"></i><i style="height:13px;background:var(--ds-other)"></i></span>Stemcraft</div>
+  <div class="seg" style="margin-left:var(--ds-5)"><button>Library</button><button>Import</button><button>Album splitter</button><button>Job queue</button><button aria-selected="true">Theory</button></div>
+  <div class="grow"></div>
+</div>
+
+<div class="row" style="align-items:stretch;gap:0;flex:1">
+  <nav class="tool-rail" aria-label="Theory tools">
+    <div class="songcard"><span class="cap">from a song</span><b>Tightrope</b><span>G minor · 8 chords · <a style="color:var(--ds-accent)">Load</a></span></div>
+    <span class="cap">Find</span><a aria-current="page">Scale finder</a><a>Chord finder</a><a>Note finder</a><a>Name that chord</a>
+    <span class="cap">Shapes</span><a>Scale positions</a><a>Triads &amp; inversions</a><a>Arpeggios</a>
+    <span class="cap">Harmony</span><a>Chords in a key</a><a>Circle of fifths</a><a>Progressions</a><a>Scales over a chord</a>
+    <span class="cap">Practice</span><a>Fretboard quiz</a><a>Theory quiz</a>
+    <div class="tool-rail-foot"><span class="cap">instrument</span>
+      <button class="btn" style="justify-content:space-between">Bass · 4 string <span class="dim3">▾</span></button>
+      <div class="row"><span>Tuning E A D G</span><a style="color:var(--ds-accent)">change</a></div>
+      <div class="row"><span>Left-handed</span><span>off</span></div></div>
+  </nav>
+  <main class="main col" style="gap:var(--ds-4)">
+
+    <div class="row"><h1 class="t-lg" style="margin:0">Scale finder</h1><div class="grow"></div>
+      <span class="t-sm dim">labels</span><div class="seg"><button>Note</button><button aria-selected="true">Interval</button><button>Degree</button></div></div>
+    <div class="col" style="gap:var(--ds-2)"><span class="cap">root</span><div class="notekeys"><button>C</button><button>C♯/D♭</button><button>D</button><button>E♭</button><button>E</button><button>F</button><button>F♯/G♭</button><button>G</button><button>A♭</button><button aria-pressed="true">A</button><button>B♭</button><button>B</button></div></div>
+    <div class="col grp" style="gap:var(--ds-2)"><span class="cap" style="width:auto">scale</span>
+      <div class="row wrap" style="gap:var(--ds-2)"><span class="cap">Common</span><button class="chip chip-lg">Major</button><button class="chip chip-lg">Minor</button><button class="chip chip-lg">Major pentatonic</button><button class="chip chip-lg" aria-pressed="true">Minor pentatonic</button><button class="chip chip-lg">Blues</button></div>
+      <div class="row wrap" style="gap:var(--ds-2)"><span class="cap">Modes</span><button class="chip">Dorian</button><button class="chip">Phrygian</button><button class="chip">Lydian</button><button class="chip">Mixolydian</button><button class="chip">Locrian</button></div>
+      <div class="row wrap" style="gap:var(--ds-2)"><span class="cap">More</span><button class="chip">Harmonic minor</button><button class="chip">Melodic minor</button><button class="chip">Whole tone</button><button class="chip">Diminished</button></div></div>
+    <div class="neck"><!--@neck inst=bass4 root=A scale=minor_pent frets=15 w=1100 label=interval window=5-8--></div>
+    <div class="row wrap" style="gap:var(--ds-2)">
+      <div class="notechips"><span class="notechip root">A<small>R</small></span><span class="notechip">C<small>♭3</small></span><span class="notechip">D<small>4</small></span><span class="notechip">E<small>5</small></span><span class="notechip">G<small>♭7</small></span></div>
+      <div class="grow"></div><span class="cap">highlight position</span>
+      <div class="seg"><button>All</button><button aria-selected="true">1 · fr 5–8</button><button>2</button><button>3</button><button>4</button><button>5</button></div></div>
+    <div class="help"><b>A minor pentatonic</b>: five notes, no half steps, so it's hard to hit a wrong note. The go-to for rock and blues bass fills and solos.
+      <b>Fits over:</b> Am, C, Dm, Em, G. <b>Same notes as</b> C major pentatonic.</div>
+  </main>
+</div>
+</div></body></html>

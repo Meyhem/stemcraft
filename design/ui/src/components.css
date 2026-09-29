@@ -269,3 +269,46 @@ body{
   background:var(--ds-ground);border:1px solid var(--ds-border);
   border-radius:var(--ds-r-pill);padding:var(--ds-2) var(--ds-4);
 }
+
+/* ---------- theory tab (D-19) ---------- */
+/* Selectable chip: a lit chip is chrome, so it takes the accent (U-01). */
+.chip[aria-pressed=true]{color:var(--ds-accent);border-color:var(--ds-accent);background:rgba(79,163,255,.12)}
+button.chip{cursor:pointer}
+/* Tool rail: grouped nav, instrument footer pinned to the bottom. */
+.tool-rail{width:232px;flex:none;border-right:1px solid var(--ds-border);background:var(--ds-surface);
+  padding:var(--ds-4) var(--ds-3);display:flex;flex-direction:column;gap:2px}
+.tool-rail > .cap{padding:var(--ds-3) var(--ds-3) var(--ds-1)}
+.tool-rail > a{display:flex;align-items:center;min-height:var(--ds-hit-setup);padding:0 var(--ds-3);border-radius:var(--ds-r-btn);
+  color:var(--ds-text-2);font-size:var(--ds-t-sm);text-decoration:none;cursor:pointer}
+.tool-rail > a:hover{background:var(--ds-raised);color:var(--ds-text)}
+.tool-rail > a[aria-current=page]{background:var(--ds-overlay);color:var(--ds-text)}
+.tool-rail-foot{margin-top:auto;border-top:1px solid var(--ds-border);padding:var(--ds-3) var(--ds-3) 0;display:flex;flex-direction:column;gap:var(--ds-2)}
+.tool-rail-foot .row{justify-content:space-between;font-size:var(--ds-t-xs);color:var(--ds-text-2)}
+.songcard{margin:0 0 var(--ds-3);padding:var(--ds-3);border:1px solid var(--ds-border-strong);border-radius:var(--ds-r-btn);
+  background:var(--ds-raised);font-size:var(--ds-t-xs);color:var(--ds-text-2);display:flex;flex-direction:column;gap:2px}
+.songcard b{color:var(--ds-text);font-size:var(--ds-t-sm)}
+.songcard-warn{border-color:rgba(255,176,32,.45)}
+/* Note picker: 12 buttons, one lit. Setup tier. */
+.notekeys{display:flex;gap:var(--ds-1);flex-wrap:wrap}
+.notekeys > button{min-width:44px;height:var(--ds-hit-setup);padding:0 var(--ds-2);border-radius:var(--ds-r-btn);
+  background:var(--ds-raised);border:1px solid var(--ds-border);font:600 var(--ds-t-sm)/1 var(--ds-font);color:var(--ds-text-2);cursor:pointer}
+.notekeys > button:hover{background:var(--ds-overlay);color:var(--ds-text)}
+.notekeys > button[aria-pressed=true]{background:var(--ds-accent);border-color:var(--ds-accent);color:var(--ds-on-accent)}
+/* Note chips: a scale's or chord's notes with their interval. */
+.notechips{display:flex;gap:var(--ds-2);flex-wrap:wrap;align-items:center}
+.notechip{display:inline-flex;align-items:baseline;gap:4px;min-width:44px;height:36px;padding:0 var(--ds-3);justify-content:center;align-items:center;
+  border-radius:var(--ds-r-btn);background:var(--ds-raised);border:1px solid var(--ds-border-strong);font:600 var(--ds-t-sm)/1 var(--ds-font)}
+.notechip small{font-weight:500;font-size:11px;color:var(--ds-text-3)}
+.notechip.root{background:var(--ds-bass);border-color:var(--ds-bass);color:var(--ds-ground)}
+.notechip.root small{color:var(--ds-ground);opacity:.7}
+/* Neck frame: the Neck component's SVG sits on ground in a panel border. */
+.neck{background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);padding:var(--ds-3) var(--ds-3) var(--ds-1)}
+.neck svg{width:100%;height:auto;display:block}
+/* Help box: one plain-language paragraph saying what is on screen and what it is for. */
+.help{background:var(--ds-surface);border:1px solid var(--ds-border);border-left:3px solid var(--ds-accent);border-radius:var(--ds-r-btn);
+  padding:var(--ds-3) var(--ds-4);font-size:var(--ds-t-sm);line-height:var(--ds-lh-sm);color:var(--ds-text-2)}
+.help b{color:var(--ds-text)}
+/* Quiz stat: one big mono number over a caption (U-04). */
+.qstat{display:flex;flex-direction:column;gap:2px}
+.qstat b{font:700 var(--ds-t-xl)/1 var(--ds-mono);font-variant-numeric:tabular-nums}
+.qstat span{font-size:var(--ds-t-xs);color:var(--ds-text-3)}
