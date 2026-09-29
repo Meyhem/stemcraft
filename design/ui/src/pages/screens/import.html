@@ -1,29 +1,38 @@
-<!-- @dsCard group="Screens" name="Import" subtitle="One source zone, then the song's jobs step by step" viewport="1200x1215" -->
+<!-- @dsCard group="Screens" name="Import" subtitle="One source zone, then the song's jobs step by step" viewport="1200x840" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Import — Stemcraft</title><style>/* @inject */
 /* source zone */
 .source{border:2px dashed var(--ds-border-strong);border-radius:var(--ds-r-panel);padding:var(--ds-5);display:flex;flex-direction:column;gap:var(--ds-4);background:rgba(255,255,255,.015)}
 .source .filepart{text-align:center;color:var(--ds-text-2)}
 .or{display:flex;align-items:center;gap:var(--ds-3);color:var(--ds-text-3)}
 .or::before,.or::after{content:"";flex:1;height:1px;background:var(--ds-border)}
-.chosen{padding:var(--ds-3) var(--ds-4);gap:var(--ds-3)}
-.chosen .ico{color:var(--ds-ok);display:flex}
-.chosen .txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--ds-4)}
 @media (max-width:520px){.grid2{grid-template-columns:1fr}}
-.hint{margin:calc(-1 * var(--ds-3)) 0 0}
-.req{color:var(--ds-accent)}
-/* steps (from the existing mockup) */
+/* ---- shared StepList component ---- */
 .steps{display:flex;flex-direction:column;gap:var(--ds-3)}
-.step{display:flex;align-items:flex-start;gap:var(--ds-3);font-size:var(--ds-t-sm)}
-.step .mark{width:24px;height:24px;border-radius:50%;border:2px solid var(--ds-border-strong);flex:none;display:flex;align-items:center;justify-content:center;font:700 13px/1 var(--ds-mono);color:var(--ds-text-3)}
-.step .body{display:flex;flex-direction:column;gap:var(--ds-2);flex:1;min-width:0;padding-top:1px}
+.step{display:grid;grid-template-columns:24px 1fr auto;column-gap:var(--ds-3);align-items:start;font-size:var(--ds-t-sm)}
+.step .mark{width:24px;height:24px;border-radius:50%;border:2px solid var(--ds-border-strong);display:flex;align-items:center;justify-content:center;font:700 13px/1 var(--ds-mono);color:var(--ds-text-3)}
+.step .lbl{padding-top:1px;min-width:0}
+.step .det{color:var(--ds-text-3);font-weight:400;margin-left:var(--ds-2)}
+.step .dur{padding-top:1px;font-family:var(--ds-mono);font-variant-numeric:tabular-nums;color:var(--ds-text-3)}
+.step .extra{grid-column:2 / 4;margin-top:var(--ds-2)}
 .step.done .mark{background:var(--ds-ok);border-color:var(--ds-ok);color:var(--ds-ground)}
 .step.now .mark{border-color:var(--ds-accent);color:var(--ds-accent)}
 .step.fail .mark{background:var(--ds-error);border-color:var(--ds-error);color:var(--ds-on-error)}
+.step.skip .mark{border-style:dashed;color:var(--ds-text-3)}
+.step.cxl .mark{border-color:var(--ds-text-3);color:var(--ds-text-3)}
 .step.done .lbl{color:var(--ds-text-2)} .step.now .lbl{color:var(--ds-text);font-weight:600}
-.step.todo .lbl{color:var(--ds-text-3)} .step.fail .lbl{color:var(--ds-error);font-weight:600}
+.step.todo .lbl,.step.skip .lbl,.step.cxl .lbl{color:var(--ds-text-3)} .step.skip .lbl{text-decoration:line-through}
+.step.fail .lbl{color:var(--ds-error);font-weight:600}
+.step.now .dur{color:var(--ds-accent)}
+/* progress state */
+.group{display:flex;flex-direction:column;gap:var(--ds-3)}
+.group + .group{padding-top:var(--ds-4);border-top:1px solid var(--ds-border)}
+.ghead{display:flex;align-items:center;gap:var(--ds-3)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:var(--ds-5);align-items:start}
+.scrim{min-height:0;padding:var(--ds-4);background:none}
 .modal{max-width:560px}
-</style></head><body><div class="scrim"><div class="modal">
+</style></head><body><div class="pair">
+<div class="scrim"><div class="modal">
       <div class="modal-head">
         <div class="col" style="gap:2px"><span class="t-lg">Add song</span><span class="t-sm dim">No format whitelist. If ffmpeg decodes it, it is accepted.</span></div>
         <button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button>
@@ -37,12 +46,44 @@
             <button class="btn" style="margin-top:var(--ds-4)">Choose file…</button>
           </div>
           <div class="or t-sm">or paste a link</div>
-          <div class="field"><input class="input" id="u1" placeholder="https://… (YouTube and direct media links)"></div>
+          <div class="field"><label for="u1" class="t-sm dim">Link</label><input class="input" id="u1" placeholder="https://… (YouTube and direct media links)"></div>
         </div>
         <div class="grid2">
-          <div class="field"><label>Title</label><input class="input" placeholder=""></div>
-          <div class="field"><label>Artist</label><input class="input"></div>
+          <div class="field"><label for="title">Title</label><input class="input" id="title"></div>
+          <div class="field"><label for="artist">Artist</label><input class="input" id="artist"></div>
         </div>
       </div>
       <div class="modal-foot"><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary" disabled>Import &amp; separate</button></div>
-</div></div></body></html>
+</div></div>
+<div class="scrim"><div class="modal">
+  <div class="modal-head"><div class="col" style="gap:2px"><span class="t-lg">Tightrope</span><span class="t-sm dim">Walk the Moon · tightrope.flac</span></div><button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+  <div class="modal-body" style="gap:var(--ds-4)">
+    <div class="group">
+      <div class="ghead"><span class="cap">import</span><span class="chip chip-ok"><i class="dot"></i>done</span><div class="grow"></div><span class="t-sm num dim3">7.8 s</span></div>
+      <div class="steps">
+        <div class="step skip"><span class="mark">–</span><span class="lbl">Download</span><span class="dur">skipped</span></div>
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Decode to 48 kHz</span><span class="dur">6.1 s</span></div>
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Waveform peaks</span><span class="dur">1.7 s</span></div>
+      </div>
+    </div>
+    <div class="group">
+      <div class="ghead"><span class="cap">separate</span><span class="chip chip-run"><i class="dot"></i>cuda</span></div>
+      <div class="steps">
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Load audio</span><span class="dur">0.4 s</span></div>
+        <div class="step now"><span class="mark">2</span><span class="lbl">Separate 4 stems</span><span class="dur">62%</span><div class="extra"><div class="bar"><i style="width:62%"></i></div></div></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Write stems</span><span class="dur">—</span></div>
+      </div>
+    </div>
+    <div class="group">
+      <div class="ghead"><span class="cap">analyze</span><span class="t-sm dim3">not queued yet</span></div>
+      <div class="steps">
+        <div class="step todo"><span class="mark">1</span><span class="lbl">Key</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">2</span><span class="lbl">Beat grid</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Chords</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">4</span><span class="lbl">Write analysis</span><span class="dur">—</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-foot"><span class="t-sm dim3 grow" style="align-self:center">Closing won't stop the import</span><button class="btn btn-ghost">Open job queue</button><button class="btn">Close</button></div>
+</div></div>
+</div></body></html>
