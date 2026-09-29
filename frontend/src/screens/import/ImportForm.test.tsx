@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
 
@@ -96,4 +96,45 @@ test('Cancel closes', async () => {
   const { onClose } = renderForm(async () => created('s1', 1, 'T'));
   await userEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
   expect(onClose).toHaveBeenCalled();
+});
+
+test('a later attempt shows its own error, not the earlier one', async () => {
+  let n = 0;
+  renderForm(async () => new Response(n++ === 0 ? 'error A: bad file' : 'error B: bad link', { status: 400 }));
+  await userEvent.upload(screen.getByLabelText(/audio or video file/i), new File(['x'], 'bad.mp3'));
+  await userEvent.click(screen.getByRole('button', { name: /import & separate/i }));
+  expect(await screen.findByText(/error A: bad file/)).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /replace/i }));
+  await userEvent.type(screen.getByLabelText(/^link$/i), 'https://example.com/v');
+  await userEvent.type(screen.getByLabelText(/^title/i), 'T');
+  await userEvent.click(screen.getByRole('button', { name: /import & separate/i }));
+
+  expect(await screen.findByText(/error B: bad link/)).toBeInTheDocument();
+  expect(screen.queryByText(/error A: bad file/)).not.toBeInTheDocument();
+});
+
+test('a second submit while the first is in flight sends nothing', async () => {
+  const { fetchMock } = renderForm(() => new Promise<Response>(() => {}));
+  await userEvent.upload(screen.getByLabelText(/audio or video file/i), new File(['x'], 'a.mp3'));
+  // The footer button is disabled while pending, so a second attempt can only
+  // arrive as a form submit (Enter in a field): the handler itself must refuse it.
+  const form = screen.getByLabelText(/^title/i).closest('form')!;
+  fireEvent.submit(form);
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  await screen.findByRole('button', { name: /importing/i });
+  fireEvent.submit(form);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+// user-event does not implement implicit submission for a submit button tied to the
+// form by the form= attribute (browsers do), so Enter is exercised as its effect: the
+// form's own submit event, which is the single submit path.
+test('the form submit event, which Enter fires, submits a ready form', async () => {
+  const { fetchMock } = renderForm(async () => created('s1', 1, 'T'));
+  await userEvent.upload(screen.getByLabelText(/audio or video file/i), new File(['x'], 'a.mp3'));
+  expect(screen.getByRole('button', { name: /import & separate/i })).toHaveAttribute('form', 'import-form');
+  fireEvent.submit(screen.getByLabelText(/^title/i).closest('form')!);
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/songs/upload', expect.anything()));
 });

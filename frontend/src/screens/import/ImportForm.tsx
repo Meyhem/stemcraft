@@ -64,10 +64,15 @@ export function ImportForm({ onCreated, onClose }: ImportFormProps) {
       });
   }
 
-  // Called by the footer button (outside the <form>) and by Enter in a field.
-  function submit(event?: FormEvent) {
-    event?.preventDefault();
-    if (!ready) return;
+  // The one submit path: the footer button (outside the <form>, tied to it by
+  // form="import-form") and Enter in a field both fire the form's onSubmit.
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!ready || pending) return;
+    // Only the current attempt's error may show (N-08), not a stale one from
+    // the other mutation.
+    upload.reset();
+    fromUrl.reset();
     if (file) {
       const form = new FormData();
       form.set('file', file);
@@ -92,13 +97,13 @@ export function ImportForm({ onCreated, onClose }: ImportFormProps) {
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" disabled={!ready || pending} onClick={() => submit()}>
+          <Button type="submit" form="import-form" variant="primary" disabled={!ready || pending}>
             {pending ? 'Importing…' : 'Import & separate'}
           </Button>
         </>
       }
     >
-      <form className={styles.form} onSubmit={submit}>
+      <form id="import-form" className={styles.form} onSubmit={submit}>
         <SourceZone file={file} link={link} onFile={chooseFile} onLink={typeLink} />
         <div className={styles.fields}>
           <TextField
