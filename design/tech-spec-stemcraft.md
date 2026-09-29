@@ -533,8 +533,8 @@ audit requirement exists.
 - **D-19 — The Music Theory tab is a browser-side lookup on tonal.js; `theory.json` is API-owned.**
   A top-level Theory tab (`/theory/:tool`) with a rail of 13 tools (scale, chord and
   note finders, shapes, harmony, two quizzes) for bass and guitar in any tuning. All
-  music logic is pure TypeScript in `music/` (`spell.ts` is the only module importing
-  `tonal`). The existing `theory.ts` is untouched. Instrument, last tool, the chosen
+  music logic is pure TypeScript in `music/`, the only place `tonal` (pinned 6.4.3) is
+  imported; no component imports it. The existing `theory.ts` is untouched. Instrument, last tool, the chosen
   song and quiz history live in `<data_dir>/theory.json`, written only by the API
   (`GET`/`PUT /api/theory`, atomic, history capped at 2,000 answers). Quiz stats and
   weak spots are derived from the history, never stored. The worker never touches it.
@@ -549,7 +549,7 @@ audit requirement exists.
   no user gain); localStorage (per-browser, lost on clear); sharing the instrument with
   Play along (reopens D-18's EADG non-goal); reference tones (a second audio source
   beside the engine needs its own design).
-  *Reversibility:* two-way. The file and endpoints are additive, and `tonal` sits behind `spell.ts`.
+  *Reversibility:* two-way. The file and endpoints are additive, and `tonal` sits behind `music/`.
   Design: `docs/superpowers/specs/2026-09-29-music-theory-design.md`.
 
 ## 12. Deferred decisions

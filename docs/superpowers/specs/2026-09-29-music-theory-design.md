@@ -81,10 +81,13 @@ selection. Choose A minor in Scale finder, open Chords in a key, and it is on A 
 2. **Chord finder.** Root + quality chips (maj, m, 7, maj7, m7, m7♭5, dim, dim7, aug,
    sus2, sus4, 6, m6, 9, add9, plus any quality tonal parses), or a free-text chord
    input ("Am7", "C/E", "F#m7b5"). It shows the name, the notes with intervals, and
-   where it occurs ("ii in G major, vi in C major"). **Guitar:** up to 9 voicing cards
-   (open, E-shape and A-shape barre, drop-2 on the top 4 strings), each a 5-fret
-   zoomed neck with muted strings marked ✕. **Bass:** arpeggio shape cards (root
-   position in two places on the neck, and root–5th–octave) instead of voicings.
+   where it occurs ("ii7 in G major, vi7 in C major"). **Guitar:** up to 9 voicing
+   cards, found by search rather than looked up, at most one per starting fret, each
+   labelled by where it sits ("Open", "Root on 6th string · fret 5", which covers the
+   E- and A-shape barres and the top-4-string shapes) with its tab ("x02010"). Each
+   card is a 5-fret zoomed neck with muted strings marked ✕. **Bass:** arpeggio shape
+   cards (from the root on the two lowest strings, and root–5th–octave) instead of
+   voicings.
 3. **Note finder.** Pick one or more notes. Every occurrence lights up, one colour per
    picked note, with octaves labelled (E1, E2…). Colours for multiple notes use neutral
    outline styles with letter labels, not stem or signal hues.
@@ -132,9 +135,10 @@ selection. Choose A minor in Scale finder, open Chords in a key, and it is on A 
     against the loaded key. Chords outside the key are labelled "borrowed", not forced
     into a numeral.
 11. **Scales over a chord.** Pick a chord to get the fitting scales, ranked safest
-    first. A scale fits when it contains every chord tone. The rank goes pentatonic
-    before 7-note, and the scale built on the chord's root before others. Each result
-    links to Scale finder.
+    first. The candidates are the scales built on the chord's root; one fits when it
+    contains every chord tone. Fewer notes rank first (a pentatonic before a 7-note
+    scale), then scale-list order: Am7 gives A minor pentatonic, A blues, A minor,
+    A dorian, A phrygian. Each result links to Scale finder.
 
 ### Practice
 
@@ -159,24 +163,28 @@ It never falls back to another song silently.
 
 ### Frontend
 
-- `frontend/src/theory/`: `TheoryScreen` (rail + outlet), `ToolRail`, `InstrumentFooter`,
-  `SongCard`, the shared controls, and one component per tool.
+- `frontend/src/theory/`: `ToolRail`, `InstrumentFooter`, `SongCard`, the shared
+  controls, and one component per tool. `screens/Theory.tsx` is the screen (rail +
+  tool), lazy-loaded so tonal and the tab stay out of the main bundle.
 - `frontend/src/music/` (pure, no React, fully unit-tested):
-  - `spell.ts`: the only module that imports tonal. Wraps note, interval, scale,
-    chord, key and Roman-numeral queries in Stemcraft types, so tonal never leaks into
-    components.
+  - `spell.ts`: wraps tonal's note, interval, scale, chord and key queries in
+    Stemcraft types. Only modules in `frontend/src/music/` import tonal; no component
+    does.
   - `tuning.ts`: instruments, tuning presets, MIDI pitch per string.
   - `positions.ts`: note → neck positions for any tuning and fret range; position
-    windows; CAGED, pentatonic box, three-notes-per-string and one-finger-per-fret shapes.
+    windows (one-finger-per-fret boxes).
+  - `shapes.ts`: pentatonic boxes, three-notes-per-string patterns, CAGED windows and
+    triad inversions.
   - `voicings.ts`: guitar voicing generator and validator, bass arpeggio shapes.
   - `identify.ts`: notes → ranked chord names.
-  - `progressions.ts`: the progression library.
+  - `harmony.ts`: scales over a chord, a chord's numeral in a key.
+  - `progressions.ts`: the progression library and numeral → chord.
   - `quiz.ts`: question generators, the weighting, stats derived from history.
-- `Neck` component (canvas-free SVG, like the mockups): any tuning, fret range or
-  start fret, open-string column left of the nut, labels by note, interval or degree,
-  a dimmed window, markers (root, tone, accent, hollow, correct, wrong, question),
-  click handler, left-handed flip. The existing `Fretboard` stays as is for the Scale
-  sheet.
+- `TheoryNeck` component (SVG, like the mockups; named apart from Play along's canvas
+  `Neck`): any tuning, fret range or start fret, open-string column left of the nut,
+  labels by note, interval or degree, a dimmed window, markers (root, tone, accent,
+  question, next, ok, wrong, muted), a weak-spot heatmap, click targets, left-handed
+  flip. The existing `Fretboard` stays as is for the Scale sheet.
 - **Routes (D-14):** `/theory` redirects to `/theory/<last_tool>` (default
   `scale-finder`). The tool slugs are `scale-finder`, `chord-finder`, `note-finder`,
   `name-that-chord`, `scale-positions`, `triads`, `arpeggios`, `chords-in-key`,
@@ -259,7 +267,7 @@ score 1.0. The pick probability is proportional to `0.15 + weakness`, so strong 
 still appear. The same item never comes twice in a row. `quiz.ts` takes a seeded RNG
 so tests are deterministic.
 
-**Stats panel** (both quiz pages): for the fretboard, a heatmap on the `Neck`,
+**Stats panel** (both quiz pages): for the fretboard, a heatmap on the `TheoryNeck`,
 coloured per position from `--ds-error` (weak) to `--ds-ok` (strong) at reduced
 opacity. Positions never asked are left blank. For the theory quiz, a list of the 10
 weakest facts. **Reset history** asks for confirmation, then PUTs an empty history.
@@ -295,15 +303,19 @@ Red and green mean wrong and right here, which is the design system's rule for v
 
 ## Build order
 
-Each phase gets its own plan document in `docs/superpowers/plans/`.
+Each phase has its own plan document in `docs/superpowers/plans/`:
 
-- **T1, foundation (the tab is usable):** `theory.json` + API + tests; nav item,
-  routes, `TheoryScreen`, rail, instrument footer; `Neck`; `tonal`, `spell.ts`,
-  `tuning.ts`, `positions.ts`; the song card; **Scale finder, Chord finder,
-  Note finder, Chords in a key** (with the small circle). README and screenshots.
-- **T2, shapes and harmony:** `voicings.ts` (the guitar voicing cards also land in
-  Chord finder here, and T1's Chord finder shows notes and intervals only),
-  `identify.ts`, `progressions.ts`; **Scale positions, Triads & inversions,
-  Arpeggios, Name that chord, Circle of fifths, Progressions, Scales over a chord**.
-- **T3, practice:** `quiz.ts`; **Fretboard quiz, Theory quiz**; stats panel and
-  heatmap; batched history saves.
+- **Foundation** ([2026-09-29-theory-foundation.md](../plans/2026-09-29-theory-foundation.md),
+  the tab is usable): `theory.json` + API + tests; nav item, lazy routes, the screen,
+  rail, instrument footer; `TheoryNeck`; `tonal`, `spell.ts`, `tuning.ts`,
+  `positions.ts`, `progressions.ts`; the song card; **Scale finder, Chord finder,
+  Note finder, Chords in a key** (with the small circle). README and screenshot.
+- **Shapes and harmony**
+  ([2026-09-29-theory-shapes-and-harmony.md](../plans/2026-09-29-theory-shapes-and-harmony.md)):
+  `voicings.ts` (the voicing and arpeggio cards land in Chord finder here; the
+  foundation's Chord finder shows notes and intervals only), `shapes.ts`,
+  `identify.ts`, `harmony.ts`; **Scale positions, Triads & inversions, Arpeggios,
+  Name that chord, Circle of fifths, Progressions, Scales over a chord**.
+- **Quizzes** ([2026-09-29-theory-quizzes.md](../plans/2026-09-29-theory-quizzes.md)):
+  `quiz.ts`; **Fretboard quiz, Theory quiz**; stats panel and heatmap; one history
+  save per round.
