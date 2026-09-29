@@ -1,11 +1,41 @@
-<!-- @dsCard group="Screens" name="Job queue" subtitle="The real operational dashboard (§10): live, history, stats" viewport="1440x1350" -->
+<!-- @dsCard group="Screens" name="Job queue" subtitle="Every job expands to its named, live steps" viewport="1440x1350" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Jobs — Stemcraft</title><style>/* @inject */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--ds-4)}
 .stat{padding:var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-1)}
 .stat .v{font:600 var(--ds-t-xl)/1 var(--ds-mono);font-variant-numeric:tabular-nums}
-.jobrow{display:grid;grid-template-columns:120px 1fr 200px;gap:var(--ds-4);align-items:center;padding:var(--ds-4);border-bottom:1px solid var(--ds-border)}
-.jobrow:last-child{border-bottom:0}
 .tbl td.num,.tbl th.num{font-family:var(--ds-mono);font-variant-numeric:tabular-nums}
+/* ---- shared StepList component ---- */
+.steps{display:flex;flex-direction:column;gap:var(--ds-3)}
+.step{display:grid;grid-template-columns:24px 1fr auto;column-gap:var(--ds-3);align-items:start;font-size:var(--ds-t-sm)}
+.step .mark{width:24px;height:24px;border-radius:50%;border:2px solid var(--ds-border-strong);display:flex;align-items:center;justify-content:center;font:700 13px/1 var(--ds-mono);color:var(--ds-text-3)}
+.step .lbl{padding-top:1px;min-width:0}
+.step .det{color:var(--ds-text-3);font-weight:400;margin-left:var(--ds-2)}
+.step .dur{padding-top:1px;font-family:var(--ds-mono);font-variant-numeric:tabular-nums;color:var(--ds-text-3)}
+.step .extra{grid-column:2 / 4;margin-top:var(--ds-2)}
+.step.done .mark{background:var(--ds-ok);border-color:var(--ds-ok);color:var(--ds-ground)}
+.step.now .mark{border-color:var(--ds-accent);color:var(--ds-accent)}
+.step.fail .mark{background:var(--ds-error);border-color:var(--ds-error);color:var(--ds-on-error)}
+.step.skip .mark{border-style:dashed;color:var(--ds-text-3)}
+.step.cxl .mark{border-color:var(--ds-text-3);color:var(--ds-text-3)}
+.step.done .lbl{color:var(--ds-text-2)} .step.now .lbl{color:var(--ds-text);font-weight:600}
+.step.todo .lbl,.step.skip .lbl,.step.cxl .lbl{color:var(--ds-text-3)} .step.skip .lbl{text-decoration:line-through}
+.step.fail .lbl{color:var(--ds-error);font-weight:600}
+.step.now .dur{color:var(--ds-accent)}
+/* ---- job rows ---- */
+.jobrow{display:grid;grid-template-columns:28px 112px 1fr auto;gap:var(--ds-4);align-items:center;padding:var(--ds-4);border-bottom:1px solid var(--ds-border)}
+.card > .job:last-child .jobrow,.card > .job:last-child .jobsteps{border-bottom:0}
+.disc{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--ds-text-2);border-radius:var(--ds-r-input);cursor:pointer}
+.disc svg{width:18px;height:18px;fill:currentColor;transition:transform var(--ds-m-flip) var(--ds-ease)}
+.job[data-open=true] .disc svg{transform:rotate(90deg)}
+.jobsteps{padding:0 var(--ds-4) var(--ds-5) calc(var(--ds-4) + 28px + 112px + 2 * var(--ds-4));border-bottom:1px solid var(--ds-border)}
+.job.running .jobrow,.job.running .jobsteps{background:rgba(79,163,255,.05)}
+.ministeps{display:inline-flex;gap:3px;vertical-align:middle;margin-left:var(--ds-2)}
+.ministeps i{width:14px;height:4px;border-radius:2px;background:var(--ds-border-strong)}
+.ministeps i.d{background:var(--ds-ok)} .ministeps i.n{background:var(--ds-accent)} .ministeps i.f{background:var(--ds-error)}
+@media (max-width:760px){
+  .jobrow{grid-template-columns:28px 1fr auto}.jobrow > .chipcell{display:none}
+  .jobsteps{padding-left:var(--ds-4)}
+}
 </style></head><body><div class="app">
 
 <div class="topbar">
@@ -27,37 +57,70 @@
   </div>
 
   <div class="card">
-    <div class="jobrow" style="background:rgba(79,163,255,.06)">
-      <span class="chip chip-run"><i class="dot"></i>running</span>
-      <div class="col" style="gap:var(--ds-2);min-width:0">
-        <div class="row"><span class="t-md" style="font-weight:600">separate</span><span class="t-md dim">Teen Town — Weather Report</span><span class="chip chip-warn">cpu</span></div>
-        <div class="bar"><i style="width:18%"></i></div>
-        <span class="t-sm dim num">18% · segment 3 of 17 · started 0:41 ago · ~3 min left</span>
+    <!-- running, auto-open -->
+    <div class="job running" data-open="true">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="true" aria-label="Hide steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip chip-run"><i class="dot"></i>running</span></span>
+        <div class="col" style="gap:var(--ds-2);min-width:0">
+          <div class="row"><span class="t-md" style="font-weight:600">separate</span><span class="t-md dim">Tightrope · Walk the Moon</span><span class="chip">cuda</span></div>
+          <div class="bar"><i style="width:57%"></i></div>
+          <span class="t-sm dim num">step 2 of 3 · 57% overall · started 0:14 ago</span>
+        </div>
+        <button class="btn">Cancel</button>
       </div>
-      <div class="row" style="justify-content:flex-end"><button class="btn">Cancel</button></div>
+      <div class="jobsteps"><div class="steps">
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Load audio</span><span class="dur">0.4 s</span></div>
+        <div class="step now"><span class="mark">2</span><span class="lbl">Separate 4 stems<span class="det num">segment 11 of 17</span></span><span class="dur">62%</span>
+          <div class="extra"><div class="bar"><i style="width:62%"></i></div></div></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Write stems</span><span class="dur">—</span></div>
+      </div></div>
     </div>
-    <div class="jobrow">
-      <span class="chip"><i class="dot"></i>queued</span>
-      <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">separate</span><span class="t-md dim">Longview — Green Day</span></div><span class="t-sm dim3">1 job ahead</span></div>
-      <div class="row" style="justify-content:flex-end"><button class="btn btn-ghost">Cancel</button></div>
+    <!-- queued, collapsed -->
+    <div class="job" data-open="false">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="false" aria-label="Show steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip"><i class="dot"></i>queued</span></span>
+        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">export</span><span class="t-md dim">Tightrope · no bass, 82%</span></div><span class="t-sm dim3">1 job ahead<span class="ministeps" aria-label="0 of 1 steps done"><i></i></span></span></div>
+        <button class="btn btn-ghost">Cancel</button>
+      </div>
     </div>
-    <div class="jobrow">
-      <span class="chip"><i class="dot"></i>queued</span>
-      <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">export</span><span class="t-md dim">Tightrope · no bass, 82%</span></div><span class="t-sm dim3">2 jobs ahead</span></div>
-      <div class="row" style="justify-content:flex-end"><button class="btn btn-ghost">Cancel</button></div>
+    <!-- queued, opened by the user -->
+    <div class="job" data-open="true">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="true" aria-label="Hide steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip"><i class="dot"></i>queued</span></span>
+        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">split_album</span><span class="t-md dim">Rumours · Fleetwood Mac</span></div><span class="t-sm dim3">2 jobs ahead</span></div>
+        <button class="btn btn-ghost">Cancel</button>
+      </div>
+      <div class="jobsteps"><div class="steps">
+        <div class="step todo"><span class="mark">1</span><span class="lbl">Render tracks</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">2</span><span class="lbl">Build zip</span><span class="dur">—</span></div>
+      </div></div>
     </div>
   </div>
 
-  <div class="banner banner-error">
-    <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 5h2v7h-2zm0 9h2v2h-2z"/></svg></span>
-    <div class="banner-body grow">
-      <p class="banner-title" style="color:var(--ds-error)">analyze failed — Come Together</p>
-      <div class="trace">Traceback (most recent call last):
-  File "worker/jobs/analyze.py", line 64, in run
-    key = essentia.standard.KeyExtractor()(audio)
-RuntimeError: KeyExtractor: input audio is shorter than the analysis frame (2048)
-  stem: other.wav — 0.4 s of non-silence after separation</div>
-      <div class="row" style="margin-top:var(--ds-3)"><button class="btn">Re-run</button><button class="btn btn-ghost">Copy traceback</button><button class="btn btn-ghost">Open song</button></div>
+  <!-- failed job, inline -->
+  <div class="card">
+    <div class="job" data-open="true">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="true" aria-label="Hide steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip chip-error"><i class="dot"></i>failed</span></span>
+        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">analyze</span><span class="t-md dim">Come Together · The Beatles</span><span class="chip">cpu</span></div><span class="t-sm num" style="color:var(--ds-error)">failed at step 1 of 4 · Key</span></div>
+        <span></span>
+      </div>
+      <div class="jobsteps"><div class="steps">
+        <div class="step fail"><span class="mark">!</span><span class="lbl">Key</span><span class="dur">0.6 s</span>
+          <div class="extra"><div class="trace" style="margin-top:0">Traceback (most recent call last):
+  File "stemcraft_worker/kinds/analyze_song.py", line 42, in run
+    key_candidates = detect_key(...)
+RuntimeError: input audio is shorter than the analysis frame (2048)
+  stem: other.wav: 0.4 s of non-silence after separation</div>
+          </div></div>
+        <div class="step todo"><span class="mark">2</span><span class="lbl">Beat grid</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Chords</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">4</span><span class="lbl">Write analysis</span><span class="dur">—</span></div>
+      </div></div>
     </div>
   </div>
 

@@ -1,64 +1,48 @@
-<!-- @dsCard group="Screens" name="Import" subtitle="File or URL, prefilled tags, honest pipeline states" viewport="1200x1215" -->
+<!-- @dsCard group="Screens" name="Import" subtitle="One source zone, then the song's jobs step by step" viewport="1200x1215" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Import — Stemcraft</title><style>/* @inject */
+/* source zone */
+.source{border:2px dashed var(--ds-border-strong);border-radius:var(--ds-r-panel);padding:var(--ds-5);display:flex;flex-direction:column;gap:var(--ds-4);background:rgba(255,255,255,.015)}
+.source .filepart{text-align:center;color:var(--ds-text-2)}
+.or{display:flex;align-items:center;gap:var(--ds-3);color:var(--ds-text-3)}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--ds-border)}
+.chosen{padding:var(--ds-3) var(--ds-4);gap:var(--ds-3)}
+.chosen .ico{color:var(--ds-ok);display:flex}
+.chosen .txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--ds-4)}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}}
+.hint{margin:calc(-1 * var(--ds-3)) 0 0}
+.req{color:var(--ds-accent)}
+/* steps (from the existing mockup) */
 .steps{display:flex;flex-direction:column;gap:var(--ds-3)}
-.step{display:flex;align-items:center;gap:var(--ds-3);font-size:var(--ds-t-sm)}
+.step{display:flex;align-items:flex-start;gap:var(--ds-3);font-size:var(--ds-t-sm)}
 .step .mark{width:24px;height:24px;border-radius:50%;border:2px solid var(--ds-border-strong);flex:none;display:flex;align-items:center;justify-content:center;font:700 13px/1 var(--ds-mono);color:var(--ds-text-3)}
+.step .body{display:flex;flex-direction:column;gap:var(--ds-2);flex:1;min-width:0;padding-top:1px}
 .step.done .mark{background:var(--ds-ok);border-color:var(--ds-ok);color:var(--ds-ground)}
 .step.now .mark{border-color:var(--ds-accent);color:var(--ds-accent)}
-.step.done span{color:var(--ds-text-2)}
-.step.now span{color:var(--ds-text);font-weight:600}
-.step.todo span{color:var(--ds-text-3)}
+.step.fail .mark{background:var(--ds-error);border-color:var(--ds-error);color:var(--ds-on-error)}
+.step.done .lbl{color:var(--ds-text-2)} .step.now .lbl{color:var(--ds-text);font-weight:600}
+.step.todo .lbl{color:var(--ds-text-3)} .step.fail .lbl{color:var(--ds-error);font-weight:600}
+.modal{max-width:560px}
 </style></head><body><div class="scrim"><div class="modal">
-
-  <div class="modal-head">
-    <div class="col" style="gap:2px">
-      <span class="t-lg">Add song</span>
-      <span class="t-sm dim">No format whitelist — if ffmpeg decodes it, it is accepted</span>
-    </div>
-    <button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button>
-  </div>
-
-  <div class="modal-body">
-    <div class="seg" style="align-self:flex-start"><button aria-selected="true">Upload</button><button>URL</button></div>
-
-    <div class="drop">
-      <svg viewBox="0 0 24 24" width="40" height="40" fill="var(--ds-text-3)"><path d="M12 3l5 5h-3v6h-4V8H7l5-5zM5 18h14v2H5z"/></svg>
-      <div class="t-md" style="color:var(--ds-text);margin-top:var(--ds-2)">Drop an audio or video file</div>
-      <div class="t-sm" style="margin-top:var(--ds-1)">Video is accepted — the audio track is extracted</div>
-      <button class="btn" style="margin-top:var(--ds-4)">Choose file…</button>
-    </div>
-
-    <div class="row panel" style="padding:var(--ds-3) var(--ds-4);gap:var(--ds-3)">
-      <span style="color:var(--ds-ok)"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>
-      <span class="t-sm num grow">tightrope.flac · 41.2 MB · 44.1 kHz · 2 ch</span>
-      <button class="btn btn-ghost" style="min-height:32px">Replace</button>
-    </div>
-
-    <div class="grid2">
-      <div class="field"><label for="t">Title</label><input class="input" id="t" value="Tightrope"></div>
-      <div class="field"><label for="a">Artist</label><input class="input" id="a" value="Walk the Moon"></div>
-    </div>
-    <p class="t-sm dim3" style="margin:calc(-1 * var(--ds-3)) 0 0">Prefilled from the file's own tags. There is no online lookup anywhere in this app — every field is yours to type.</p>
-
-    <hr class="divider">
-
-    <div class="col" style="gap:var(--ds-3)">
-      <span class="cap">what happens next</span>
-      <div class="steps">
-        <div class="step done"><span class="mark">&#10003;</span><span>Keep the original, untouched, forever</span></div>
-        <div class="step now"><span class="mark">2</span><span>Decode to 48 kHz stereo WAV and normalize</span></div>
-        <div class="step todo"><span class="mark">3</span><span>Compute waveform peaks</span></div>
-        <div class="step todo"><span class="mark">4</span><span>Queue separation — 4 stems, ~20 s on cuda</span></div>
-        <div class="step todo"><span class="mark">5</span><span>Analyze key, beat grid and chords — a few seconds on CPU</span></div>
+      <div class="modal-head">
+        <div class="col" style="gap:2px"><span class="t-lg">Add song</span><span class="t-sm dim">No format whitelist. If ffmpeg decodes it, it is accepted.</span></div>
+        <button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button>
       </div>
-      <div class="bar"><i style="width:34%"></i></div>
-    </div>
-  </div>
-
-  <div class="modal-foot">
-    <button class="btn btn-ghost">Cancel</button>
-    <button class="btn btn-primary">Import &amp; separate</button>
-  </div>
-
+      <div class="modal-body">
+        <div class="source">
+          <div class="filepart">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="var(--ds-text-3)"><path d="M12 3l5 5h-3v6h-4V8H7l5-5zM5 18h14v2H5z"/></svg>
+            <div class="t-md" style="color:var(--ds-text);margin-top:var(--ds-2)">Drop an audio or video file</div>
+            <div class="t-sm" style="margin-top:var(--ds-1)">For video, the audio track is extracted</div>
+            <button class="btn" style="margin-top:var(--ds-4)">Choose file…</button>
+          </div>
+          <div class="or t-sm">or paste a link</div>
+          <div class="field"><input class="input" id="u1" placeholder="https://… (YouTube and direct media links)"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Title</label><input class="input" placeholder=""></div>
+          <div class="field"><label>Artist</label><input class="input"></div>
+        </div>
+      </div>
+      <div class="modal-foot"><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary" disabled>Import &amp; separate</button></div>
 </div></div></body></html>

@@ -3,7 +3,9 @@
 Self-hosted, single-user web app that splits songs into stems so you can mute your own
 instrument and play along.
 
-- Import a file or a YouTube link; any format ffmpeg can decode is accepted
+- Add a song from a file or a link (YouTube and direct media) in one dialog; any format
+  ffmpeg can decode is accepted. The dialog then follows the import, separation and
+  analysis live, step by step
 - GPU stem separation into vocals, drums, bass and other
 - Live mixer: mute, solo and volume per stem
 - Song view time axis: the wheel zooms at the pointer, dragging across the lanes zooms to
@@ -16,19 +18,21 @@ instrument and play along.
   drag, add and delete cuts, or type exact start and end times to the millisecond, then
   download a zip
 - Export the current mix
-- Job queue screen with all-time stats: passed and failed counts and the average duration per
-  job kind and device
+- Job queue screen: every job expands to its named steps, live, with a duration each and a
+  failure's real traceback under the step that failed; all-time stats with passed and
+  failed counts and the average duration per job kind and device
 - Failures and CPU fallbacks are shown in the UI with the real error message
 
 ## Screens
 
 ![Library](docs/screenshots/library.png)
+![Add song](docs/screenshots/import.png)
 ![Song view](docs/screenshots/song-view.png)
 ![Album splitter](docs/screenshots/album-splitter.png)
 ![Job queue](docs/screenshots/job-queue.png)
 
-All four are captures of the running app, made with
-`node scripts/capture-screens.mjs library=/ song-view=/songs/<id> album-splitter=/splitter/<id> job-queue=/jobs`
+All five are captures of the running app, made with
+`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> album-splitter=/splitter/<id> job-queue=/jobs`
 (API and dev server running; it only loads the pages). The design system these follow —
 tokens, components and screen mockups — is in [design/ui](design/ui) (build it with
 `python3 design/ui/build.py`), with its rules in [design/ui-spec.md](design/ui-spec.md).
