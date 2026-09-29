@@ -530,6 +530,28 @@ audit requirement exists.
   *Reversibility:* two-way. The `song.json` field is additive (v2 → v3).
   Design: `docs/superpowers/specs/2026-09-29-play-along-design.md`.
 
+- **D-19 — The Music Theory tab is a browser-side lookup on tonal.js; `theory.json` is API-owned.**
+  A top-level Theory tab (`/theory/:tool`) with a rail of 13 tools (scale, chord and
+  note finders, shapes, harmony, two quizzes) for bass and guitar in any tuning. All
+  music logic is pure TypeScript in `music/` (`spell.ts` is the only module importing
+  `tonal`). The existing `theory.ts` is untouched. Instrument, last tool, the chosen
+  song and quiz history live in `<data_dir>/theory.json`, written only by the API
+  (`GET`/`PUT /api/theory`, atomic, history capped at 2,000 answers). Quiz stats and
+  weak spots are derived from the history, never stored. The worker never touches it.
+  *Because:* like the scale view (R-05), this is arithmetic with no failure mode, so
+  it belongs in the browser where every picker change is instant. Letter-correct
+  spelling across modes, harmonic minor and ~40 chord qualities, plus chord-symbol
+  parsing, is the error-prone part, and a maintained library does it better than a
+  second hand-written implementation. A server-side file follows the player across
+  devices and is backed up with the rest of the data.
+  *Rejected:* hand-writing all theory (re-implements tonal's edge cases); rebuilding
+  `theory.ts` on tonal (touches working Scale sheet / Song view / Play along code for
+  no user gain); localStorage (per-browser, lost on clear); sharing the instrument with
+  Play along (reopens D-18's EADG non-goal); reference tones (a second audio source
+  beside the engine needs its own design).
+  *Reversibility:* two-way. The file and endpoints are additive, and `tonal` sits behind `spell.ts`.
+  Design: `docs/superpowers/specs/2026-09-29-music-theory-design.md`.
+
 ## 12. Deferred decisions
 
 - **Tabs / transcription pipeline** (bass → torchcrepe → MIDI → fretboard → alphaTab,
