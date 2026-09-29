@@ -136,8 +136,9 @@ inside the `Job` object, via `asdict`.
 ### Job queue
 
 - One row per job, as now, plus a disclosure button (`aria-expanded`).
-- The running job is expanded by default. The others are collapsed, each showing a
-  `StepStrip`.
+- Running and failed jobs are expanded by default: a failed job's traceback must stay
+  visible without a click, as it is today (N-08). The others are collapsed, each showing
+  a `StepStrip`.
 - The live row shows "step n of m · x% overall".
 - A failed row says "failed at step n of m · <label>", and its traceback moves under
   the failed step. The separate banner list is removed.
@@ -155,8 +156,8 @@ inside the `Job` object, via `asdict`.
   trap, Esc and an inert background without a library. This settles Q-05 for dialogs
   only.
 - **Form state.** There is one source zone. Choosing a file clears the link, and
-  pasting a link clears the file. Once a source is chosen, the zone collapses to a row
-  with a Replace button. Title and Artist are shared fields. Title is required only for
+  typing a link clears the file. A chosen file collapses the zone to a row with a
+  Replace button; a link stays editable in its own field below the drop zone. Title and Artist are shared fields. Title is required only for
   a link, and the hint says why. There is one primary button, "Import & separate",
   which calls `useCreateSongFromUpload` or `useCreateSongFromUrl`.
 - **Progress state.** After submit, the header shows the song's title and artist, and

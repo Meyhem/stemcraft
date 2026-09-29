@@ -1,0 +1,576 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Job Steps Design</title><style>/* Stemcraft design tokens — single source of truth.
+   Rule of the system: SATURATION carries meaning.
+   Muted hues (~65% sat) identify a STEM and appear only where a stem is named.
+   Vivid hues (~95% sat) are SYSTEM SIGNALS and appear only in chrome.
+   The two sets never share a context, so a vivid red always means "failed". */
+:root{
+  /* ground + surfaces — depth comes from surface steps + 1px borders, not shadows */
+  --ds-ground:#0B0C0E;
+  --ds-surface:#131519;
+  --ds-raised:#1A1D22;
+  --ds-overlay:#22262D;
+  --ds-border:#2A2F37;
+  --ds-border-strong:#3A414B;
+
+  /* text */
+  --ds-text:#EDEFF2;
+  --ds-text-2:#9BA3AE;   /* ~7:1 on ground */
+  --ds-text-3:#626A76;
+
+  /* stem identity — muted. Never the sole carrier: fixed order + always labelled. */
+  --ds-vocals:#E0A458;
+  --ds-drums:#D9605F;
+  --ds-bass:#4FC3B0;
+  --ds-other:#8E85E0;
+
+  /* system signals — vivid */
+  --ds-ok:#30D158;
+  --ds-warn:#FFB020;
+  --ds-error:#FF3B30;
+  --ds-queued:#626A76;
+  --ds-accent:#4FA3FF;   /* focus rings, selected chrome, links */
+
+  /* text ON a filled control. A lit control is chrome (U-01), so these pair with
+     accent/error/warn fills only -- never with a stem hue. */
+  --ds-on-accent:#04121F;
+  --ds-on-error:#180000;
+  --ds-on-warn:#1A1200;
+
+  /* type — one step up from typical web for the 1.5 m music-stand constraint */
+  --ds-font:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif;
+  --ds-mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --ds-t-display:48px; --ds-lh-display:52px;
+  --ds-t-xl:32px;      --ds-lh-xl:38px;
+  --ds-t-lg:24px;      --ds-lh-lg:30px;
+  --ds-t-md:18px;      --ds-lh-md:26px;   /* body default */
+  --ds-t-sm:15px;      --ds-lh-sm:22px;
+  --ds-t-xs:13px;      --ds-lh-xs:18px;   /* floor — dense tables only */
+
+  /* space — 4px base */
+  --ds-1:4px; --ds-2:8px; --ds-3:12px; --ds-4:16px;
+  --ds-5:24px; --ds-6:32px; --ds-7:48px; --ds-8:64px; --ds-9:96px;
+
+  /* shape */
+  --ds-r-input:4px; --ds-r-btn:8px; --ds-r-panel:12px; --ds-r-pill:999px;
+
+  /* hit targets — two tiers, enforced */
+  --ds-hit-perform:56px;  /* touched while holding an instrument */
+  --ds-hit-setup:40px;    /* touched with both hands free */
+  --ds-hit-min:32px;      /* absolute floor */
+
+  /* motion — the playhead is NEVER animated by CSS (D-07: engine owns the clock) */
+  --ds-m-flip:120ms; --ds-m-panel:200ms; --ds-m-progress:400ms;
+  --ds-ease:cubic-bezier(.2,.7,.3,1);
+
+  --ds-shadow-overlay:0 24px 48px -12px rgba(0,0,0,.72);
+}
+@media (prefers-reduced-motion:reduce){
+  :root{ --ds-m-flip:0ms; --ds-m-panel:0ms; --ds-m-progress:0ms; }
+}
+
+/* ---------- base ---------- */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--ds-ground); color:var(--ds-text);
+  font:400 var(--ds-t-md)/var(--ds-lh-md) var(--ds-font);
+  -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:2px solid var(--ds-accent); outline-offset:2px}
+.num{font-family:var(--ds-mono); font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.t-display{font-size:var(--ds-t-display);line-height:var(--ds-lh-display);font-weight:600}
+.t-xl{font-size:var(--ds-t-xl);line-height:var(--ds-lh-xl);font-weight:600}
+.t-lg{font-size:var(--ds-t-lg);line-height:var(--ds-lh-lg);font-weight:600}
+.t-md{font-size:var(--ds-t-md);line-height:var(--ds-lh-md)}
+.t-sm{font-size:var(--ds-t-sm);line-height:var(--ds-lh-sm)}
+.t-xs{font-size:var(--ds-t-xs);line-height:var(--ds-lh-xs)}
+.dim{color:var(--ds-text-2)} .dim3{color:var(--ds-text-3)}
+.cap{text-transform:uppercase;letter-spacing:.08em;font-size:var(--ds-t-xs);font-weight:600;color:var(--ds-text-3)}
+.row{display:flex;align-items:center;gap:var(--ds-3)}
+.col{display:flex;flex-direction:column}
+.grow{flex:1} .wrap{flex-wrap:wrap}
+
+/* ---------- surfaces ---------- */
+.panel{background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel)}
+.panel-pad{padding:var(--ds-5)}
+.card{background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
+.divider{height:1px;background:var(--ds-border);border:0;margin:0}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--ds-2);
+  min-height:var(--ds-hit-setup); padding:0 var(--ds-4);
+  border-radius:var(--ds-r-btn); border:1px solid transparent;
+  font:600 var(--ds-t-sm)/1 var(--ds-font); color:var(--ds-text);
+  background:var(--ds-raised); border-color:var(--ds-border-strong);
+  cursor:pointer; transition:background var(--ds-m-flip) var(--ds-ease),border-color var(--ds-m-flip) var(--ds-ease);
+  white-space:nowrap;
+}
+.btn:hover{background:var(--ds-overlay)}
+.btn-primary{background:var(--ds-accent);border-color:var(--ds-accent);color:var(--ds-on-accent)}
+.btn-primary:hover{filter:brightness(1.1);background:var(--ds-accent)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--ds-text-2);font-weight:500}
+.btn-ghost:hover{background:var(--ds-raised);color:var(--ds-text)}
+.btn-danger{background:transparent;border-color:var(--ds-error);color:var(--ds-error)}
+.btn-danger:hover{background:rgba(255,59,48,.12)}
+.btn-perform{min-height:var(--ds-hit-perform);padding:0 var(--ds-5);font-size:var(--ds-t-md)}
+.btn[disabled],.btn[aria-disabled=true]{opacity:.4;pointer-events:none}
+.iconbtn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:var(--ds-hit-setup);height:var(--ds-hit-setup);
+  border-radius:var(--ds-r-btn);border:1px solid var(--ds-border-strong);
+  background:var(--ds-raised);color:var(--ds-text-2);cursor:pointer;
+  transition:all var(--ds-m-flip) var(--ds-ease);
+}
+.iconbtn:hover{background:var(--ds-overlay);color:var(--ds-text)}
+.iconbtn-perform{width:var(--ds-hit-perform);height:var(--ds-hit-perform)}
+.iconbtn svg{width:20px;height:20px;fill:currentColor}
+.iconbtn-perform svg{width:26px;height:26px}
+.iconbtn[aria-pressed=true]{background:var(--ds-accent);border-color:var(--ds-accent);color:var(--ds-on-accent)}
+
+/* ---------- chips / badges ---------- */
+.chip{
+  display:inline-flex;align-items:center;gap:var(--ds-2);
+  height:28px;padding:0 var(--ds-3);border-radius:var(--ds-r-pill);
+  background:var(--ds-raised);border:1px solid var(--ds-border-strong);
+  font:600 var(--ds-t-xs)/1 var(--ds-font);color:var(--ds-text-2);white-space:nowrap;
+}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.chip-ok{color:var(--ds-ok);border-color:rgba(48,209,88,.4);background:rgba(48,209,88,.1)}
+.chip-warn{color:var(--ds-warn);border-color:rgba(255,176,32,.4);background:rgba(255,176,32,.1)}
+.chip-error{color:var(--ds-error);border-color:rgba(255,59,48,.4);background:rgba(255,59,48,.1)}
+.chip-run{color:var(--ds-accent);border-color:rgba(79,163,255,.4);background:rgba(79,163,255,.1)}
+.chip-lg{height:var(--ds-hit-setup);padding:0 var(--ds-4);font-size:var(--ds-t-sm)}
+
+/* ---------- banners ---------- */
+.banner{
+  display:flex;gap:var(--ds-4);align-items:flex-start;
+  padding:var(--ds-4) var(--ds-5);border-radius:var(--ds-r-panel);
+  border:1px solid;background:var(--ds-surface);
+}
+.banner .bicon{flex:none;width:24px;height:24px;margin-top:2px}
+.banner .bicon svg{width:24px;height:24px;fill:currentColor}
+.banner-warn{border-color:rgba(255,176,32,.45);background:rgba(255,176,32,.08);color:var(--ds-warn)}
+.banner-error{border-color:rgba(255,59,48,.45);background:rgba(255,59,48,.08);color:var(--ds-error)}
+.banner-body{color:var(--ds-text)}
+.banner-title{font-weight:600;margin:0 0 var(--ds-1)}
+.trace{
+  font:400 var(--ds-t-xs)/1.6 var(--ds-mono);color:var(--ds-text-2);
+  background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-input);
+  padding:var(--ds-3);margin-top:var(--ds-3);white-space:pre;overflow-x:auto;
+}
+
+/* ---------- fields ---------- */
+.field{display:flex;flex-direction:column;gap:var(--ds-2)}
+.field > label{font-size:var(--ds-t-sm);font-weight:600;color:var(--ds-text-2)}
+.input{
+  height:var(--ds-hit-setup);padding:0 var(--ds-3);
+  background:var(--ds-ground);border:1px solid var(--ds-border-strong);
+  border-radius:var(--ds-r-input);color:var(--ds-text);
+  font:400 var(--ds-t-md)/1 var(--ds-font);width:100%;
+}
+.input::placeholder{color:var(--ds-text-3)}
+.input:focus{border-color:var(--ds-accent);outline:none}
+.drop{
+  border:2px dashed var(--ds-border-strong);border-radius:var(--ds-r-panel);
+  padding:var(--ds-8) var(--ds-5);text-align:center;color:var(--ds-text-2);
+  background:rgba(255,255,255,.015);
+}
+.check{display:inline-flex;align-items:center;gap:var(--ds-3);min-height:var(--ds-hit-setup);cursor:pointer}
+.check .box{
+  width:22px;height:22px;flex:none;border-radius:var(--ds-r-input);
+  border:2px solid var(--ds-border-strong);display:inline-flex;align-items:center;justify-content:center;
+}
+.check[data-on=true] .box{background:var(--ds-accent);border-color:var(--ds-accent)}
+.check[data-on=true] .box::after{content:"";width:11px;height:6px;border:2px solid var(--ds-on-accent);border-top:0;border-right:0;transform:rotate(-45deg) translateY(-2px)}
+
+/* ---------- segmented ---------- */
+.seg{display:inline-flex;background:var(--ds-ground);border:1px solid var(--ds-border-strong);border-radius:var(--ds-r-btn);padding:3px;gap:3px}
+.seg > button{
+  min-height:34px;padding:0 var(--ds-4);border:0;background:transparent;border-radius:5px;
+  color:var(--ds-text-2);font:600 var(--ds-t-sm)/1 var(--ds-font);cursor:pointer;
+}
+.seg > button[aria-selected=true]{background:var(--ds-overlay);color:var(--ds-text)}
+
+/* ---------- slider ---------- */
+.slider{display:flex;flex-direction:column;gap:var(--ds-2);min-width:180px}
+.slider .shead{display:flex;justify-content:space-between;align-items:baseline}
+.slider .slabel{font-size:var(--ds-t-sm);font-weight:600;color:var(--ds-text-2)}
+.slider .sval{font-size:var(--ds-t-md);font-weight:600}
+.track{position:relative;height:8px;border-radius:var(--ds-r-pill);background:var(--ds-ground);border:1px solid var(--ds-border)}
+.track .fill{position:absolute;inset:0 auto 0 0;border-radius:var(--ds-r-pill);background:var(--ds-accent)}
+.track .knob{
+  position:absolute;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;
+  background:var(--ds-text);border:2px solid var(--ds-ground);box-shadow:0 2px 6px rgba(0,0,0,.6);
+}
+.track .center-tick{position:absolute;top:-4px;bottom:-4px;left:50%;width:1px;background:var(--ds-border-strong)}
+.slider-perform .track{height:14px}
+.slider-perform .knob{width:32px;height:32px;margin:-16px 0 0 -16px}
+
+/* ---------- progress ---------- */
+.bar{height:6px;border-radius:var(--ds-r-pill);background:var(--ds-ground);border:1px solid var(--ds-border);overflow:hidden}
+.bar > i{display:block;height:100%;background:var(--ds-accent);transition:width var(--ds-m-progress) linear}
+.bar-ok > i{background:var(--ds-ok)} .bar-error > i{background:var(--ds-error)}
+
+/* ---------- stem strips ---------- */
+.stem{--c:var(--ds-text-2)}
+.stem-v{--c:var(--ds-vocals)} .stem-d{--c:var(--ds-drums)}
+.stem-b{--c:var(--ds-bass)}   .stem-o{--c:var(--ds-other)}
+.stem-row{
+  display:grid;grid-template-columns:200px 1fr;align-items:stretch;
+  border-bottom:1px solid var(--ds-border);
+}
+.stem-row:last-child{border-bottom:0}
+.stem-ctl{
+  display:flex;flex-direction:column;gap:var(--ds-2);justify-content:center;
+  padding:var(--ds-3) var(--ds-4);background:var(--ds-surface);
+  border-left:3px solid var(--c);
+}
+.stem-name{display:flex;align-items:center;gap:var(--ds-2);font-weight:600;font-size:var(--ds-t-md)}
+.stem-name .sw{width:10px;height:10px;border-radius:2px;background:var(--c);flex:none}
+.ms{display:flex;gap:var(--ds-2)}
+.ms button{
+  width:var(--ds-hit-perform);height:44px;border-radius:var(--ds-r-btn);cursor:pointer;
+  border:1px solid var(--ds-border-strong);background:var(--ds-raised);
+  color:var(--ds-text-2);font:700 var(--ds-t-sm)/1 var(--ds-font);
+  transition:all var(--ds-m-flip) var(--ds-ease);
+}
+.ms button[aria-pressed=true][data-k=m]{background:var(--ds-error);border-color:var(--ds-error);color:var(--ds-on-error)}
+.ms button[aria-pressed=true][data-k=s]{background:var(--ds-warn);border-color:var(--ds-warn);color:var(--ds-on-warn)}
+.stem-lane{position:relative;background:var(--ds-ground);display:flex;align-items:center;padding:0 0 0 0;overflow:hidden}
+.stem-lane.muted{opacity:.28}
+.stem-lane svg{display:block;width:100%;height:100%}
+.gainbar{height:4px;border-radius:2px;background:var(--ds-ground);border:1px solid var(--ds-border);position:relative}
+.gainbar > i{position:absolute;inset:0 auto 0 0;background:var(--c);border-radius:2px}
+
+/* ---------- waveform furniture ---------- */
+.wavewrap{position:relative;background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
+.grid-beats{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.055) 0 1px,transparent 1px 42px)}
+.grid-bars{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.16) 0 1px,transparent 1px 168px)}
+.loopregion{position:absolute;top:0;bottom:0;background:rgba(79,163,255,.13);border-left:2px solid var(--ds-accent);border-right:2px solid var(--ds-accent);pointer-events:none}
+.loopregion::before,.loopregion::after{
+  content:attr(data-a);position:absolute;top:0;background:var(--ds-accent);color:var(--ds-on-accent);
+  font:700 var(--ds-t-xs)/18px var(--ds-mono);padding:0 6px;
+}
+.loopregion::before{left:-2px}
+.loopregion::after{content:attr(data-b);right:-2px}
+.playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--ds-text);pointer-events:none;box-shadow:0 0 12px rgba(237,239,242,.6)}
+.playhead::before{content:"";position:absolute;top:0;left:-6px;border:7px solid transparent;border-top-color:var(--ds-text);border-bottom:0}
+/* The ruler is the click-to-seek strip: a tinted band with a pointer cursor that
+   brightens on hover, so it reads as a different target from the lanes below it (a
+   press there zooms or, in the splitter, cuts). */
+.ruler{display:flex;height:26px;border-bottom:1px solid var(--ds-border-strong);align-items:center;position:relative;
+  background:color-mix(in srgb,var(--ds-accent) 10%,var(--ds-raised));cursor:pointer}
+.ruler:hover,.ruler.is-hover{background:color-mix(in srgb,var(--ds-accent) 22%,var(--ds-raised))}
+.ruler span{position:absolute;font:600 var(--ds-t-xs)/1 var(--ds-mono);color:var(--ds-text-2);transform:translateX(4px)}
+
+/* Zoom controls, shared by the Song view transport and the splitter toolbar:
+   − / readout of what is in view / + / Fit. */
+.zoomctl{display:flex;align-items:center;gap:var(--ds-2)}
+.zoomctl .btn{min-width:40px;padding:0 var(--ds-3)}
+.zoomval{min-width:11ch;text-align:center;font:400 var(--ds-t-sm)/1 var(--ds-mono);font-variant-numeric:tabular-nums;color:var(--ds-text-2);white-space:nowrap}
+
+/* Drag-to-zoom: the range a drag across the lanes (or the splitter waveform) will fit. */
+.zoomsel{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--ds-accent) 18%,transparent);
+  border-left:1px solid var(--ds-accent);border-right:1px solid var(--ds-accent);pointer-events:none}
+
+/* Album splitter cut: one 2 px amber line with its number on a tag. The line is not the
+   hit target -- a press within 8 px grabs it -- so it can stay this thin. Selected: the
+   line turns accent and the tag gets the focus ring. */
+.cutmark{position:absolute;top:26px;bottom:0;width:2px;margin-left:-1px;background:var(--ds-warn);pointer-events:none}
+.cutmark.is-selected{background:var(--ds-accent)}
+.cuttag{position:absolute;top:28px;min-width:22px;height:22px;padding:0 var(--ds-1);transform:translateX(-50%);
+  display:flex;align-items:center;justify-content:center;background:var(--ds-warn);color:var(--ds-on-warn);
+  border-radius:var(--ds-r-btn);font:600 var(--ds-t-xs)/1 var(--ds-mono);cursor:ew-resize}
+.cuttag.is-selected{outline:2px solid var(--ds-accent);outline-offset:2px}
+
+/* ---------- transport ---------- */
+.transport{display:flex;align-items:center;gap:var(--ds-4);padding:var(--ds-4) var(--ds-5);background:var(--ds-surface);border-top:1px solid var(--ds-border)}
+.readout{display:flex;align-items:baseline;gap:var(--ds-2)}
+.readout .big{font:600 var(--ds-t-display)/1 var(--ds-mono);font-variant-numeric:tabular-nums}
+.readout .unit{font-size:var(--ds-t-sm);color:var(--ds-text-3);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+
+/* ---------- table ---------- */
+.tbl{width:100%;border-collapse:collapse;font-size:var(--ds-t-sm)}
+.tbl th{
+  text-align:left;padding:var(--ds-2) var(--ds-3);font-size:var(--ds-t-xs);font-weight:700;
+  text-transform:uppercase;letter-spacing:.08em;color:var(--ds-text-3);
+  border-bottom:1px solid var(--ds-border);white-space:nowrap;
+}
+.tbl td{padding:var(--ds-3);border-bottom:1px solid var(--ds-border);vertical-align:middle;height:var(--ds-hit-setup)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr:hover{background:var(--ds-raised)}
+
+/* ---------- app shell ---------- */
+.app{display:flex;flex-direction:column;height:100%;min-height:100vh;background:var(--ds-ground)}
+.topbar{display:flex;align-items:center;gap:var(--ds-4);height:64px;padding:0 var(--ds-5);border-bottom:1px solid var(--ds-border);background:var(--ds-surface);flex:none}
+.brand{display:flex;align-items:center;gap:var(--ds-2);font-weight:700;font-size:var(--ds-t-md);letter-spacing:-.01em}
+.brand .mark{display:flex;gap:2px;align-items:flex-end;height:20px}
+.brand .mark i{width:4px;border-radius:1px;display:block}
+.main{flex:1;min-height:0;overflow:auto;padding:var(--ds-5)}
+.modal{width:100%;max-width:620px;background:var(--ds-surface);border:1px solid var(--ds-border-strong);border-radius:var(--ds-r-panel);box-shadow:var(--ds-shadow-overlay);overflow:hidden}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:var(--ds-5);border-bottom:1px solid var(--ds-border)}
+.modal-body{padding:var(--ds-5);display:flex;flex-direction:column;gap:var(--ds-5)}
+.modal-foot{display:flex;justify-content:flex-end;gap:var(--ds-3);padding:var(--ds-4) var(--ds-5);border-top:1px solid var(--ds-border);background:var(--ds-raised)}
+.scrim{background:rgba(5,6,8,.72);padding:var(--ds-7);display:flex;justify-content:center;align-items:flex-start;min-height:100vh}
+
+/* ---------- empty state ---------- */
+.empty{display:flex;flex-direction:column;align-items:center;gap:var(--ds-4);padding:var(--ds-9) var(--ds-5);text-align:center;color:var(--ds-text-2)}
+.empty .glyph{opacity:.35}
+
+/* ---------- doc furniture (preview pages only) ---------- */
+.doc{padding:var(--ds-6);display:flex;flex-direction:column;gap:var(--ds-6)}
+.doc h1{font-size:var(--ds-t-lg);margin:0;font-weight:600}
+.doc h2{font-size:var(--ds-t-sm);margin:0;text-transform:uppercase;letter-spacing:.08em;color:var(--ds-text-3)}
+.sec{display:flex;flex-direction:column;gap:var(--ds-3)}
+.note{font-size:var(--ds-t-sm);color:var(--ds-text-2);max-width:72ch}
+.note b{color:var(--ds-text);font-weight:600}
+
+/* ---------- near-silent stem (a stem can be empty; see domain spec) ---------- */
+.stem-row.silent .stem-ctl{opacity:.55}
+.stem-row.silent .ms button{pointer-events:none}
+.stem-lane.silent svg{opacity:.16}
+.silent-note{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.silent-note > span{
+  display:inline-flex;align-items:center;gap:var(--ds-2);
+  font:600 var(--ds-t-sm)/1 var(--ds-font);color:var(--ds-text-3);
+  background:var(--ds-ground);border:1px solid var(--ds-border);
+  border-radius:var(--ds-r-pill);padding:var(--ds-2) var(--ds-4);
+}
+
+.wrapd{padding:var(--ds-6) var(--ds-4);max-width:1320px;margin:0 auto}
+h1.pg{margin:0 0 var(--ds-2)} .lede{margin:0 0 var(--ds-6);max-width:920px}
+.sec{margin:var(--ds-7) 0 var(--ds-3)} .sec + p{margin:0 0 var(--ds-4);max-width:920px}
+.stage{border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
+/* ---- shared StepList component ---- */
+.steps{display:flex;flex-direction:column;gap:var(--ds-3)}
+.step{display:grid;grid-template-columns:24px 1fr auto;column-gap:var(--ds-3);align-items:start;font-size:var(--ds-t-sm)}
+.step .mark{width:24px;height:24px;border-radius:50%;border:2px solid var(--ds-border-strong);display:flex;align-items:center;justify-content:center;font:700 13px/1 var(--ds-mono);color:var(--ds-text-3)}
+.step .lbl{padding-top:1px;min-width:0}
+.step .det{color:var(--ds-text-3);font-weight:400;margin-left:var(--ds-2)}
+.step .dur{padding-top:1px;font-family:var(--ds-mono);font-variant-numeric:tabular-nums;color:var(--ds-text-3)}
+.step .extra{grid-column:2 / 4;margin-top:var(--ds-2)}
+.step.done .mark{background:var(--ds-ok);border-color:var(--ds-ok);color:var(--ds-ground)}
+.step.now .mark{border-color:var(--ds-accent);color:var(--ds-accent)}
+.step.fail .mark{background:var(--ds-error);border-color:var(--ds-error);color:var(--ds-on-error)}
+.step.skip .mark{border-style:dashed;color:var(--ds-text-3)}
+.step.cxl .mark{border-color:var(--ds-text-3);color:var(--ds-text-3)}
+.step.done .lbl{color:var(--ds-text-2)} .step.now .lbl{color:var(--ds-text);font-weight:600}
+.step.todo .lbl,.step.skip .lbl,.step.cxl .lbl{color:var(--ds-text-3)} .step.skip .lbl{text-decoration:line-through}
+.step.fail .lbl{color:var(--ds-error);font-weight:600}
+.step.now .dur{color:var(--ds-accent)}
+/* ---- job rows ---- */
+.jobrow{display:grid;grid-template-columns:28px 112px 1fr auto;gap:var(--ds-4);align-items:center;padding:var(--ds-4);border-bottom:1px solid var(--ds-border)}
+.card > .job:last-child .jobrow,.card > .job:last-child .jobsteps{border-bottom:0}
+.disc{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--ds-text-2);border-radius:var(--ds-r-input);cursor:pointer}
+.disc svg{width:18px;height:18px;fill:currentColor;transition:transform var(--ds-m-flip) var(--ds-ease)}
+.job[data-open=true] .disc svg{transform:rotate(90deg)}
+.jobsteps{padding:0 var(--ds-4) var(--ds-5) calc(var(--ds-4) + 28px + 112px + 2 * var(--ds-4));border-bottom:1px solid var(--ds-border)}
+.job.running .jobrow,.job.running .jobsteps{background:rgba(79,163,255,.05)}
+.ministeps{display:inline-flex;gap:3px;vertical-align:middle;margin-left:var(--ds-2)}
+.ministeps i{width:14px;height:4px;border-radius:2px;background:var(--ds-border-strong)}
+.ministeps i.d{background:var(--ds-ok)} .ministeps i.n{background:var(--ds-accent)} .ministeps i.f{background:var(--ds-error)}
+@media (max-width:760px){
+  .jobrow{grid-template-columns:28px 1fr auto}.jobrow > .chipcell{display:none}
+  .jobsteps{padding-left:var(--ds-4)}
+}
+/* ---- modal ---- */
+.scrim{min-height:0;padding:var(--ds-5) var(--ds-4)} .modal{max-width:560px}
+.group{display:flex;flex-direction:column;gap:var(--ds-3)}
+.group + .group{padding-top:var(--ds-4);border-top:1px solid var(--ds-border)}
+.ghead{display:flex;align-items:center;gap:var(--ds-3)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:var(--ds-6)}
+.notes{margin-top:var(--ds-7);max-width:920px} .notes li{margin-bottom:var(--ds-2)}
+</style></head><body><div class="wrapd">
+
+<h1 class="pg t-xl">Every job, step by step</h1>
+<p class="lede dim">Each job kind declares its steps in <span class="num">stemcraft_lib</span>. The steps are written when the job is queued, and the worker advances them while it runs. The websocket already pushes every change to a job row, so steps update live with no new transport. One shared <b>StepList</b> component draws them in the Job queue and in the Add-song modal.</p>
+
+<h2 class="sec t-lg">1 · Job queue: live section</h2>
+<p class="t-sm dim">One row per job, as it is now. Each row has a disclosure arrow. The running job opens by itself, and the rest stay collapsed with a thin segment strip showing where each one is. Each step shows its own duration, and the running step shows its live percentage. A failed job's traceback now appears under the step that failed, instead of in a separate banner list.</p>
+
+<div class="stage"><div class="app" style="min-height:0">
+<div class="topbar">
+  <div class="brand"><span class="mark"><i style="height:10px;background:var(--ds-vocals)"></i><i style="height:16px;background:var(--ds-drums)"></i><i style="height:20px;background:var(--ds-bass)"></i><i style="height:13px;background:var(--ds-other)"></i></span>Stemcraft</div>
+  <div class="grow"></div><span class="chip chip-ok">cuda · RTX 5080</span>
+</div>
+<div class="main col" style="gap:var(--ds-5)">
+  <div class="row"><h1 class="t-lg" style="margin:0">Jobs</h1><span class="chip chip-run"><i class="dot"></i>1 running</span><span class="chip">2 queued</span></div>
+
+  <div class="card">
+    <!-- running, auto-open -->
+    <div class="job running" data-open="true">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="true" aria-label="Hide steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip chip-run"><i class="dot"></i>running</span></span>
+        <div class="col" style="gap:var(--ds-2);min-width:0">
+          <div class="row"><span class="t-md" style="font-weight:600">separate</span><span class="t-md dim">Tightrope · Walk the Moon</span><span class="chip">cuda</span></div>
+          <div class="bar"><i style="width:57%"></i></div>
+          <span class="t-sm dim num">step 2 of 3 · 57% overall · started 0:14 ago</span>
+        </div>
+        <button class="btn">Cancel</button>
+      </div>
+      <div class="jobsteps"><div class="steps">
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Load audio</span><span class="dur">0.4 s</span></div>
+        <div class="step now"><span class="mark">2</span><span class="lbl">Separate 4 stems<span class="det num">segment 11 of 17</span></span><span class="dur">62%</span>
+          <div class="extra"><div class="bar"><i style="width:62%"></i></div></div></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Write stems</span><span class="dur">—</span></div>
+      </div></div>
+    </div>
+    <!-- queued, collapsed -->
+    <div class="job" data-open="false">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="false" aria-label="Show steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip"><i class="dot"></i>queued</span></span>
+        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">export</span><span class="t-md dim">Tightrope · no bass, 82%</span></div><span class="t-sm dim3">1 job ahead<span class="ministeps" aria-label="0 of 1 steps done"><i></i></span></span></div>
+        <button class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+    <!-- queued, opened by the user -->
+    <div class="job" data-open="true">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="true" aria-label="Hide steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip"><i class="dot"></i>queued</span></span>
+        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">split_album</span><span class="t-md dim">Rumours · Fleetwood Mac</span></div><span class="t-sm dim3">2 jobs ahead</span></div>
+        <button class="btn btn-ghost">Cancel</button>
+      </div>
+      <div class="jobsteps"><div class="steps">
+        <div class="step todo"><span class="mark">1</span><span class="lbl">Render tracks</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">2</span><span class="lbl">Build zip</span><span class="dur">—</span></div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- failed job, inline -->
+  <div class="card">
+    <div class="job" data-open="true">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="true" aria-label="Hide steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip chip-error"><i class="dot"></i>failed</span></span>
+        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">analyze</span><span class="t-md dim">Come Together · The Beatles</span><span class="chip">cpu</span></div><span class="t-sm num" style="color:var(--ds-error)">failed at step 1 of 4 · Key</span></div>
+        <span></span>
+      </div>
+      <div class="jobsteps"><div class="steps">
+        <div class="step fail"><span class="mark">!</span><span class="lbl">Key</span><span class="dur">0.6 s</span>
+          <div class="extra"><div class="trace" style="margin-top:0">Traceback (most recent call last):
+  File "stemcraft_worker/kinds/analyze_song.py", line 42, in run
+    key_candidates = detect_key(...)
+RuntimeError: input audio is shorter than the analysis frame (2048)
+  stem: other.wav: 0.4 s of non-silence after separation</div>
+          </div></div>
+        <div class="step todo"><span class="mark">2</span><span class="lbl">Beat grid</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Chords</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">4</span><span class="lbl">Write analysis</span><span class="dur">—</span></div>
+      </div></div>
+    </div>
+  </div>
+</div></div></div>
+
+<h2 class="sec t-lg">2 · History rows open the same way</h2>
+<p class="t-sm dim">Finished jobs keep their steps, so history shows where the time went. A skipped step is struck through with a reason. Jobs from before step tracking have no step record, and the page says so rather than inventing steps for them.</p>
+<div class="stage"><div class="app" style="min-height:0"><div class="main">
+  <div class="card">
+    <div class="job" data-open="true">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip chip-ok"><i class="dot"></i>done</span></span>
+        <div class="row"><span class="t-md" style="font-weight:600">import</span><span class="t-md dim">Tightrope</span><span class="chip">cpu</span></div>
+        <span class="t-sm num dim">7.8 s · 12:57:02</span>
+      </div>
+      <div class="jobsteps"><div class="steps">
+        <div class="step skip"><span class="mark">–</span><span class="lbl">Download</span><span class="dur">skipped · uploaded file</span></div>
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Decode to 48 kHz</span><span class="dur">6.1 s</span></div>
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Waveform peaks</span><span class="dur">1.7 s</span></div>
+      </div></div>
+    </div>
+    <div class="job" data-open="true">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip"><i class="dot"></i>cancelled</span></span>
+        <div class="row"><span class="t-md" style="font-weight:600">split_album</span><span class="t-md dim">Rumours</span><span class="chip">cpu</span></div>
+        <span class="t-sm num dim">3.2 s · 12:40:11</span>
+      </div>
+      <div class="jobsteps"><div class="steps">
+        <div class="step cxl"><span class="mark">&#9632;</span><span class="lbl">Render tracks<span class="det num">stopped after 4 of 11</span></span><span class="dur">3.2 s</span></div>
+        <div class="step todo"><span class="mark">2</span><span class="lbl">Build zip</span><span class="dur">—</span></div>
+      </div></div>
+    </div>
+    <div class="job" data-open="true">
+      <div class="jobrow">
+        <button class="disc" aria-expanded="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
+        <span class="chipcell"><span class="chip chip-ok"><i class="dot"></i>done</span></span>
+        <div class="row"><span class="t-md" style="font-weight:600">separate</span><span class="t-md dim">Hysteria</span><span class="chip">cuda</span></div>
+        <span class="t-sm num dim">19.4 s · 09:12:40</span>
+      </div>
+      <div class="jobsteps"><p class="t-sm dim3" style="margin:0">No step record. This job ran before step tracking existed.</p></div>
+    </div>
+  </div>
+</div></div></div>
+
+<h2 class="sec t-lg">3 · Add-song modal, now built from job steps</h2>
+<p class="t-sm dim">The modal no longer works out its steps from which files exist. It shows the import job and then the song's separate and analyze jobs, each as a small group drawn with the same StepList. Separate and analyze are queued by the worker after import finishes, so until they exist their steps come from the declared list and are drawn pending.</p>
+<div class="pair">
+<div class="stage"><div class="scrim"><div class="modal">
+  <div class="modal-head"><div class="col" style="gap:2px"><span class="t-lg">Tightrope</span><span class="t-sm dim">Walk the Moon · tightrope.flac</span></div><button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+  <div class="modal-body" style="gap:var(--ds-4)">
+    <div class="group">
+      <div class="ghead"><span class="cap">import</span><span class="chip chip-ok"><i class="dot"></i>done</span><div class="grow"></div><span class="t-sm num dim3">7.8 s</span></div>
+      <div class="steps">
+        <div class="step skip"><span class="mark">–</span><span class="lbl">Download</span><span class="dur">skipped</span></div>
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Decode to 48 kHz</span><span class="dur">6.1 s</span></div>
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Waveform peaks</span><span class="dur">1.7 s</span></div>
+      </div>
+    </div>
+    <div class="group">
+      <div class="ghead"><span class="cap">separate</span><span class="chip chip-run"><i class="dot"></i>cuda</span></div>
+      <div class="steps">
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Load audio</span><span class="dur">0.4 s</span></div>
+        <div class="step now"><span class="mark">2</span><span class="lbl">Separate 4 stems</span><span class="dur">62%</span><div class="extra"><div class="bar"><i style="width:62%"></i></div></div></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Write stems</span><span class="dur">—</span></div>
+      </div>
+    </div>
+    <div class="group">
+      <div class="ghead"><span class="cap">analyze</span><span class="t-sm dim3">not queued yet</span></div>
+      <div class="steps">
+        <div class="step todo"><span class="mark">1</span><span class="lbl">Key</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">2</span><span class="lbl">Beat grid</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Chords</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">4</span><span class="lbl">Write analysis</span><span class="dur">—</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-foot"><span class="t-sm dim3 grow" style="align-self:center">Closing won't stop the import</span><button class="btn btn-ghost">Open job queue</button><button class="btn">Close</button></div>
+</div></div></div>
+
+<div class="stage"><div class="scrim"><div class="modal">
+  <div class="modal-head"><div class="col" style="gap:2px"><span class="t-lg">Dreams</span><span class="t-sm dim">Fleetwood Mac · youtube.com</span></div><button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+  <div class="modal-body" style="gap:var(--ds-4)">
+    <div class="group">
+      <div class="ghead"><span class="cap">import</span><span class="chip chip-error"><i class="dot"></i>failed</span></div>
+      <div class="steps">
+        <div class="step fail"><span class="mark">!</span><span class="lbl">Download</span><span class="dur">2.3 s</span>
+          <div class="extra"><div class="banner banner-error" style="padding:var(--ds-3) var(--ds-4)"><div class="banner-body t-sm"><p class="banner-title">yt-dlp could not fetch the link</p><div class="trace">ERROR: [youtube] xYz: Sign in to confirm your age.
+This video may be inappropriate for some users.</div></div></div></div></div>
+        <div class="step todo"><span class="mark">2</span><span class="lbl">Decode to 48 kHz</span><span class="dur">—</span></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Waveform peaks</span><span class="dur">—</span></div>
+      </div>
+    </div>
+    <div class="group">
+      <div class="ghead"><span class="cap">separate · analyze</span><span class="t-sm dim3">won't run: import failed</span></div>
+    </div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-ghost">Open job queue</button><button class="btn">Close</button></div>
+</div></div></div>
+</div>
+
+<div class="notes t-sm dim">
+  <p class="cap">Step marks: one vocabulary everywhere</p>
+  <ul>
+    <li><b style="color:var(--ds-ok)">✓ done</b> · <b style="color:var(--ds-accent)">● running</b> with a live percentage and bar · <b>○ pending</b> · <b style="color:var(--ds-error)">! failed</b> with the real error inline · dashed <b>– skipped</b> with a reason · <b>■ cancelled</b> with where it stopped.</li>
+    <li>The optional <i>detail</i> text (for example "segment 11 of 17", "4 of 11", "bass.opus") comes from the worker as it runs and is never guessed by the UI.</li>
+    <li>The collapsed row's segment strip is the same data drawn small, so you can see where a job is without opening it.</li>
+  </ul>
+</div>
+</div></body></html>

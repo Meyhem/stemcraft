@@ -192,8 +192,8 @@ assuming it can vary.
    card in place and does not affect its neighbours (§9).
 2. **Import** — modal over the current page (`/import` with a background location,
    D-14), built on the native `<dialog>`. One form with one source zone: drop or choose
-   a file, or paste a link. The last one given is the source, and the zone collapses to
-   a row with Replace. Title and artist are shared fields, filled in from the file's own
+   a file, or paste a link. The last one given is the source. A chosen file collapses the
+   zone to a row with Replace; a link stays editable in its field. Title and artist are shared fields, filled in from the file's own
    tags when left blank and always editable; no online lookup anywhere (C-06). Title is
    required for a link. After submit, the modal shows the song's `import`, `separate` and
    `analyze` jobs as three step groups (D-17), drawn with the same StepList as the Job

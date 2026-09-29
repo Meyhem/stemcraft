@@ -1,0 +1,518 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Import Modal Design</title><style>/* Stemcraft design tokens — single source of truth.
+   Rule of the system: SATURATION carries meaning.
+   Muted hues (~65% sat) identify a STEM and appear only where a stem is named.
+   Vivid hues (~95% sat) are SYSTEM SIGNALS and appear only in chrome.
+   The two sets never share a context, so a vivid red always means "failed". */
+:root{
+  /* ground + surfaces — depth comes from surface steps + 1px borders, not shadows */
+  --ds-ground:#0B0C0E;
+  --ds-surface:#131519;
+  --ds-raised:#1A1D22;
+  --ds-overlay:#22262D;
+  --ds-border:#2A2F37;
+  --ds-border-strong:#3A414B;
+
+  /* text */
+  --ds-text:#EDEFF2;
+  --ds-text-2:#9BA3AE;   /* ~7:1 on ground */
+  --ds-text-3:#626A76;
+
+  /* stem identity — muted. Never the sole carrier: fixed order + always labelled. */
+  --ds-vocals:#E0A458;
+  --ds-drums:#D9605F;
+  --ds-bass:#4FC3B0;
+  --ds-other:#8E85E0;
+
+  /* system signals — vivid */
+  --ds-ok:#30D158;
+  --ds-warn:#FFB020;
+  --ds-error:#FF3B30;
+  --ds-queued:#626A76;
+  --ds-accent:#4FA3FF;   /* focus rings, selected chrome, links */
+
+  /* text ON a filled control. A lit control is chrome (U-01), so these pair with
+     accent/error/warn fills only -- never with a stem hue. */
+  --ds-on-accent:#04121F;
+  --ds-on-error:#180000;
+  --ds-on-warn:#1A1200;
+
+  /* type — one step up from typical web for the 1.5 m music-stand constraint */
+  --ds-font:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif;
+  --ds-mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --ds-t-display:48px; --ds-lh-display:52px;
+  --ds-t-xl:32px;      --ds-lh-xl:38px;
+  --ds-t-lg:24px;      --ds-lh-lg:30px;
+  --ds-t-md:18px;      --ds-lh-md:26px;   /* body default */
+  --ds-t-sm:15px;      --ds-lh-sm:22px;
+  --ds-t-xs:13px;      --ds-lh-xs:18px;   /* floor — dense tables only */
+
+  /* space — 4px base */
+  --ds-1:4px; --ds-2:8px; --ds-3:12px; --ds-4:16px;
+  --ds-5:24px; --ds-6:32px; --ds-7:48px; --ds-8:64px; --ds-9:96px;
+
+  /* shape */
+  --ds-r-input:4px; --ds-r-btn:8px; --ds-r-panel:12px; --ds-r-pill:999px;
+
+  /* hit targets — two tiers, enforced */
+  --ds-hit-perform:56px;  /* touched while holding an instrument */
+  --ds-hit-setup:40px;    /* touched with both hands free */
+  --ds-hit-min:32px;      /* absolute floor */
+
+  /* motion — the playhead is NEVER animated by CSS (D-07: engine owns the clock) */
+  --ds-m-flip:120ms; --ds-m-panel:200ms; --ds-m-progress:400ms;
+  --ds-ease:cubic-bezier(.2,.7,.3,1);
+
+  --ds-shadow-overlay:0 24px 48px -12px rgba(0,0,0,.72);
+}
+@media (prefers-reduced-motion:reduce){
+  :root{ --ds-m-flip:0ms; --ds-m-panel:0ms; --ds-m-progress:0ms; }
+}
+
+/* ---------- base ---------- */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--ds-ground); color:var(--ds-text);
+  font:400 var(--ds-t-md)/var(--ds-lh-md) var(--ds-font);
+  -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:2px solid var(--ds-accent); outline-offset:2px}
+.num{font-family:var(--ds-mono); font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.t-display{font-size:var(--ds-t-display);line-height:var(--ds-lh-display);font-weight:600}
+.t-xl{font-size:var(--ds-t-xl);line-height:var(--ds-lh-xl);font-weight:600}
+.t-lg{font-size:var(--ds-t-lg);line-height:var(--ds-lh-lg);font-weight:600}
+.t-md{font-size:var(--ds-t-md);line-height:var(--ds-lh-md)}
+.t-sm{font-size:var(--ds-t-sm);line-height:var(--ds-lh-sm)}
+.t-xs{font-size:var(--ds-t-xs);line-height:var(--ds-lh-xs)}
+.dim{color:var(--ds-text-2)} .dim3{color:var(--ds-text-3)}
+.cap{text-transform:uppercase;letter-spacing:.08em;font-size:var(--ds-t-xs);font-weight:600;color:var(--ds-text-3)}
+.row{display:flex;align-items:center;gap:var(--ds-3)}
+.col{display:flex;flex-direction:column}
+.grow{flex:1} .wrap{flex-wrap:wrap}
+
+/* ---------- surfaces ---------- */
+.panel{background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel)}
+.panel-pad{padding:var(--ds-5)}
+.card{background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
+.divider{height:1px;background:var(--ds-border);border:0;margin:0}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--ds-2);
+  min-height:var(--ds-hit-setup); padding:0 var(--ds-4);
+  border-radius:var(--ds-r-btn); border:1px solid transparent;
+  font:600 var(--ds-t-sm)/1 var(--ds-font); color:var(--ds-text);
+  background:var(--ds-raised); border-color:var(--ds-border-strong);
+  cursor:pointer; transition:background var(--ds-m-flip) var(--ds-ease),border-color var(--ds-m-flip) var(--ds-ease);
+  white-space:nowrap;
+}
+.btn:hover{background:var(--ds-overlay)}
+.btn-primary{background:var(--ds-accent);border-color:var(--ds-accent);color:var(--ds-on-accent)}
+.btn-primary:hover{filter:brightness(1.1);background:var(--ds-accent)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--ds-text-2);font-weight:500}
+.btn-ghost:hover{background:var(--ds-raised);color:var(--ds-text)}
+.btn-danger{background:transparent;border-color:var(--ds-error);color:var(--ds-error)}
+.btn-danger:hover{background:rgba(255,59,48,.12)}
+.btn-perform{min-height:var(--ds-hit-perform);padding:0 var(--ds-5);font-size:var(--ds-t-md)}
+.btn[disabled],.btn[aria-disabled=true]{opacity:.4;pointer-events:none}
+.iconbtn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:var(--ds-hit-setup);height:var(--ds-hit-setup);
+  border-radius:var(--ds-r-btn);border:1px solid var(--ds-border-strong);
+  background:var(--ds-raised);color:var(--ds-text-2);cursor:pointer;
+  transition:all var(--ds-m-flip) var(--ds-ease);
+}
+.iconbtn:hover{background:var(--ds-overlay);color:var(--ds-text)}
+.iconbtn-perform{width:var(--ds-hit-perform);height:var(--ds-hit-perform)}
+.iconbtn svg{width:20px;height:20px;fill:currentColor}
+.iconbtn-perform svg{width:26px;height:26px}
+.iconbtn[aria-pressed=true]{background:var(--ds-accent);border-color:var(--ds-accent);color:var(--ds-on-accent)}
+
+/* ---------- chips / badges ---------- */
+.chip{
+  display:inline-flex;align-items:center;gap:var(--ds-2);
+  height:28px;padding:0 var(--ds-3);border-radius:var(--ds-r-pill);
+  background:var(--ds-raised);border:1px solid var(--ds-border-strong);
+  font:600 var(--ds-t-xs)/1 var(--ds-font);color:var(--ds-text-2);white-space:nowrap;
+}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.chip-ok{color:var(--ds-ok);border-color:rgba(48,209,88,.4);background:rgba(48,209,88,.1)}
+.chip-warn{color:var(--ds-warn);border-color:rgba(255,176,32,.4);background:rgba(255,176,32,.1)}
+.chip-error{color:var(--ds-error);border-color:rgba(255,59,48,.4);background:rgba(255,59,48,.1)}
+.chip-run{color:var(--ds-accent);border-color:rgba(79,163,255,.4);background:rgba(79,163,255,.1)}
+.chip-lg{height:var(--ds-hit-setup);padding:0 var(--ds-4);font-size:var(--ds-t-sm)}
+
+/* ---------- banners ---------- */
+.banner{
+  display:flex;gap:var(--ds-4);align-items:flex-start;
+  padding:var(--ds-4) var(--ds-5);border-radius:var(--ds-r-panel);
+  border:1px solid;background:var(--ds-surface);
+}
+.banner .bicon{flex:none;width:24px;height:24px;margin-top:2px}
+.banner .bicon svg{width:24px;height:24px;fill:currentColor}
+.banner-warn{border-color:rgba(255,176,32,.45);background:rgba(255,176,32,.08);color:var(--ds-warn)}
+.banner-error{border-color:rgba(255,59,48,.45);background:rgba(255,59,48,.08);color:var(--ds-error)}
+.banner-body{color:var(--ds-text)}
+.banner-title{font-weight:600;margin:0 0 var(--ds-1)}
+.trace{
+  font:400 var(--ds-t-xs)/1.6 var(--ds-mono);color:var(--ds-text-2);
+  background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-input);
+  padding:var(--ds-3);margin-top:var(--ds-3);white-space:pre;overflow-x:auto;
+}
+
+/* ---------- fields ---------- */
+.field{display:flex;flex-direction:column;gap:var(--ds-2)}
+.field > label{font-size:var(--ds-t-sm);font-weight:600;color:var(--ds-text-2)}
+.input{
+  height:var(--ds-hit-setup);padding:0 var(--ds-3);
+  background:var(--ds-ground);border:1px solid var(--ds-border-strong);
+  border-radius:var(--ds-r-input);color:var(--ds-text);
+  font:400 var(--ds-t-md)/1 var(--ds-font);width:100%;
+}
+.input::placeholder{color:var(--ds-text-3)}
+.input:focus{border-color:var(--ds-accent);outline:none}
+.drop{
+  border:2px dashed var(--ds-border-strong);border-radius:var(--ds-r-panel);
+  padding:var(--ds-8) var(--ds-5);text-align:center;color:var(--ds-text-2);
+  background:rgba(255,255,255,.015);
+}
+.check{display:inline-flex;align-items:center;gap:var(--ds-3);min-height:var(--ds-hit-setup);cursor:pointer}
+.check .box{
+  width:22px;height:22px;flex:none;border-radius:var(--ds-r-input);
+  border:2px solid var(--ds-border-strong);display:inline-flex;align-items:center;justify-content:center;
+}
+.check[data-on=true] .box{background:var(--ds-accent);border-color:var(--ds-accent)}
+.check[data-on=true] .box::after{content:"";width:11px;height:6px;border:2px solid var(--ds-on-accent);border-top:0;border-right:0;transform:rotate(-45deg) translateY(-2px)}
+
+/* ---------- segmented ---------- */
+.seg{display:inline-flex;background:var(--ds-ground);border:1px solid var(--ds-border-strong);border-radius:var(--ds-r-btn);padding:3px;gap:3px}
+.seg > button{
+  min-height:34px;padding:0 var(--ds-4);border:0;background:transparent;border-radius:5px;
+  color:var(--ds-text-2);font:600 var(--ds-t-sm)/1 var(--ds-font);cursor:pointer;
+}
+.seg > button[aria-selected=true]{background:var(--ds-overlay);color:var(--ds-text)}
+
+/* ---------- slider ---------- */
+.slider{display:flex;flex-direction:column;gap:var(--ds-2);min-width:180px}
+.slider .shead{display:flex;justify-content:space-between;align-items:baseline}
+.slider .slabel{font-size:var(--ds-t-sm);font-weight:600;color:var(--ds-text-2)}
+.slider .sval{font-size:var(--ds-t-md);font-weight:600}
+.track{position:relative;height:8px;border-radius:var(--ds-r-pill);background:var(--ds-ground);border:1px solid var(--ds-border)}
+.track .fill{position:absolute;inset:0 auto 0 0;border-radius:var(--ds-r-pill);background:var(--ds-accent)}
+.track .knob{
+  position:absolute;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;
+  background:var(--ds-text);border:2px solid var(--ds-ground);box-shadow:0 2px 6px rgba(0,0,0,.6);
+}
+.track .center-tick{position:absolute;top:-4px;bottom:-4px;left:50%;width:1px;background:var(--ds-border-strong)}
+.slider-perform .track{height:14px}
+.slider-perform .knob{width:32px;height:32px;margin:-16px 0 0 -16px}
+
+/* ---------- progress ---------- */
+.bar{height:6px;border-radius:var(--ds-r-pill);background:var(--ds-ground);border:1px solid var(--ds-border);overflow:hidden}
+.bar > i{display:block;height:100%;background:var(--ds-accent);transition:width var(--ds-m-progress) linear}
+.bar-ok > i{background:var(--ds-ok)} .bar-error > i{background:var(--ds-error)}
+
+/* ---------- stem strips ---------- */
+.stem{--c:var(--ds-text-2)}
+.stem-v{--c:var(--ds-vocals)} .stem-d{--c:var(--ds-drums)}
+.stem-b{--c:var(--ds-bass)}   .stem-o{--c:var(--ds-other)}
+.stem-row{
+  display:grid;grid-template-columns:200px 1fr;align-items:stretch;
+  border-bottom:1px solid var(--ds-border);
+}
+.stem-row:last-child{border-bottom:0}
+.stem-ctl{
+  display:flex;flex-direction:column;gap:var(--ds-2);justify-content:center;
+  padding:var(--ds-3) var(--ds-4);background:var(--ds-surface);
+  border-left:3px solid var(--c);
+}
+.stem-name{display:flex;align-items:center;gap:var(--ds-2);font-weight:600;font-size:var(--ds-t-md)}
+.stem-name .sw{width:10px;height:10px;border-radius:2px;background:var(--c);flex:none}
+.ms{display:flex;gap:var(--ds-2)}
+.ms button{
+  width:var(--ds-hit-perform);height:44px;border-radius:var(--ds-r-btn);cursor:pointer;
+  border:1px solid var(--ds-border-strong);background:var(--ds-raised);
+  color:var(--ds-text-2);font:700 var(--ds-t-sm)/1 var(--ds-font);
+  transition:all var(--ds-m-flip) var(--ds-ease);
+}
+.ms button[aria-pressed=true][data-k=m]{background:var(--ds-error);border-color:var(--ds-error);color:var(--ds-on-error)}
+.ms button[aria-pressed=true][data-k=s]{background:var(--ds-warn);border-color:var(--ds-warn);color:var(--ds-on-warn)}
+.stem-lane{position:relative;background:var(--ds-ground);display:flex;align-items:center;padding:0 0 0 0;overflow:hidden}
+.stem-lane.muted{opacity:.28}
+.stem-lane svg{display:block;width:100%;height:100%}
+.gainbar{height:4px;border-radius:2px;background:var(--ds-ground);border:1px solid var(--ds-border);position:relative}
+.gainbar > i{position:absolute;inset:0 auto 0 0;background:var(--c);border-radius:2px}
+
+/* ---------- waveform furniture ---------- */
+.wavewrap{position:relative;background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
+.grid-beats{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.055) 0 1px,transparent 1px 42px)}
+.grid-bars{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.16) 0 1px,transparent 1px 168px)}
+.loopregion{position:absolute;top:0;bottom:0;background:rgba(79,163,255,.13);border-left:2px solid var(--ds-accent);border-right:2px solid var(--ds-accent);pointer-events:none}
+.loopregion::before,.loopregion::after{
+  content:attr(data-a);position:absolute;top:0;background:var(--ds-accent);color:var(--ds-on-accent);
+  font:700 var(--ds-t-xs)/18px var(--ds-mono);padding:0 6px;
+}
+.loopregion::before{left:-2px}
+.loopregion::after{content:attr(data-b);right:-2px}
+.playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--ds-text);pointer-events:none;box-shadow:0 0 12px rgba(237,239,242,.6)}
+.playhead::before{content:"";position:absolute;top:0;left:-6px;border:7px solid transparent;border-top-color:var(--ds-text);border-bottom:0}
+/* The ruler is the click-to-seek strip: a tinted band with a pointer cursor that
+   brightens on hover, so it reads as a different target from the lanes below it (a
+   press there zooms or, in the splitter, cuts). */
+.ruler{display:flex;height:26px;border-bottom:1px solid var(--ds-border-strong);align-items:center;position:relative;
+  background:color-mix(in srgb,var(--ds-accent) 10%,var(--ds-raised));cursor:pointer}
+.ruler:hover,.ruler.is-hover{background:color-mix(in srgb,var(--ds-accent) 22%,var(--ds-raised))}
+.ruler span{position:absolute;font:600 var(--ds-t-xs)/1 var(--ds-mono);color:var(--ds-text-2);transform:translateX(4px)}
+
+/* Zoom controls, shared by the Song view transport and the splitter toolbar:
+   − / readout of what is in view / + / Fit. */
+.zoomctl{display:flex;align-items:center;gap:var(--ds-2)}
+.zoomctl .btn{min-width:40px;padding:0 var(--ds-3)}
+.zoomval{min-width:11ch;text-align:center;font:400 var(--ds-t-sm)/1 var(--ds-mono);font-variant-numeric:tabular-nums;color:var(--ds-text-2);white-space:nowrap}
+
+/* Drag-to-zoom: the range a drag across the lanes (or the splitter waveform) will fit. */
+.zoomsel{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--ds-accent) 18%,transparent);
+  border-left:1px solid var(--ds-accent);border-right:1px solid var(--ds-accent);pointer-events:none}
+
+/* Album splitter cut: one 2 px amber line with its number on a tag. The line is not the
+   hit target -- a press within 8 px grabs it -- so it can stay this thin. Selected: the
+   line turns accent and the tag gets the focus ring. */
+.cutmark{position:absolute;top:26px;bottom:0;width:2px;margin-left:-1px;background:var(--ds-warn);pointer-events:none}
+.cutmark.is-selected{background:var(--ds-accent)}
+.cuttag{position:absolute;top:28px;min-width:22px;height:22px;padding:0 var(--ds-1);transform:translateX(-50%);
+  display:flex;align-items:center;justify-content:center;background:var(--ds-warn);color:var(--ds-on-warn);
+  border-radius:var(--ds-r-btn);font:600 var(--ds-t-xs)/1 var(--ds-mono);cursor:ew-resize}
+.cuttag.is-selected{outline:2px solid var(--ds-accent);outline-offset:2px}
+
+/* ---------- transport ---------- */
+.transport{display:flex;align-items:center;gap:var(--ds-4);padding:var(--ds-4) var(--ds-5);background:var(--ds-surface);border-top:1px solid var(--ds-border)}
+.readout{display:flex;align-items:baseline;gap:var(--ds-2)}
+.readout .big{font:600 var(--ds-t-display)/1 var(--ds-mono);font-variant-numeric:tabular-nums}
+.readout .unit{font-size:var(--ds-t-sm);color:var(--ds-text-3);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+
+/* ---------- table ---------- */
+.tbl{width:100%;border-collapse:collapse;font-size:var(--ds-t-sm)}
+.tbl th{
+  text-align:left;padding:var(--ds-2) var(--ds-3);font-size:var(--ds-t-xs);font-weight:700;
+  text-transform:uppercase;letter-spacing:.08em;color:var(--ds-text-3);
+  border-bottom:1px solid var(--ds-border);white-space:nowrap;
+}
+.tbl td{padding:var(--ds-3);border-bottom:1px solid var(--ds-border);vertical-align:middle;height:var(--ds-hit-setup)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr:hover{background:var(--ds-raised)}
+
+/* ---------- app shell ---------- */
+.app{display:flex;flex-direction:column;height:100%;min-height:100vh;background:var(--ds-ground)}
+.topbar{display:flex;align-items:center;gap:var(--ds-4);height:64px;padding:0 var(--ds-5);border-bottom:1px solid var(--ds-border);background:var(--ds-surface);flex:none}
+.brand{display:flex;align-items:center;gap:var(--ds-2);font-weight:700;font-size:var(--ds-t-md);letter-spacing:-.01em}
+.brand .mark{display:flex;gap:2px;align-items:flex-end;height:20px}
+.brand .mark i{width:4px;border-radius:1px;display:block}
+.main{flex:1;min-height:0;overflow:auto;padding:var(--ds-5)}
+.modal{width:100%;max-width:620px;background:var(--ds-surface);border:1px solid var(--ds-border-strong);border-radius:var(--ds-r-panel);box-shadow:var(--ds-shadow-overlay);overflow:hidden}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:var(--ds-5);border-bottom:1px solid var(--ds-border)}
+.modal-body{padding:var(--ds-5);display:flex;flex-direction:column;gap:var(--ds-5)}
+.modal-foot{display:flex;justify-content:flex-end;gap:var(--ds-3);padding:var(--ds-4) var(--ds-5);border-top:1px solid var(--ds-border);background:var(--ds-raised)}
+.scrim{background:rgba(5,6,8,.72);padding:var(--ds-7);display:flex;justify-content:center;align-items:flex-start;min-height:100vh}
+
+/* ---------- empty state ---------- */
+.empty{display:flex;flex-direction:column;align-items:center;gap:var(--ds-4);padding:var(--ds-9) var(--ds-5);text-align:center;color:var(--ds-text-2)}
+.empty .glyph{opacity:.35}
+
+/* ---------- doc furniture (preview pages only) ---------- */
+.doc{padding:var(--ds-6);display:flex;flex-direction:column;gap:var(--ds-6)}
+.doc h1{font-size:var(--ds-t-lg);margin:0;font-weight:600}
+.doc h2{font-size:var(--ds-t-sm);margin:0;text-transform:uppercase;letter-spacing:.08em;color:var(--ds-text-3)}
+.sec{display:flex;flex-direction:column;gap:var(--ds-3)}
+.note{font-size:var(--ds-t-sm);color:var(--ds-text-2);max-width:72ch}
+.note b{color:var(--ds-text);font-weight:600}
+
+/* ---------- near-silent stem (a stem can be empty; see domain spec) ---------- */
+.stem-row.silent .stem-ctl{opacity:.55}
+.stem-row.silent .ms button{pointer-events:none}
+.stem-lane.silent svg{opacity:.16}
+.silent-note{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.silent-note > span{
+  display:inline-flex;align-items:center;gap:var(--ds-2);
+  font:600 var(--ds-t-sm)/1 var(--ds-font);color:var(--ds-text-3);
+  background:var(--ds-ground);border:1px solid var(--ds-border);
+  border-radius:var(--ds-r-pill);padding:var(--ds-2) var(--ds-4);
+}
+
+body{padding:var(--ds-6) var(--ds-4)}
+h1.pg{margin:0 0 var(--ds-2)} .lede{margin:0 0 var(--ds-6);max-width:900px}
+.frames{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:var(--ds-6)}
+.frame{display:flex;flex-direction:column;gap:var(--ds-3)}
+.frame h2{margin:0;font-size:var(--ds-t-md)} .frame p{margin:0}
+.stage{position:relative;border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden;background:var(--ds-ground)}
+.stage .scrim{min-height:0;padding:var(--ds-5) var(--ds-4);position:relative}
+.modal{max-width:560px}
+/* page underneath */
+.under{position:absolute;inset:0;padding:var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-4)}
+.under nav{display:flex;gap:var(--ds-5);font-size:var(--ds-t-sm);color:var(--ds-text-2)}
+.under nav b{color:var(--ds-text)}
+.under .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--ds-3)}
+.under .cards div{height:120px;background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel)}
+.stage.over .scrim{background:rgba(5,6,8,.72)}
+/* source zone */
+.source{border:2px dashed var(--ds-border-strong);border-radius:var(--ds-r-panel);padding:var(--ds-5);display:flex;flex-direction:column;gap:var(--ds-4);background:rgba(255,255,255,.015)}
+.source .filepart{text-align:center;color:var(--ds-text-2)}
+.or{display:flex;align-items:center;gap:var(--ds-3);color:var(--ds-text-3)}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--ds-border)}
+.chosen{padding:var(--ds-3) var(--ds-4);gap:var(--ds-3)}
+.chosen .ico{color:var(--ds-ok);display:flex}
+.chosen .txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--ds-4)}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}}
+.hint{margin:calc(-1 * var(--ds-3)) 0 0}
+.req{color:var(--ds-accent)}
+/* steps (from the existing mockup) */
+.steps{display:flex;flex-direction:column;gap:var(--ds-3)}
+.step{display:flex;align-items:flex-start;gap:var(--ds-3);font-size:var(--ds-t-sm)}
+.step .mark{width:24px;height:24px;border-radius:50%;border:2px solid var(--ds-border-strong);flex:none;display:flex;align-items:center;justify-content:center;font:700 13px/1 var(--ds-mono);color:var(--ds-text-3)}
+.step .body{display:flex;flex-direction:column;gap:var(--ds-2);flex:1;min-width:0;padding-top:1px}
+.step.done .mark{background:var(--ds-ok);border-color:var(--ds-ok);color:var(--ds-ground)}
+.step.now .mark{border-color:var(--ds-accent);color:var(--ds-accent)}
+.step.fail .mark{background:var(--ds-error);border-color:var(--ds-error);color:var(--ds-on-error)}
+.step.done .lbl{color:var(--ds-text-2)} .step.now .lbl{color:var(--ds-text);font-weight:600}
+.step.todo .lbl{color:var(--ds-text-3)} .step.fail .lbl{color:var(--ds-error);font-weight:600}
+.songline{gap:var(--ds-3)}
+.notes{margin-top:var(--ds-7);max-width:900px}
+.notes li{margin-bottom:var(--ds-2)}
+</style></head><body>
+
+<h1 class="pg t-xl">Import as a modal</h1>
+<p class="lede dim">One form, one source zone. You give it a file or a link, whichever came last wins. After you submit, the same modal shows the five pipeline steps, each derived from the song's files and jobs. Built only from existing tokens and components.</p>
+
+<div class="frames">
+
+<!-- 1. empty, over the library -->
+<section class="frame">
+  <h2>1 · Empty, opened over the Library</h2>
+  <p class="t-sm dim">"New Song" or the nav link opens <span class="num">/import</span> on top of the current page. Esc, ✕, Cancel or a click on the scrim closes it.</p>
+  <div class="stage over">
+    <div class="under" aria-hidden="true"><nav><b>Library</b><span>Import</span><span>Album splitter</span><span>Job queue</span></nav><div class="cards"><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+    <div class="scrim"><div class="modal">
+      <div class="modal-head">
+        <div class="col" style="gap:2px"><span class="t-lg">Add song</span><span class="t-sm dim">No format whitelist. If ffmpeg decodes it, it is accepted.</span></div>
+        <button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="source">
+          <div class="filepart">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="var(--ds-text-3)"><path d="M12 3l5 5h-3v6h-4V8H7l5-5zM5 18h14v2H5z"/></svg>
+            <div class="t-md" style="color:var(--ds-text);margin-top:var(--ds-2)">Drop an audio or video file</div>
+            <div class="t-sm" style="margin-top:var(--ds-1)">For video, the audio track is extracted</div>
+            <button class="btn" style="margin-top:var(--ds-4)">Choose file…</button>
+          </div>
+          <div class="or t-sm">or paste a link</div>
+          <div class="field"><input class="input" id="u1" placeholder="https://… (YouTube and direct media links)"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Title</label><input class="input" placeholder=""></div>
+          <div class="field"><label>Artist</label><input class="input"></div>
+        </div>
+      </div>
+      <div class="modal-foot"><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary" disabled>Import &amp; separate</button></div>
+    </div></div>
+  </div>
+</section>
+
+<!-- 2. file chosen -->
+<section class="frame">
+  <h2>2 · A file is chosen</h2>
+  <p class="t-sm dim">The zone collapses to a single row for the file. "Replace" brings the zone back, and choosing a file clears any link. Title is optional: left blank, the server fills it from the file's tags.</p>
+  <div class="stage"><div class="scrim"><div class="modal">
+    <div class="modal-head"><div class="col" style="gap:2px"><span class="t-lg">Add song</span><span class="t-sm dim">No format whitelist. If ffmpeg decodes it, it is accepted.</span></div><button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+    <div class="modal-body">
+      <div class="row panel chosen">
+        <span class="ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>
+        <span class="t-sm num grow txt">tightrope.flac · 41.2 MB</span>
+        <button class="btn btn-ghost" style="min-height:32px">Replace</button>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Title</label><input class="input" placeholder="From the file's tags"></div>
+        <div class="field"><label>Artist</label><input class="input" placeholder="From the file's tags"></div>
+      </div>
+      <p class="t-sm dim3 hint">Left blank, these come from the file's own tags. There's no online lookup anywhere (C-06).</p>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary">Import &amp; separate</button></div>
+  </div></div></div>
+</section>
+
+<!-- 3. link pasted -->
+<section class="frame">
+  <h2>3 · A link is pasted</h2>
+  <p class="t-sm dim">The same row, showing the link instead. A link has nothing to read tags from until it's downloaded, so Title becomes required and the hint says why.</p>
+  <div class="stage"><div class="scrim"><div class="modal">
+    <div class="modal-head"><div class="col" style="gap:2px"><span class="t-lg">Add song</span><span class="t-sm dim">No format whitelist. If ffmpeg decodes it, it is accepted.</span></div><button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+    <div class="modal-body">
+      <div class="row panel chosen">
+        <span class="ico" style="color:var(--ds-accent)"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3.9 12a3.1 3.1 0 013.1-3.1h4V7H7a5 5 0 000 10h4v-1.9H7A3.1 3.1 0 013.9 12zM8 13h8v-2H8v2zm9-6h-4v1.9h4a3.1 3.1 0 010 6.2h-4V17h4a5 5 0 000-10z"/></svg></span>
+        <span class="t-sm num grow txt">https://www.youtube.com/watch?v=dQw4w9WgXcQ</span>
+        <button class="btn btn-ghost" style="min-height:32px">Replace</button>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Title <span class="req">· required</span></label><input class="input" value="Tightrope"></div>
+        <div class="field"><label>Artist</label><input class="input" value="Walk the Moon"></div>
+      </div>
+      <p class="t-sm dim3 hint">A link has no tags to read before it's downloaded.</p>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary">Import &amp; separate</button></div>
+  </div></div></div>
+</section>
+
+<!-- 4. running -->
+<section class="frame">
+  <h2>4 · Submitted, pipeline running</h2>
+  <p class="t-sm dim">The form is swapped for the song and its five steps. Each step's state is derived from files and jobs, never stored. Closing the modal doesn't stop the work, and the Library card keeps tracking it. When step 5 is done, the primary button becomes "Open song".</p>
+  <div class="stage"><div class="scrim"><div class="modal">
+    <div class="modal-head"><div class="col" style="gap:2px"><span class="t-lg">Tightrope</span><span class="t-sm dim">Walk the Moon · tightrope.flac</span></div><button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+    <div class="modal-body">
+      <div class="steps">
+        <div class="step done"><span class="mark">&#10003;</span><div class="body"><span class="lbl">Keep the original, untouched</span></div></div>
+        <div class="step done"><span class="mark">&#10003;</span><div class="body"><span class="lbl">Decode to 48 kHz stereo WAV</span></div></div>
+        <div class="step done"><span class="mark">&#10003;</span><div class="body"><span class="lbl">Compute waveform peaks</span></div></div>
+        <div class="step now"><span class="mark">4</span><div class="body"><div class="row" style="justify-content:space-between"><span class="lbl">Separate into 4 stems</span><span class="chip chip-run"><span class="dot"></span>cuda · <span class="num">62%</span></span></div><div class="bar"><i style="width:62%"></i></div></div></div>
+        <div class="step todo"><span class="mark">5</span><div class="body"><span class="lbl">Analyze key, beat grid and chords</span></div></div>
+      </div>
+    </div>
+    <div class="modal-foot"><span class="t-sm dim3 grow" style="align-self:center">Closing won't stop the import</span><button class="btn">Close</button><button class="btn btn-primary" disabled>Open song</button></div>
+  </div></div></div>
+</section>
+
+<!-- 5. failed -->
+<section class="frame">
+  <h2>5 · A step failed</h2>
+  <p class="t-sm dim">The failed step turns red and shows the job's real error (N-08). The original file is kept, so the import can be retried from the Job queue. Steps after the failure stay grey.</p>
+  <div class="stage"><div class="scrim"><div class="modal">
+    <div class="modal-head"><div class="col" style="gap:2px"><span class="t-lg">Tightrope</span><span class="t-sm dim">Walk the Moon · tightrope.flac</span></div><button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+    <div class="modal-body">
+      <div class="steps">
+        <div class="step done"><span class="mark">&#10003;</span><div class="body"><span class="lbl">Keep the original, untouched</span></div></div>
+        <div class="step fail"><span class="mark">!</span><div class="body"><span class="lbl">Decode to 48 kHz stereo WAV</span>
+          <div class="banner banner-error"><div class="banner-body t-sm"><p class="banner-title">ffmpeg could not decode the file</p><div class="trace">[flac @ 0x5581] invalid sync code
+Error while decoding stream #0:0: Invalid data
+original.flac: Invalid data found when processing input</div></div></div>
+        </div></div>
+        <div class="step todo"><span class="mark">3</span><div class="body"><span class="lbl">Compute waveform peaks</span></div></div>
+        <div class="step todo"><span class="mark">4</span><div class="body"><span class="lbl">Separate into 4 stems</span></div></div>
+        <div class="step todo"><span class="mark">5</span><div class="body"><span class="lbl">Analyze key, beat grid and chords</span></div></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost">Open job queue</button><button class="btn">Close</button></div>
+  </div></div></div>
+</section>
+
+</div>
+
+<div class="notes t-sm dim">
+  <p class="cap">Differences from the existing mockup</p>
+  <ul>
+    <li>The Upload | URL toggle is gone. A single source zone takes either a file or a link.</li>
+    <li>Title and artist aren't filled in on the client. The server reads the tags on upload, so the fields show a "From the file's tags" placeholder. No client-side tag probe is added.</li>
+    <li>Pipeline steps appear only after submit, not as a preview under the form.</li>
+  </ul>
+</div>
+</body></html>
