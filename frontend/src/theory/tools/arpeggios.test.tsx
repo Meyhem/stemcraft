@@ -59,3 +59,66 @@ test('arpeggios: a readable chord in the link raises no alert', async () => {
   await screen.findByRole('heading', { name: 'Arpeggios' });
   expect(screen.queryByRole('alert')).toBeNull();
 });
+
+test('arpeggios: a box that lacks a chord tone says which, root included', async () => {
+  renderTool('/theory/arpeggios?root=A&q=m7');
+  await screen.findByRole('heading', { name: 'Arpeggios' });
+  expect(screen.queryByRole('status')).toBeNull();
+  position('2');
+  expect(screen.getByText('frets 8–11')).toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveTextContent('This box has no A (R) — it sits outside frets 8–11.');
+  position('4');
+  expect(screen.getByRole('status')).toHaveTextContent('This box has no E (5) — it sits outside frets 3–6.');
+  position('All');
+  expect(screen.queryByRole('status')).toBeNull();
+});
+
+test('arpeggios: a box holding every chord tone shows no missing-tone note', async () => {
+  // Am7 position 1 (frets 5–8) holds A, C, E and G.
+  renderTool('/theory/arpeggios?root=A&q=m7');
+  await screen.findByRole('heading', { name: 'Arpeggios' });
+  position('1');
+  expect(screen.queryByRole('status')).toBeNull();
+});
+
+test('arpeggios: a complete guitar box shows no missing-tone note', async () => {
+  const guitar = { instrument: { kind: 'guitar' as const, strings: 6 as const, tuning: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'], left_handed: false } };
+  renderTool('/theory/arpeggios?root=C&q=maj', { theory: guitar });
+  await screen.findByRole('heading', { name: 'Arpeggios' });
+  position('1');
+  expect(screen.getByText('frets 8–12')).toBeInTheDocument();
+  expect(screen.queryByRole('status')).toBeNull();
+});
+
+test('arpeggios: Play order is disabled with a reason until a position is chosen, and off shows intervals', async () => {
+  const { dots } = renderTool('/theory/arpeggios?root=A&q=m7');
+  await screen.findByRole('heading', { name: 'Arpeggios' });
+  const box = screen.getByRole('checkbox', { name: 'Play order' });
+  expect(box).toBeDisabled();
+  expect(box.closest('label')).toHaveAttribute('title', 'Choose a position to number its notes');
+  position('1');
+  expect(box).toBeEnabled();
+  expect(dots()).toContain('s0f5:6');
+  fireEvent.click(box);
+  expect(dots()).toContain('s0f5:♭3');
+  expect(dots()).toContain('s3f5:R');
+  expect(dots().every((d) => ['R', '♭3', '5', '♭7'].includes(d.split(':')[1]!))).toBe(true);
+});
+
+test('arpeggios: a slash bass that is not a chord tone is listed and said not to be drawn', async () => {
+  renderTool('/theory/arpeggios?chord=C/Bb');
+  await screen.findByRole('heading', { name: 'Arpeggios' });
+  const chips = within(screen.getByRole('list', { name: 'Notes' })).getAllByRole('listitem');
+  expect(chips.map((c) => c.textContent)).toEqual(['CR', 'E3', 'G5', 'B♭♭7']);
+  expect(screen.getByText(/The slash bass B♭ is not a chord tone and is not drawn on the neck\./)).toBeInTheDocument();
+});
+
+test('arpeggios: a chosen position is dropped when the quality changes', async () => {
+  renderTool('/theory/arpeggios?root=A&q=m7');
+  await screen.findByRole('heading', { name: 'Arpeggios' });
+  position('1');
+  expect(screen.getByText('frets 5–8')).toBeInTheDocument();
+  fireEvent.click(within(screen.getByRole('group', { name: 'Quality' })).getAllByRole('button')[0]!);
+  expect(within(screen.getByRole('group', { name: 'Position' })).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.queryByText(/^frets /)).toBeNull();
+});

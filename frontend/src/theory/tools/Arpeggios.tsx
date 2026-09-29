@@ -36,6 +36,11 @@ export function Arpeggios() {
     ? all.filter((p) => p.fret >= active.lo && p.fret <= active.hi).sort((a, b) => a.midi - b.midi || b.string - a.string)
     : [];
 
+  // A 4-fret box can miss a chord tone, the root included; say which rather than number it as if it were whole (N-08).
+  const present = new Set(inWindow.map((p) => p.pc));
+  const missing = active ? chord.notes.filter((n) => !present.has(n.pc)) : [];
+  const chips = chord.extraBass ? [...chord.notes, chord.extraBass] : chord.notes;
+
   const dots: NeckDot[] = all.map((p) => {
     const idx = inWindow.findIndex((q) => q.string === p.string && q.fret === p.fret);
     const note = chord.notes.find((n) => n.pc === p.pc)!;
@@ -51,8 +56,8 @@ export function Arpeggios() {
   return (
     <>
       <ToolHeader title="Arpeggios">
-        <label className={styles.check}>
-          <input type="checkbox" checked={order} onChange={(e) => setOrder(e.target.checked)} />
+        <label className={styles.check} title={active ? undefined : 'Choose a position to number its notes'}>
+          <input type="checkbox" checked={order} disabled={!active} onChange={(e) => setOrder(e.target.checked)} />
           Play order
         </label>
       </ToolHeader>
@@ -68,7 +73,7 @@ export function Arpeggios() {
       <ChipRow label="Quality" value={sel.chord ? null : sel.quality} onChange={(q) => select({ quality: q, chord: null })} options={QUALITIES.map((q) => ({ value: q.id, label: q.label }))} />
       <div className={styles.row}>
         <b>{pretty(chord.symbol)}</b>
-        <NoteChips notes={chord.notes} />
+        <NoteChips notes={chips} />
         <span className={styles.cap}>position</span>
         {windows.length === 0 ? (
           <span className={styles.dimText}>No position of {pretty(chord.symbol)} to highlight in this tuning.</span>
@@ -82,6 +87,16 @@ export function Arpeggios() {
         )}
         {active && <span className={styles.dimText}>frets {active.lo}–{active.hi}</span>}
       </div>
+      {missing.length > 0 && active && (
+        <p className={styles.dimText} role="status">
+          This box has no {missing.map((n) => `${pretty(n.name)} (${n.interval})`).join(' or ')} — it sits outside frets {active.lo}–{active.hi}.
+        </p>
+      )}
+      {chord.extraBass && (
+        <p className={styles.dimText}>
+          The slash bass {pretty(chord.extraBass.name)} is not a chord tone and is not drawn on the neck.
+        </p>
+      )}
       <div className={styles.neck}>
         <TheoryNeck instrument={inst} frets={frets} dots={dots} window={active} label={`${pretty(chord.symbol)} arpeggio`} />
       </div>
