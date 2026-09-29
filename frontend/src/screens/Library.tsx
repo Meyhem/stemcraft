@@ -4,7 +4,18 @@ import { Link } from 'react-router-dom';
 
 import type { SongEntry } from '../api/client';
 import { useDeleteSong, useSongs } from '../api/queries';
+import { Banner, Button, ButtonLink, Chip, EmptyState, type ChipTone } from '../ui';
 import styles from './Library.module.css';
+
+// Song state is derived from which files exist (CLAUDE.md: "Prefer deriving state over
+// storing it"), so these are the only three values. 'analyzed' is the finished state and
+// takes the ok tone; the two intermediate states are neutral, because a song that is
+// merely imported is not a warning.
+const STATE_TONE: Record<string, ChipTone> = {
+  imported: 'neutral',
+  separated: 'neutral',
+  analyzed: 'ok',
+};
 
 function sortKey(entry: SongEntry): string {
   return entry.song?.last_played_at ?? entry.song?.created_at ?? '';
@@ -25,16 +36,25 @@ export function Library() {
   }
 
   return (
-    <section>
+    <section className={styles.screen}>
       <div className={styles.header}>
         <h1>Library</h1>
-        <Link className={styles.new} to="/import">
+        <ButtonLink variant="primary" to="/import">
           New Song
-        </Link>
+        </ButtonLink>
       </div>
 
-      {songs.isError && <p role="alert">{String(songs.error)}</p>}
-      {songs.data?.length === 0 && <p>No songs yet.</p>}
+      {songs.isError && (
+        <Banner tone="error" title="The library could not be listed" trace={String(songs.error)} />
+      )}
+
+      {songs.data?.length === 0 && (
+        <EmptyState title="No songs yet.">
+          <ButtonLink variant="primary" to="/import">
+            Import your first song
+          </ButtonLink>
+        </EmptyState>
+      )}
 
       <ul className={styles.grid}>
         {entries.map((entry) => (
@@ -48,23 +68,29 @@ export function Library() {
                   {entry.song.title}
                 </Link>
                 <span className={styles.artist}>{entry.song.artist}</span>
-                <span className={styles.state}>{entry.state}</span>
+                <Chip tone={STATE_TONE[entry.state ?? ''] ?? 'neutral'} dot>
+                  {entry.state}
+                </Chip>
                 {entry.state === 'analyzed' && (
-                  <Link className={styles.scale} to={`/songs/${entry.song.id}/scale`}>
+                  <ButtonLink
+                    className={styles.scale}
+                    variant="ghost"
+                    to={`/songs/${entry.song.id}/scale`}
+                  >
                     Scale &amp; fretboard
-                  </Link>
+                  </ButtonLink>
                 )}
               </>
             ) : (
               <>
                 <span className={styles.title}>{entry.dir}</span>
                 {/* §9: one bad file never breaks the library -- shown, not hidden. */}
-                <pre className={styles.unreadable}>{entry.unreadable}</pre>
+                <Banner tone="error" title="This song could not be read" trace={entry.unreadable} />
               </>
             )}
-            <button className={styles.delete} onClick={() => handleDelete(entry)}>
+            <Button className={styles.delete} variant="danger" onClick={() => handleDelete(entry)}>
               Delete
-            </button>
+            </Button>
           </li>
         ))}
       </ul>

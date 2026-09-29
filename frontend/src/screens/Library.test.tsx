@@ -102,3 +102,17 @@ test('delete calls the API when confirmed and the list refetches', async () => {
   // Invalidated -> refetched.
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
 });
+
+test('an analyzed song shows an ok-toned state chip and a separated one does not', async () => {
+  // Load-bearing on the tone, not just the text: before the chip existed the state was
+  // plain uppercase text, so a test asserting only on the word "analyzed" would have
+  // passed against the old markup and proved nothing about this change.
+  renderLibrary([
+    { ...entry, dir: 'a-x', state: 'analyzed', song: { ...song, id: 'a', title: 'Done' } },
+    { ...entry, dir: 'b-y', state: 'separated', song: { ...song, id: 'b', title: 'Partway' } },
+  ]);
+
+  expect(await screen.findByText('analyzed')).toHaveClass('chip', 'ok');
+  expect(screen.getByText('separated')).toHaveClass('chip');
+  expect(screen.getByText('separated')).not.toHaveClass('ok');
+});
