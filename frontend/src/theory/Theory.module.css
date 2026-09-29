@@ -401,3 +401,36 @@
   align-items: baseline;
   gap: var(--ds-3);
 }
+
+/* ---- quizzes ---- */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--ds-t-xs);
+  color: var(--ds-text-3);
+}
+
+.stat b {
+  font: 700 var(--ds-t-xl) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-text);
+}
+
+.option {
+  min-height: var(--ds-hit-setup);
+  padding: 0 var(--ds-4);
+  background: var(--ds-raised);
+  color: var(--ds-text);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  font: 600 var(--ds-t-md) / 1 var(--ds-font);
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:disabled {
+  color: var(--ds-error);
+  border-color: var(--ds-error);
+  cursor: default;
+}

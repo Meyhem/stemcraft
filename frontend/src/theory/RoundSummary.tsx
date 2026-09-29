@@ -1,0 +1,40 @@
+// End of a round (D-19): score, average time, the three weakest items and
+// "Practise these", which starts a round of only those. Enter starts the next
+// round, unless Enter is what is pressing a button (that button acts instead).
+import { useEffect } from 'react';
+
+import { Button, Panel } from '../ui';
+import styles from './Theory.module.css';
+import { quizKey, roundStats, weakestOfRound, type Result } from './useQuizRound';
+
+export function RoundSummary({ results, onRestart }: { results: readonly Result[]; onRestart: (only?: string[]) => void }) {
+  const stats = roundStats(results);
+  const weak = weakestOfRound(results);
+  const allRight = weak.every((r) => r.correct);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (quizKey(e) !== 'Enter') return;
+      if (e.target instanceof Element && e.target.closest('button, a, [role="button"]')) return;
+      onRestart();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onRestart]);
+  return (
+    <Panel className={styles.stack}>
+      <h2 className={styles.big}>
+        {stats.correct} / {stats.answered} first try
+      </h2>
+      <p className={styles.dimText}>Average {stats.avgSeconds.toFixed(1)} s per answer.</p>
+      <p>
+        {allRight ? 'Slowest this round' : 'Weakest this round'}: <b>{weak.map((r) => r.text).join(' · ')}</b>
+      </p>
+      <div className={styles.row}>
+        <Button variant="primary" onClick={() => onRestart()}>
+          Next round
+        </Button>
+        <Button onClick={() => onRestart(weak.map((r) => r.item))}>Practise these</Button>
+      </div>
+    </Panel>
+  );
+}

@@ -8,6 +8,7 @@ import { Arpeggios } from './tools/Arpeggios';
 import { ChordFinder } from './tools/ChordFinder';
 import { ChordsInKey } from './tools/ChordsInKey';
 import { CircleOfFifthsTool } from './tools/CircleOfFifthsTool';
+import { FretboardQuiz } from './tools/FretboardQuiz';
 import { NameThatChord } from './tools/NameThatChord';
 import { NoteFinder } from './tools/NoteFinder';
 import { Progressions } from './tools/Progressions';
@@ -39,6 +40,7 @@ export const TOOLS: readonly ToolDef[] = [
   { slug: 'circle-of-fifths', label: 'Circle of fifths', group: 'Harmony', Component: CircleOfFifthsTool },
   { slug: 'progressions', label: 'Progressions', group: 'Harmony', Component: Progressions },
   { slug: 'scales-over-chord', label: 'Scales over a chord', group: 'Harmony', Component: ScalesOverChord },
+  { slug: 'fretboard-quiz', label: 'Fretboard quiz', group: 'Practice', Component: FretboardQuiz },
 ];
 
 export function toolBySlug(slug: string | undefined): ToolDef | undefined {

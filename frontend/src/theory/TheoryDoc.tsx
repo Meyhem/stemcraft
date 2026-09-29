@@ -44,6 +44,7 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const latest = useRef<TheoryDoc | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gone = useRef(false);
 
   // One save at a time. A save asked for while one runs is remembered and run
   // once more, with the newest document, when the current one finishes; only
@@ -82,6 +83,10 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
         }
       } while (again.current);
       setSaveError(error);
+      if (error && gone.current) {
+        console.error(`theory.json was not saved on leaving the tab: ${error}`);
+        if (latest.current) client.setQueryData(KEY, latest.current);
+      }
       return error;
     })().finally(() => {
       running.current = null;
@@ -107,18 +112,17 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   // Leaving the tab with a change pending or in flight still saves it. If that
   // fails there is no provider left to show a banner, so the message goes to
   // the console and the document is parked in the query cache: coming back
-  // shows the unsaved document rather than silently dropping it (N-08).
-  useEffect(
-    () => () => {
-      const finishing = timer.current ? save() : running.current;
-      void finishing?.then((error) => {
-        if (!error) return;
-        console.error(`theory.json was not saved on leaving the tab: ${error}`);
-        if (latest.current) client.setQueryData(KEY, latest.current);
-      });
-    },
-    [save, client],
-  );
+  // shows the unsaved document rather than silently dropping it (N-08). React
+  // runs this cleanup before those of the components below it, and a quiz saves
+  // its round from its own cleanup, so a save that starts after this one has
+  // run must report its failure the same way: `gone` is what tells it to.
+  useEffect(() => {
+    gone.current = false;
+    return () => {
+      gone.current = true;
+      if (timer.current) void save();
+    };
+  }, [save]);
 
   const resetToDefaults = useCallback(async () => {
     latest.current = DEFAULT_THEORY;
