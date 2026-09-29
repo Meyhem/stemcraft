@@ -195,3 +195,19 @@ def test_boot_refuses_to_start_when_dependencies_are_unmet(tmp_path, monkeypatch
         with TestClient(create_app()):
             pass
     assert "ffmpeg" in str(err.value)
+
+
+def test_job_stats_route_reports_counts_and_averages(client):
+    conn = jobs_db.connect(settings().jobs_db)
+    ok = jobs_db.enqueue(conn, kind="probe")
+    jobs_db.claim_next(conn, device="cuda")
+    jobs_db.finish(conn, ok)
+    conn.execute("UPDATE jobs SET started_at = 10.0, finished_at = 12.5 WHERE id = ?", (ok,))
+    bad = jobs_db.enqueue(conn, kind="probe")
+    jobs_db.claim_next(conn, device="cuda")
+    jobs_db.fail(conn, bad, "boom")
+    assert client.get("/api/jobs/stats").json() == {
+        "passed": 1,
+        "failed": 1,
+        "durations": [{"kind": "probe", "device": "cuda", "count": 1, "avg_seconds": 2.5}],
+    }

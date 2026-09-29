@@ -26,6 +26,11 @@ def list_jobs(conn: Conn, active: bool = False, limit: int = 200) -> dict:
     return {"jobs": [asdict(j) for j in jobs_db.list_jobs(conn, states=states, limit=limit)]}
 
 
+@router.get("/api/jobs/stats")
+def job_stats(conn: Conn) -> dict:
+    return asdict(jobs_db.job_stats(conn))
+
+
 @router.post("/api/jobs", status_code=201)
 def enqueue_job(body: EnqueueRequest, conn: Conn) -> dict:
     job_id = jobs_db.enqueue(conn, kind=body.kind, song_id=body.song_id, payload=body.payload)
