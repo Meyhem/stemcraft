@@ -9,6 +9,7 @@ import {
   fitsOver,
   intervalLabel,
   keyChords,
+  keyAccidentalCount,
   keySignature,
   namer,
   pretty,
@@ -201,5 +202,13 @@ describe('keys', () => {
     expect(keySignature('G', 'minor').accidentals).toEqual(['Bb', 'Eb']);
     expect(relativeKey('G', 'major')).toEqual({ root: 'E', mode: 'minor' });
     expect(relativeKey('E', 'minor')).toEqual({ root: 'G', mode: 'major' });
+  });
+
+  test('the accidental count is not capped at seven', () => {
+    expect(keyAccidentalCount('C', 'major')).toBe(0);
+    expect(keyAccidentalCount('C#', 'major')).toBe(7);
+    expect(keyAccidentalCount('D#', 'major')).toBe(9);
+    expect(keyAccidentalCount('Gb', 'minor')).toBe(9);
+    expect(keyAccidentalCount('D#', 'minor')).toBe(6);
   });
 });

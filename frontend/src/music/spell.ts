@@ -284,6 +284,16 @@ export function keySignature(root: string, mode: KeyMode): { accidentals: string
   return { accidentals: (sharps ? SHARP_ORDER : FLAT_ORDER).slice(0, sig.length), sharps };
 }
 
+/**
+ * How many sharps or flats the key's signature really has, uncapped: D# major
+ * is 9 sharps. `keySignature` lists at most seven, so a caller that must not
+ * show a truncated signature (N-08) asks this first.
+ */
+export function keyAccidentalCount(root: string, mode: KeyMode): number {
+  const major = mode === 'major' ? root : Key.minorKey(root).relativeMajor;
+  return Key.majorKey(major).keySignature.length;
+}
+
 /** G major -> "E minor"; E minor -> "G major". */
 export function relativeKey(root: string, mode: KeyMode): { root: string; mode: KeyMode } {
   return mode === 'major'

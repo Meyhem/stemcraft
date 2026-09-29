@@ -22,6 +22,24 @@ export function circleIndex(root: string, mode: KeyMode): number {
   return (mode === 'major' ? MAJORS : MINORS).findIndex((k) => pcOf(k) === pc);
 }
 
+/** The circle's own label for a pitch class in a mode: 3 -> "Eb" major, "D#" minor. */
+export function circleKeyName(pc: number, mode: KeyMode): string {
+  const ring = mode === 'major' ? MAJORS : MINORS;
+  return ring.find((k) => pcOf(k) === ((pc % 12) + 12) % 12)!;
+}
+
+/**
+ * The two keys a fifth either side, in the same mode, named as the circle names
+ * them. Derived from the pitch class, so every spelling has both (N-08).
+ */
+export function circleNeighbours(root: string, mode: KeyMode): { root: string; mode: KeyMode; dir: 'up' | 'down' }[] {
+  const pc = pcOf(root)!;
+  return [
+    { root: circleKeyName(pc + 5, mode), mode, dir: 'down' },
+    { root: circleKeyName(pc + 7, mode), mode, dir: 'up' },
+  ];
+}
+
 export function CircleOfFifths({
   root,
   mode,

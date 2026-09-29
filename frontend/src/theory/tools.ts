@@ -7,6 +7,7 @@ import type { TheoryTool } from '../api/client';
 import { Arpeggios } from './tools/Arpeggios';
 import { ChordFinder } from './tools/ChordFinder';
 import { ChordsInKey } from './tools/ChordsInKey';
+import { CircleOfFifthsTool } from './tools/CircleOfFifthsTool';
 import { NameThatChord } from './tools/NameThatChord';
 import { NoteFinder } from './tools/NoteFinder';
 import { ScaleFinder } from './tools/ScaleFinder';
@@ -34,6 +35,7 @@ export const TOOLS: readonly ToolDef[] = [
   { slug: 'triads', label: 'Triads & inversions', group: 'Shapes', Component: Triads },
   { slug: 'arpeggios', label: 'Arpeggios', group: 'Shapes', Component: Arpeggios },
   { slug: 'chords-in-key', label: 'Chords in a key', group: 'Harmony', Component: ChordsInKey },
+  { slug: 'circle-of-fifths', label: 'Circle of fifths', group: 'Harmony', Component: CircleOfFifthsTool },
   { slug: 'scales-over-chord', label: 'Scales over a chord', group: 'Harmony', Component: ScalesOverChord },
 ];
 
