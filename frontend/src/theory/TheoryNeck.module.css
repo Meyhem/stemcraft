@@ -1,0 +1,159 @@
+/* The Theory tab's neck (D-19). Colours per U-13: the root takes the bass hue,
+   "act on this" is accent, right/wrong are the vivid ok/error signals. This and
+   Fretboard.module.css are the only stylesheets where a note dot names the
+   instrument (chrome.test.ts allows them the bass hue). */
+.svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.fret {
+  stroke: var(--ds-border-strong);
+  stroke-width: 1.5;
+}
+
+.nut {
+  stroke: var(--ds-text-2);
+  stroke-width: 4;
+}
+
+.string {
+  stroke: var(--ds-border-strong);
+}
+
+.inlay,
+.stringName {
+  fill: var(--ds-text-3);
+  font: 400 13px var(--ds-mono);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.window {
+  fill: var(--ds-accent);
+  fill-opacity: 0.08;
+  stroke: var(--ds-accent);
+  stroke-opacity: 0.45;
+}
+
+.root,
+.tone,
+.accent,
+.question,
+.next,
+.ok,
+.wrong {
+  stroke-width: 2;
+}
+
+.root {
+  fill: var(--ds-bass);
+  stroke: var(--ds-bass);
+}
+
+.tone {
+  fill: var(--ds-raised);
+  stroke: var(--ds-bass);
+}
+
+.accent {
+  fill: var(--ds-accent);
+  stroke: var(--ds-accent);
+}
+
+.halo {
+  fill: var(--ds-accent);
+  opacity: 0.22;
+}
+
+.question {
+  fill: var(--ds-ground);
+  stroke: var(--ds-accent);
+}
+
+.next {
+  fill: var(--ds-ground);
+  stroke: var(--ds-text-3);
+  stroke-dasharray: 4 3;
+}
+
+.ok {
+  fill: var(--ds-ok);
+  stroke: var(--ds-ok);
+}
+
+.wrong {
+  fill: var(--ds-ground);
+  stroke: var(--ds-error);
+}
+
+.label {
+  font-weight: 700;
+  font-family: var(--ds-font);
+  fill: var(--ds-text);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.label_root,
+.label_ok {
+  fill: var(--ds-ground);
+}
+
+.label_accent {
+  fill: var(--ds-on-accent);
+}
+
+.label_question {
+  fill: var(--ds-accent);
+}
+
+.label_next {
+  fill: var(--ds-text-3);
+}
+
+.label_wrong {
+  fill: var(--ds-error);
+}
+
+/* Outside the highlighted position: faded, but the label stays legible (U-13). */
+.dim circle {
+  opacity: 0.28;
+}
+
+.dim .label {
+  fill: var(--ds-text-3);
+}
+
+.muteMark {
+  fill: var(--ds-text-3);
+  font: 700 15px var(--ds-font);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.heatWeak {
+  fill: var(--ds-error);
+}
+
+.heatStrong {
+  fill: var(--ds-ok);
+}
+
+.pick {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.pick:hover {
+  fill: var(--ds-overlay);
+  fill-opacity: 0.5;
+}
+
+.pick:focus-visible {
+  outline: none;
+  stroke: var(--ds-accent);
+  stroke-width: 2;
+}
