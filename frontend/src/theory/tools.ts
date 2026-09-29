@@ -10,6 +10,7 @@ import { ChordsInKey } from './tools/ChordsInKey';
 import { CircleOfFifthsTool } from './tools/CircleOfFifthsTool';
 import { NameThatChord } from './tools/NameThatChord';
 import { NoteFinder } from './tools/NoteFinder';
+import { Progressions } from './tools/Progressions';
 import { ScaleFinder } from './tools/ScaleFinder';
 import { ScalePositions } from './tools/ScalePositions';
 import { ScalesOverChord } from './tools/ScalesOverChord';
@@ -36,6 +37,7 @@ export const TOOLS: readonly ToolDef[] = [
   { slug: 'arpeggios', label: 'Arpeggios', group: 'Shapes', Component: Arpeggios },
   { slug: 'chords-in-key', label: 'Chords in a key', group: 'Harmony', Component: ChordsInKey },
   { slug: 'circle-of-fifths', label: 'Circle of fifths', group: 'Harmony', Component: CircleOfFifthsTool },
+  { slug: 'progressions', label: 'Progressions', group: 'Harmony', Component: Progressions },
   { slug: 'scales-over-chord', label: 'Scales over a chord', group: 'Harmony', Component: ScalesOverChord },
 ];
 
