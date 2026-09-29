@@ -34,8 +34,9 @@ Violating any of these breaks the design, not just a test:
    every repetition.
 6. **Mix stems to stereo before stretching, not after** (D-05). One SoundTouch
    instance, not four.
-7. **wavesurfer.js never plays audio** (D-07). Waveform rendering and region UI only,
-   slaved to the custom engine's clock.
+7. **No waveform renderer ever plays audio** (D-07). Waveform drawing and region/cut UI
+   only, slaved to the custom engine's clock. (wavesurfer.js was replaced by our own
+   canvas painters; the rule outlived the library.)
 8. **All file writes are atomic** — temp file then rename.
 9. **The original upload/download is never modified or deleted.**
 10. **Fail loudly** (N-08). No silent fallbacks. A CPU fallback, missing dependency or

@@ -110,10 +110,11 @@ occurred — which is what makes N-05 achievable at all. Seeking a stretcher ins
 would emit buffered loop-end audio after the jump, producing an audible artifact on
 every repetition.
 
-Consequently **wavesurfer.js does not drive playback.** It renders waveforms and hosts
-the region/loop UI, and is slaved to the engine's clock. The domain spec's implication
-that its multitrack plugin plays the audio is superseded: that plugin owns its own
-media elements and playhead, which is precisely the control the engine must retain.
+Consequently **no waveform renderer drives playback** (D-07). Waveforms and the
+region/loop UI are drawings slaved to the engine's clock. The domain spec's implication
+that wavesurfer's multitrack plugin plays the audio is superseded: that plugin owns its
+own media elements and playhead, which is precisely the control the engine must retain.
+(wavesurfer.js itself has since been replaced by our own canvas painters; see D-07.)
 
 ```
  browser ───── HTTP (opus, peaks, json) ─────┐
@@ -129,7 +130,7 @@ media elements and playhead, which is precisely the control the engine must reta
    │  │         wrap + xfade)    │                                 │  torch  │
    │  └──────────────────────────┘                                 └─────────┘
    │                                                                    │
-   └───────────── wavesurfer: waveform + regions only                   │
+   └───────────── waveform canvases + regions only                       │
                   (slaved to engine clock)          stems/, analysis, exports
 ```
 
@@ -362,10 +363,17 @@ audit requirement exists.
   independent tempo control); accepting a small seam (explicitly refused in Q5).
   *Reversibility:* **one-way**; it is the engine's central mechanism.
 
-- **D-07 — wavesurfer.js renders waveforms and regions only; it does not play audio.**
-  *Because:* D-06 requires ownership of the cursor and clock, which the multitrack
-  plugin holds internally.
+- **D-07 — No waveform renderer plays audio.** Waveforms are drawings slaved to the
+  custom engine's clock (Song view) or to a plain `<audio>` element (Album splitter);
+  region and cut UI is ours. *(Originally worded around wavesurfer.js; amended when it
+  was removed — see the note below.)*
+  *Because:* D-06 requires ownership of the cursor and clock, which a library player such
+  as wavesurfer's multitrack plugin holds internally.
   *Rejected:* wavesurfer multitrack as the player (cannot meet N-05).
+  *Amendment (Phase 8/9):* wavesurfer.js was dropped as the renderer. It lays a
+  canvas out at the full content width, which cannot be zoomed to the depths the Song
+  view and the splitter need; both now paint one viewport-sized canvas that repaints on
+  scroll (`music/zoom.ts`). The rule this decision protects is unchanged.
   *Reversibility:* one-way in practice — it is the reason the custom engine exists.
   *Cost:* the engine is bespoke work, and the largest single risk in the project
   (R-01).

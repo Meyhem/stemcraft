@@ -35,8 +35,8 @@ Copied verbatim from the spec. These are correctness floors, not preferences.
 - **Never seek the time-stretcher** (D-06). Loops wrap the engine's own read cursor in
   the input domain with a ~5 ms crossfade.
 - **Mix to stereo before stretching** (D-05). One SoundTouch instance, not four.
-- **wavesurfer.js never plays audio** (D-07). Rendering and region UI only, slaved to
-  the engine clock.
+- **No waveform renderer plays audio** (D-07). Rendering and region UI only, slaved to
+  the engine clock. (wavesurfer.js was later replaced by our own canvas painters.)
 - **Fail loudly** (N-08). No silent fallbacks. Missing dependency, wrong device or
   failed job must be visible in the UI with the real error text.
 - **CUDA ≥ 12.8** (C-02), torch pinned to a cu128 index via a constraints file.
@@ -184,7 +184,7 @@ key readout shows confidence and alternatives, never a single answer as fact.
 The screen the product exists for. Needs Phase 3's engine, Phase 4's stems and Phase
 5's grid — which is why it is sixth and not first.
 
-- Stacked waveforms via wavesurfer, slaved to the engine clock; playhead positioned by
+- Stacked waveforms (wavesurfer at the time, now our own canvases), slaved to the engine clock; playhead positioned by
   `requestAnimationFrame` from that clock, never by CSS (U-05).
 - Per-stem mute, solo, volume. Live tempo 50–100 % and live pitch shift.
 - A–B loop snapped to bars, stored as bar numbers and resolved through the grid.
