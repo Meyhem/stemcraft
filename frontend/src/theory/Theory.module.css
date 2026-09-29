@@ -191,6 +191,11 @@
   cursor: pointer;
 }
 
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .chipLarge {
   min-height: var(--ds-hit-setup);
   padding: 0 var(--ds-4);
