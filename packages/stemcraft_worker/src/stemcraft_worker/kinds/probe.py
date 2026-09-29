@@ -15,6 +15,7 @@ from ..registry import JobCancelled, JobContext, register
 def run(ctx: JobContext) -> dict:
     steps = int(ctx.payload.get("steps", 10))
     step_seconds = float(ctx.payload.get("step_seconds", 0.5))
+    ctx.step("tick")
     for index in range(steps):
         if ctx.cancelled():
             raise JobCancelled

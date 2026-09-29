@@ -52,15 +52,18 @@ def run_one(
     renewer.start()
     try:
         fn = get_kind(job.kind)
-        result = fn(
-            JobContext(
-                conn=conn,
-                job_id=job.id,
-                payload=job.payload,
-                device=device,
-                worker_state=worker_state,
-            )
+        ctx = JobContext(
+            conn=conn,
+            job_id=job.id,
+            payload=job.payload,
+            device=device,
+            worker_state=worker_state,
+            steps=job.steps,
         )
+        result = fn(ctx)
+        # D-17: close the last step; a declared step that never ran is a bug in
+        # the kind and fails the job here rather than finishing it.
+        ctx.complete()
         jobs_db.finish(conn, job.id, result)
         log.info("job %s (%s) done", job.id, job.kind)
     except JobCancelled:
