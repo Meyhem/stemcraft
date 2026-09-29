@@ -7,9 +7,10 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { DEFAULT_THEORY, type QuizAnswer, type TheoryDoc } from '../../api/client';
 import * as quiz from '../../music/quiz';
 import { Theory } from '../../screens/Theory';
-import { forgetUnsavedTheory } from '../TheoryDoc';
-import { ROUND, seeds } from '../useQuizRound';
-import { renderTool } from './testing';
+import { forgetUnsavedTheory, TheoryDocProvider, useTheoryDoc } from '../TheoryDoc';
+import { explainWrong } from '../../music/quizExplain';
+import { ROUND, seeds, useQuizRound, type Round } from '../useQuizRound';
+import { renderFlaky, renderTool } from './testing';
 import { factText } from './TheoryQuiz';
 
 // The real question generator, with a hook so a test can make it fail or look at its arguments.
@@ -302,18 +303,30 @@ test('a round is exactly 20: the 20th answer draws no question, and late or doub
   expect(screen.getByText('20 / 20 first try')).toBeInTheDocument();
 });
 
-test('two key events before a redraw cannot both answer one question', async () => {
+test('two key events before a redraw cannot both answer one question: exactly one answer is recorded', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] }); // frozen clock: the same questions, in the same option order, on every visit
+  vi.setSystemTime(new Date('2026-09-29T12:00:00Z'));
+  // A first visit only to learn where the right answer of question 2 sits (a fixed seed makes it the same next time).
   renderTool('/theory/theory-quiz', { theory: tq() });
   await screen.findByRole('group', { name: 'Answers' });
-  const right = String(rightOption(question(), options()) + 1);
+  const first = rightOption(question(), options());
+  answerRight();
+  const second = rightOption(question(), options());
+  cleanup();
+  expect(second).not.toBe(first);
+
+  renderTool('/theory/theory-quiz', { theory: tq() });
+  await screen.findByRole('group', { name: 'Answers' });
+  expect(rightOption(question(), options())).toBe(first);
+  // The second event repeats the first key. Answering question 1 twice would record two answers; aimed at
+  // question 2, where that key is a wrong pick, it records none.
   act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: right }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: right }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: String(first + 1) }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: String(first + 1) }));
   });
-  // The first answered question 1; the second was aimed at question 2 and can score at most that one.
-  const stats = screen.getByText(/first try/).textContent!;
-  expect(stats).toMatch(/^[01]\/2 first try$|^[01]\/1 first try$/);
-  expect(Number(/round (\d+)/.exec(progress())![1])).toBeLessThanOrEqual(3);
+  expect(progress()).toBe('round 2 of 20');
+  expect(screen.getByText(/first try/)).toHaveTextContent('1/1 first try');
+  expect(screen.getByRole('status')).toHaveTextContent('✕'); // the repeat was a wrong pick on question 2
 });
 
 test('Enter starts the next round from the summary, but not when it is pressing a button; the same question never comes twice in a row, even across rounds', async () => {
@@ -339,6 +352,18 @@ test('Enter starts the next round from the summary, but not when it is pressing 
   const calls = next.mock.calls;
   expect(calls.length).toBeGreaterThanOrEqual(21);
   calls.forEach((c, i) => i > 0 && expect(c[3]).toBe(next.mock.results[i - 1]!.value.item));
+});
+
+test('Enter on the summary starts the next round even while a topic chip has the focus; it only yields to the summary\'s own buttons', async () => {
+  renderTool('/theory/theory-quiz', { theory: tq() });
+  await screen.findByRole('group', { name: 'Answers' });
+  for (let i = 0; i < ROUND; i++) answerRight();
+  await screen.findByText('20 / 20 first try');
+  const chip = screen.getByRole('button', { name: 'Keys' });
+  chip.focus();
+  fireEvent.keyDown(chip, { key: 'Enter' });
+  expect(progress()).toBe('round 1 of 20'); // the chip did not flip and the round started
+  expect(chip).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('the weighting sees the answer just given, and a practise list limits the next round', async () => {
@@ -379,12 +404,10 @@ test('the weakest of a round is listed in words', async () => {
 
 // ---------------------------------------------------------------- topics
 
-test('topics are saved once, in a fixed order, and switching one restarts the round', async () => {
+test('topics are saved in a fixed order, and a burst of switches is exactly one PUT', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   const { puts } = renderTool('/theory/theory-quiz', { theory: tq() });
   await screen.findByRole('group', { name: 'Answers' });
-  answerRight();
-  expect(progress()).toBe('round 2 of 20');
   fireEvent.click(screen.getByRole('button', { name: 'Chords' }));
   fireEvent.click(screen.getByRole('button', { name: 'Keys' }));
   fireEvent.click(screen.getByRole('button', { name: 'Chords' }));
@@ -392,11 +415,23 @@ test('topics are saved once, in a fixed order, and switching one restarts the ro
   await act(async () => {
     await vi.advanceTimersByTimeAsync(2000);
   });
-  const last = puts.at(-1)!;
-  expect(last.quiz.settings.theory.topics).toEqual(['chords', 'intervals']);
-  // One PUT for the answer given before the change (the round was left) and one for the settings burst.
-  expect(puts.length).toBeLessThanOrEqual(2);
-  expect(puts.filter((p) => p.quiz.history.length === 1)).not.toHaveLength(0);
+  expect(puts).toHaveLength(1);
+  expect(puts[0]!.quiz.settings.theory.topics).toEqual(['chords', 'intervals']);
+});
+
+test('switching a topic mid-round saves the answers so far together with the setting, none twice', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const { puts } = renderTool('/theory/theory-quiz', { theory: tq() });
+  await screen.findByRole('group', { name: 'Answers' });
+  answerRight();
+  answerRight();
+  fireEvent.click(screen.getByRole('button', { name: 'Chords' }));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2000);
+  });
+  expect(puts).toHaveLength(1);
+  expect(puts[0]!.quiz.history).toHaveLength(2);
+  expect(puts[0]!.quiz.settings.theory.topics).toEqual(['keys', 'intervals']);
 });
 
 test('the last topic cannot be switched off: it is disabled with the reason, and nothing restarts or is saved', async () => {
@@ -567,4 +602,254 @@ test('leaving mid-round for another tool saves what was answered, once', async (
   unmount();
   await waitFor(() => expect(puts).toHaveLength(1));
   expect(puts[0]!.quiz.history).toHaveLength(3);
+});
+
+// ---------------------------------------------------------------- what a wrong pick is (explained, never revealed)
+
+/** Independent oracle for the explanation of a wrong option: each claim in the sentence is checked with tonal. */
+function checkExplanation(item: string, picked: string, text: string) {
+  const [kind, a = '', b = ''] = item.split(':');
+  const key = a;
+  let m: RegExpExecArray | null;
+  const why = `${item} / ${picked} => ${text}`;
+  if (kind === 'v') {
+    if ((m = /^(.+) is the (\S+) of (.+) major, not the V\.$/.exec(text))) {
+      // A chord of the key's own scale, named with the right numeral.
+      const scale = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+      const degree = scale.indexOf(m[2]!);
+      expect(degree, why).toBeGreaterThanOrEqual(0);
+      const root = chroma(key) + [0, 2, 4, 5, 7, 9, 11][degree]!;
+      expect(chroma(Chord.get(ascii(m[1]!)).tonic!), why).toBe(root % 12);
+      expect(m[3], why).toBe(pretty(key));
+      expect(m[1], why).toBe(picked);
+    } else if ((m = /^(.+) is the V of (.+) major, not of (.+) major\.$/.exec(text))) {
+      expect(chroma(m[1]!), why).toBe((chroma(m[2]!) + 7) % 12);
+      expect(Chord.get(ascii(m[1]!)).quality, why).toBe('Major');
+      expect(m[3], why).toBe(pretty(key));
+      expect(m[1], why).toBe(picked);
+      expect(chroma(m[2]!), why).not.toBe(chroma(key));
+    } else throw new Error(why);
+  } else if (kind === 'rel') {
+    m = /^(.+) minor is the relative minor of (.+) major, not of (.+) major\.$/.exec(text);
+    expect(m, why).not.toBeNull();
+    expect(`${m![1]} minor`, why).toBe(picked);
+    expect((chroma(m![1]!) + 3) % 12, why).toBe(chroma(m![2]!));
+    expect(m![3], why).toBe(pretty(key));
+    expect(chroma(m![2]!), why).not.toBe(chroma(key));
+  } else if (kind === 'sig') {
+    m = /^(.+) major has (.+), not (.+) major\.$/.exec(text);
+    expect(m, why).not.toBeNull();
+    expect(m![2], why).toBe(picked);
+    const claimed = ascii(m![1]!);
+    const table = { ...SHARPS, ...FLATS };
+    const n = picked === 'no sharps or flats' ? 0 : Number(picked.split(' ')[0]);
+    const sharp = picked.includes('sharp');
+    expect(table[claimed] ?? 0, why).toBe(n);
+    if (n > 0) expect(claimed in SHARPS, why).toBe(sharp);
+    expect(m![3], why).toBe(pretty(key));
+  } else if (kind === 'notes') {
+    m = /^(.+) is (.+), not (.+)\.$/.exec(text);
+    expect(m, why).not.toBeNull();
+    expect(m![1], why).toBe(picked);
+    expect(Chord.get(ascii(m![2]!)).notes.map(chroma).join(), why).toBe(picked.split(' ').map(chroma).join());
+    expect(Chord.get(ascii(m![2]!)).tonic, why).toBe(Chord.get(ascii(a)).tonic);
+    expect(m![3], why).toBe(pretty(a));
+  } else if (kind === 'name') {
+    m = /^(.+) is (.+), not (.+)\.$/.exec(text);
+    expect(m, why).not.toBeNull();
+    expect(m![1], why).toBe(picked);
+    expect(Chord.get(ascii(picked)).notes.map(chroma).join(), why).toBe(m![2]!.split(' ').map(chroma).join());
+    expect(m![3]!.split(' ').map(chroma).join(), why).toBe(Chord.get(ascii(a)).notes.map(chroma).join());
+  } else {
+    m = /^A (.+) above (.+) is (.+), not (.+)\.$/.exec(text);
+    expect(m, why).not.toBeNull();
+    expect(m![1], why).toBe(picked);
+    expect(m![2], why).toBe(pretty(a));
+    expect(chroma(m![3]!), why).toBe((chroma(a) + SEMITONES.indexOf(picked)) % 12);
+    expect(chroma(m![4]!), why).toBe((chroma(a) + SEMITONES.indexOf(SEMITONES[(chroma(Note.transpose(a, b)) - chroma(a) + 12) % 12]!)) % 12);
+  }
+}
+
+const pretty = (s: string) => s.replaceAll('#', '♯').replace(/([A-G])b/g, '$1♭');
+
+test('every wrong option of every fact is explained with a sentence whose claims an independent oracle confirms, and never names the right answer', () => {
+  let explained = 0;
+  for (const item of quiz.theoryItems(['keys', 'chords', 'intervals'])) {
+    const q = quiz.theoryQuestion(item, quiz.mulberry32(7));
+    q.options.forEach((option, i) => {
+      if (i === q.answer) return;
+      const text = explainWrong(item, option);
+      expect(text, `${item} / ${option}`).not.toMatch(/is not the answer/); // every kind here can be computed
+      checkExplanation(item, option, text);
+      explained += 1;
+    });
+  }
+  expect(explained).toBeGreaterThan(600);
+});
+
+test('the wording, one example of each kind', () => {
+  expect(explainWrong('v:Eb', 'F♯')).toBe('F♯ is the V of B major, not of E♭ major.');
+  expect(explainWrong('v:Eb', 'A♭')).toBe('A♭ is the IV of E♭ major, not the V.');
+  expect(explainWrong('rel:F', 'D♯ minor')).toBe('D♯ minor is the relative minor of F♯ major, not of F major.');
+  expect(explainWrong('sig:D', '3 flats')).toBe('E♭ major has 3 flats, not D major.');
+  expect(explainWrong('sig:C', '1 sharp')).toBe('G major has 1 sharp, not C major.');
+  expect(explainWrong('notes:Bm7', 'B D♯ F♯ A')).toBe('B D♯ F♯ A is B7, not Bm7.');
+  expect(explainWrong('name:Bm', 'B')).toBe('B is B D♯ F♯, not B D F♯.');
+  expect(explainWrong('ivl:C:6M', 'minor 6th')).toBe('A minor 6th above C is A♭, not A.');
+});
+
+test('an option it cannot explain is said so plainly, not explained wrongly', () => {
+  expect(explainWrong('v:Eb', 'purple')).toBe('purple is not the answer.');
+  expect(explainWrong('sig:D', 'lots')).toBe('lots is not the answer.');
+  expect(explainWrong('ivl:C:6M', 'a fifth-ish')).toBe('a fifth-ish is not the answer.');
+  expect(explainWrong('mystery:x', 'y')).toBe('y is not the answer.');
+});
+
+test('the chip on the screen explains the mistake, keeps the ✕ out of the reading, and does not reveal the answer', async () => {
+  renderTool('/theory/theory-quiz', { theory: tq() });
+  await screen.findByRole('group', { name: 'Answers' });
+  const q = question();
+  const right = options()[rightOption(q, options())]!;
+  const wrong = wrongIndexes()[0]!;
+  const picked = options()[wrong]!;
+  fireEvent.click(buttons()[wrong]!);
+  const status = screen.getByRole('status');
+  expect(status).toHaveTextContent(/Try again\.$/);
+  expect(status.querySelector('[aria-hidden="true"]')).toHaveTextContent('✕');
+  expect(status.textContent).toContain(picked);
+  expect(status.textContent).not.toMatch(/is not the answer/);
+  // The right option is still the only one that advances.
+  expect(status.textContent!.replace(picked, '')).not.toContain(` ${right},`);
+  answerRight();
+  expect(progress()).toBe('round 2 of 20');
+});
+
+// ---------------------------------------------------------------- the file becomes unreadable mid-round
+
+test('the file becomes unreadable mid-round: no question, no key answers anything, and when it reads again the round goes on and every answer is saved once', async () => {
+  const page = renderFlaky('/theory/theory-quiz', tq());
+  await screen.findByRole('group', { name: 'Answers' });
+  for (let i = 0; i < 3; i++) answerRight();
+  expect(progress()).toBe('round 4 of 20');
+
+  await page.unreadable();
+  await screen.findByText(/The quiz needs theory.json/);
+  expect(screen.queryByRole('group', { name: 'Answers' })).toBeNull();
+  expect(screen.queryByText(/^round \d+ of 20$/)).toBeNull();
+  for (let i = 0; i < 3; i++) for (const key of ['1', '2', '3', '4']) press(key); // blind key presses: nothing to answer
+  await page.readable();
+  await screen.findByRole('group', { name: 'Answers' });
+  // Not one blind answer was recorded, and the three before the failure are still counted.
+  expect(progress()).toBe('round 4 of 20');
+  expect(screen.getByText(/first try/)).toHaveTextContent('3/3 first try');
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(page.puts).toHaveLength(0);
+
+  for (let i = 0; i < 17; i++) answerRight();
+  expect(await screen.findByText('20 / 20 first try')).toBeInTheDocument();
+  await waitFor(() => expect(page.puts).toHaveLength(1));
+  expect(page.puts[0]!.quiz.history).toHaveLength(20);
+});
+
+test('the round is not lost when the tab is left while the file is unreadable: the answers are kept, logged, guarded, and saved after the next good read', async () => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const page = renderFlaky('/theory/theory-quiz', tq());
+  await screen.findByRole('group', { name: 'Answers' });
+  for (let i = 0; i < 3; i++) answerRight();
+  await page.unreadable();
+  await screen.findByText(/The quiz needs theory.json/);
+  page.unmount();
+  await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining('cannot be read')));
+  expect(page.puts).toHaveLength(0);
+  const closing = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(closing);
+  expect(closing.defaultPrevented).toBe(true); // the answers live nowhere else
+
+  const back = renderFlaky('/theory/theory-quiz', tq());
+  await screen.findByRole('group', { name: 'Answers' });
+  await waitFor(() => expect(back.puts).toHaveLength(1));
+  expect(back.puts[0]!.quiz.history).toHaveLength(3);
+  expect(within(screen.getByRole('list')).getAllByRole('listitem').length).toBeGreaterThan(0); // and they show in the weak facts
+});
+
+let round!: Round;
+function Probe() {
+  round = useQuizRound();
+  return <p>{useTheoryDoc().doc ? 'ready' : 'no document'}</p>;
+}
+function hookPage() {
+  const puts: TheoryDoc[] = [];
+  let reading = true;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        puts.push(JSON.parse(String(init.body)));
+        return new Response(String(init.body));
+      }
+      return reading ? new Response(JSON.stringify({ ...DEFAULT_THEORY, last_tool: 'theory-quiz' })) : new Response(JSON.stringify({ detail: 'theory.json: broken' }), { status: 500 });
+    }),
+  );
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 5000, refetchOnWindowFocus: false } } });
+  const view = render(
+    <QueryClientProvider client={client}>
+      <TheoryDocProvider>
+        <Probe />
+      </TheoryDocProvider>
+    </QueryClientProvider>,
+  );
+  const refetch = () => act(async () => void (await client.invalidateQueries({ queryKey: ['theory'] })));
+  return {
+    ...view,
+    puts,
+    unreadable: async () => {
+      reading = false;
+      await refetch();
+    },
+    readable: async () => {
+      reading = true;
+      await refetch();
+    },
+  };
+}
+const record = (i: number) =>
+  act(() => {
+    round.record({ quiz: 'theory', mode: 'keys', item: `q${i}`, correct: true, ms: 100 + i, text: `fact ${i}` });
+  });
+
+test('the 20th answer arriving while the file is unreadable is kept, not dropped, and goes out once after the next good read', async () => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const page = hookPage();
+  await screen.findByText('ready');
+  for (let i = 0; i < 3; i++) record(i);
+  await page.unreadable();
+  await screen.findByText('no document');
+  for (let i = 3; i < ROUND; i++) record(i);
+  expect(round.done).toBe(true);
+  expect(page.puts).toHaveLength(0); // nothing is written over an unreadable file
+  expect(error).toHaveBeenCalledWith(expect.stringContaining('cannot be read'));
+  await page.readable();
+  await screen.findByText('ready');
+  await waitFor(() => expect(page.puts).toHaveLength(1));
+  expect(page.puts[0]!.quiz.history).toHaveLength(20);
+  expect(round.history).toHaveLength(20); // once, not twice
+  expect(round.results).toHaveLength(20);
+});
+
+test('answers the hook could not hand over stay with it (and say so), instead of being let go of', async () => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ detail: 'theory.json: broken' }), { status: 500 })));
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <TheoryDocProvider>
+        <Probe />
+      </TheoryDocProvider>
+    </QueryClientProvider>,
+  );
+  await screen.findByText('no document'); // the file was never read: there is no document to add answers to
+  record(1);
+  act(() => round.restart());
+  expect(error).toHaveBeenCalledWith(expect.stringContaining('could not be saved'));
+  expect(round.history).toHaveLength(1); // still held by the hook, not dropped
+  expect(round.results).toHaveLength(0);
 });

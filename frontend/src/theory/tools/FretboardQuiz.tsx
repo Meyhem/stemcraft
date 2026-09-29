@@ -111,7 +111,13 @@ export function FretboardQuiz() {
   // A new question whenever the mode, focus or instrument changes (and the first one).
   const focusKey = [doc !== null, settings.mode, settings.strings.join(), settings.frets.join(), settings.accidentals, inst.tuning.join()].join('|');
   useEffect(() => {
+    // No readable document (the file could not be read mid-round): no question is on offer, so no key or tap can
+    // answer one. The round's results are kept; when the file reads again a fresh question is drawn.
     if (doc) draw([], round.only);
+    else {
+      setAttempt(null);
+      setProblem(null);
+    }
     // Deliberately keyed on the focus alone: a new question is drawn for a new focus, not for every history change.
   }, [focusKey]);
 
@@ -132,14 +138,14 @@ export function FretboardQuiz() {
 
   const answerNote = (pc: number) => {
     const a = attemptRef.current;
-    if (!a || a.q.mode !== 'name-note') return;
+    if (!doc || !a || a.q.mode !== 'name-note') return;
     if (pc === a.q.answerPc) finish(a, cellText(inst, a.q.item), Date.now() - a.started);
     else miss(a, null, `✕ not ${pretty(plainName(pc))}. Try again.`);
   };
 
   const tap = (cell: Cell) => {
     const a = attemptRef.current;
-    if (!a || a.q.mode === 'name-note') return;
+    if (!doc || !a || a.q.mode === 'name-note') return;
     const q = a.q;
     const pc = pcAt(inst, cell);
     const name = pretty(plainName(pc));

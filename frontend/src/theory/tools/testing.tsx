@@ -1,7 +1,7 @@
 // Renders one Theory tool inside the Theory screen with a mocked API, for the
 // per-tool tests. `where()` reports the current path + query string.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { vi } from 'vitest';
 
@@ -55,4 +55,56 @@ export function renderTool(
       (d) => `${d.getAttribute('data-cell')}:${d.textContent}${d.getAttribute('data-dim') ? ':dim' : ''}`,
     );
   return { ...view, puts, where: () => location, dots };
+}
+
+/**
+ * The Theory screen on a file that can stop being readable: `unreadable()` makes the next reads fail and refetches
+ * now (the tab regained focus while the server is down), `readable()` makes them work again and refetches.
+ */
+export function renderFlaky(path: string, theory: Partial<TheoryDoc> = {}) {
+  const doc = { ...DEFAULT_THEORY, ...theory };
+  const puts: TheoryDoc[] = [];
+  let reading = true;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/api/theory' && init?.method === 'PUT') {
+        puts.push(JSON.parse(String(init.body)));
+        return new Response(String(init.body));
+      }
+      if (url === '/api/theory') {
+        return reading ? new Response(JSON.stringify(doc)) : new Response(JSON.stringify({ detail: 'theory.json: broken' }), { status: 500 });
+      }
+      if (url === '/api/songs') return new Response(JSON.stringify({ songs: [] }));
+      throw new Error(`unexpected fetch: ${url}`);
+    }),
+  );
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 5000, refetchOnWindowFocus: false } } });
+  const view = render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="theory/:tool" element={<Theory />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const refetch = async () => {
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['theory'] });
+    });
+  };
+  return {
+    ...view,
+    client,
+    puts,
+    unreadable: async () => {
+      reading = false;
+      await refetch();
+    },
+    readable: async () => {
+      reading = true;
+      await refetch();
+    },
+  };
 }

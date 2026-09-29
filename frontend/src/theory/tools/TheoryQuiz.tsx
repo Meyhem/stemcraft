@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { DEFAULT_THEORY, type QuizAnswer, type TheoryQuizSettings } from '../../api/client';
 import { mulberry32, nextTheoryQuestion, NothingToPractise, QuizFocusError, theoryQuestion, type TheoryQuestion } from '../../music/quiz';
+import { explainWrong } from '../../music/quizExplain';
 import { pretty } from '../../music/spell';
 import { Button, Chip, Panel } from '../../ui';
 import { HelpBox, ToolHeader } from '../controls';
@@ -96,7 +97,13 @@ export function TheoryQuiz() {
   // A new question whenever the topics change (and the first one).
   const topicKey = `${doc !== null}|${topics.join()}`;
   useEffect(() => {
+    // No readable document (the file could not be read mid-round): no question is on offer, so no key can answer one.
+    // The round's results are kept; when the file reads again the flip of `doc` above draws a fresh question.
     if (doc) draw([], round.only);
+    else {
+      setAttempt(null);
+      setProblem(null);
+    }
     // Deliberately keyed on the topics alone: a new question is drawn for new topics, not for every history change.
   }, [topicKey]);
 
@@ -125,7 +132,7 @@ export function TheoryQuiz() {
 
   const choose = (i: number) => {
     const a = attemptRef.current;
-    if (!a || i < 0 || i >= a.q.options.length || a.wrong.includes(i)) return;
+    if (!doc || !a || i < 0 || i >= a.q.options.length || a.wrong.includes(i)) return;
     if (i === a.q.answer) finish(a);
     else setAttempt({ ...a, wrong: [...a.wrong, i] });
   };
@@ -248,7 +255,8 @@ export function TheoryQuiz() {
       <div role="status">
         {lastWrong && (
           <Chip tone="error" size="lg">
-            {`✕ ${lastWrong} is not right. Try again.`}
+            <span aria-hidden="true">✕ </span>
+            {explainWrong(q!.item, lastWrong)} Try again.
           </Chip>
         )}
       </div>

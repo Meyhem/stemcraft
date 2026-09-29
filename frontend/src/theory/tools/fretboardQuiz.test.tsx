@@ -12,7 +12,7 @@ import { cellText } from '../QuizStats';
 import { forgetUnsavedTheory, TheoryDocProvider, useTheoryDoc } from '../TheoryDoc';
 import { TheoryNeck } from '../TheoryNeck';
 import { HISTORY_CAP, ROUND, roundStats, seeds, useQuizRound, weakestOfRound, type Result, type Round } from '../useQuizRound';
-import { renderTool } from './testing';
+import { renderFlaky, renderTool } from './testing';
 
 // Unmount first: leaving the tab flushes a pending save, which needs the fetch stub still in place.
 afterEach(() => {
@@ -338,6 +338,48 @@ test('Enter starts the next round from the summary, but not when it is pressing 
   expect(screen.getByText('20 / 20 first try')).toBeInTheDocument();
   fireEvent.keyDown(window, { key: 'Enter' });
   expect(progress()).toBe('round 1 of 20');
+});
+
+test('Enter on the summary starts the next round while a setting button outside it has the focus', async () => {
+  const { container } = renderTool('/theory/fretboard-quiz', { theory: nameNote });
+  await screen.findByText('Name this note');
+  for (let i = 0; i < ROUND; i++) answerRight(container);
+  await screen.findByText('20 / 20 first try');
+  const setting = screen.getByRole('button', { name: 'Frets 0–5' });
+  setting.focus();
+  fireEvent.keyDown(setting, { key: 'Enter' });
+  expect(progress()).toBe('round 1 of 20');
+});
+
+test('the file becomes unreadable mid-round (name the note): the alert is the whole screen, no key answers a hidden question, and the round goes on and is saved once when it reads again', async () => {
+  const page = renderFlaky('/theory/fretboard-quiz', nameNote);
+  await screen.findByText('Name this note');
+  for (let i = 0; i < 3; i++) answerRight(page.container);
+  expect(progress()).toBe('round 4 of 20');
+  await page.unreadable();
+  await screen.findByText(/The quiz needs theory.json/);
+  expect(screen.queryByText('Name this note')).toBeNull();
+  for (const key of DIGITS) for (let i = 0; i < 3; i++) fireEvent.keyDown(window, { key });
+  await page.readable();
+  await screen.findByText('Name this note');
+  expect(progress()).toBe('round 4 of 20');
+  expect(screen.getByText(/first try/)).toHaveTextContent('3/3 first try');
+  expect(page.puts).toHaveLength(0);
+  for (let i = 0; i < 17; i++) answerRight(page.container);
+  expect(await screen.findByText('20 / 20 first try')).toBeInTheDocument();
+  await waitFor(() => expect(page.puts).toHaveLength(1));
+  expect(page.puts[0]!.quiz.history).toHaveLength(20);
+});
+
+test('the file becomes unreadable mid-round (find the note): taps are not answers either', async () => {
+  const page = renderFlaky('/theory/fretboard-quiz', fb());
+  await screen.findByText(/^Find every /);
+  await page.unreadable();
+  await screen.findByText(/The quiz needs theory.json/);
+  expect(screen.queryByRole('button', { name: 'G string, open' })).toBeNull(); // no neck to tap on
+  await page.readable();
+  await screen.findByText(/^Find every /);
+  expect(screen.getByText(/first try/)).toHaveTextContent('0/0 first try');
 });
 
 test('leaving mid-round for another tool saves what was answered, once', async () => {

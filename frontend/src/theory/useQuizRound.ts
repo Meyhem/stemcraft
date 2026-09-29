@@ -67,12 +67,18 @@ export function useQuizRound(): Round {
   }, []);
 
   // One PUT with every unsaved answer. `update` applies it to the document at once, so nothing is held back
-  // here after this call, and a failed save leaves the answers in the document for Retry.
+  // here after this call, and a failed save leaves the answers in the document for Retry. Answers are only let go
+  // of once `update` has taken them (into the document, or, while the file cannot be read, into the kept copy that
+  // goes out after the next good read); if it takes nothing they stay here (N-08).
   const flush = useCallback(() => {
     const answers = state.current.unsaved;
     if (answers.length === 0) return;
-    commit({ ...state.current, unsaved: [] });
-    update((d) => ({ ...d, quiz: { ...d.quiz, history: [...d.quiz.history, ...answers].slice(-HISTORY_CAP) } }), { now: true });
+    const taken = update((d) => ({ ...d, quiz: { ...d.quiz, history: [...d.quiz.history, ...answers].slice(-HISTORY_CAP) } }), {
+      now: true,
+      keep: true,
+    });
+    if (taken) commit({ ...state.current, unsaved: [] });
+    else console.error(`${answers.length} quiz answers could not be saved: theory.json was never read, so there is no document to add them to`);
   }, [commit, update]);
 
   const record = useCallback<Round['record']>(
@@ -104,15 +110,14 @@ export function useQuizRound(): Round {
   const restart = useCallback(
     (items?: string[]) => {
       flush();
-      commit({ results: [], unsaved: [] });
+      commit({ results: [], unsaved: state.current.unsaved }); // whatever the flush could not hand over stays
       setOnly(items?.length ? [...new Set(items)] : undefined);
     },
     [flush, commit],
   );
 
   const resetHistory = useCallback(() => {
-    commit({ ...state.current, unsaved: [] });
-    update((d) => ({ ...d, quiz: { ...d.quiz, history: [] } }), { now: true });
+    if (update((d) => ({ ...d, quiz: { ...d.quiz, history: [] } }), { now: true })) commit({ ...state.current, unsaved: [] });
   }, [commit, update]);
 
   return {

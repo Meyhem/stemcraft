@@ -71,8 +71,14 @@ export interface TheoryDocState {
   loadError: string | null;
   /** The last PUT failed: its message. Cleared by the next successful save. */
   saveError: string | null;
-  /** Applies `change` now and saves it: after 500 ms, or at once with `{ now: true }`. */
-  update: (change: (doc: TheoryDoc) => TheoryDoc, options?: { now?: boolean }) => void;
+  /**
+   * Applies `change` now and saves it: after 500 ms, or at once with `{ now: true }`. Returns whether it was applied:
+   * false while there is no readable document (nothing is written over an unreadable file, U-09). With `{ keep: true }`
+   * a change that would be refused because the file cannot be read now is instead kept in memory, with a message in
+   * the console and the unload warning, and goes out after the next read that works: for answers that must not be
+   * dropped (N-08). It is still false when no document was ever loaded to add them to.
+   */
+  update: (change: (doc: TheoryDoc) => TheoryDoc, options?: { now?: boolean; keep?: boolean }) => boolean;
   retry: () => void;
   /** PUTs the defaults over an unreadable theory.json. Only after the player confirms. */
   resetToDefaults: () => Promise<void>;
@@ -179,7 +185,21 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   const update = useCallback<TheoryDocState['update']>(
     (change, options) => {
       const base = latest.current;
-      if (!base || blocked.current) return;
+      if (!base) return false;
+      if (blocked.current) {
+        if (!options?.keep) return false;
+        // The file cannot be read: nothing is sent. The change goes on the last document this tab had and waits with
+        // it, to be merged into the file's after the next good read (the layout effect below).
+        const kept = change(base);
+        latest.current = kept;
+        rev.current += 1;
+        keepUnsaved(kept);
+        awaitingKept.current = true;
+        edits.current = [];
+        warnIfUnsaved();
+        console.error('theory.json cannot be read, so these changes are kept in memory and saved after the next read that works');
+        return true;
+      }
       const next = change(base);
       if (waiting()) edits.current.push(change);
       latest.current = next;
@@ -192,6 +212,7 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
       if (timer.current) clearTimeout(timer.current);
       if (options?.now) void save();
       else timer.current = setTimeout(() => void save(), DEBOUNCE_MS);
+      return true;
     },
     [save, warnIfUnsaved],
   );
