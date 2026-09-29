@@ -13,7 +13,7 @@ and `.claude/launch.json` only.
 
 - Python 3.12, managed with `uv`. Node.js with npm for the frontend.
 - The GPU is an RTX 5080 (sm_120). CUDA 12.8 or newer is a correctness floor; torch is pinned
-  to the cu128 index by a constraints file. Never let a dependency resolve it elsewhere.
+  to the cu128 index by `[tool.uv.sources]` plus an explicit index in `pyproject.toml`. Never let a dependency resolve it elsewhere.
 - `ffmpeg` and `yt-dlp` must be on `PATH`. Both the API and the worker validate dependencies
   at boot and refuse to start, naming what is missing. The worker also runs one tiny inference
   to prove the device works. Install yt-dlp with `uv tool install yt-dlp` and update it often.
@@ -59,7 +59,7 @@ Single-origin alternative: build the frontend, then
 ```bash
 uv run pytest
 ```
-(ran) Backend, worker, library and `ops/tests`. 359 passed.
+(ran) Backend, worker, library and `ops/tests`. All tests pass.
 
 ```bash
 uv run ruff check packages ops
@@ -69,7 +69,7 @@ uv run ruff check packages ops
 ```bash
 npm --prefix frontend test -- --run
 ```
-(ran) Vitest. 443 tests in 48 files passed.
+(ran) Vitest. All tests pass.
 
 ```bash
 npm --prefix frontend run typecheck

@@ -12,7 +12,18 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 BASH = shutil.which("bash")
 SCRIPT = REPO / "ops" / "install.sh"
-FAKES = ("uv", "npm", "ffmpeg", "yt-dlp", "systemctl", "loginctl", "sudo", "curl", "journalctl")
+FAKES = (
+    "uv",
+    "npm",
+    "ffmpeg",
+    "ffprobe",
+    "yt-dlp",
+    "systemctl",
+    "loginctl",
+    "sudo",
+    "curl",
+    "journalctl",
+)
 
 
 def _fake(bin_dir: Path, name: str, log: Path, body: str = "") -> None:
@@ -27,10 +38,10 @@ def env(tmp_path):
     bin_dir.mkdir()
     log = tmp_path / "calls.log"
     log.touch()
-    tools_dir = tmp_path / "tools"  # ffmpeg and yt-dlp live apart from uv (D9-06)
+    tools_dir = tmp_path / "tools"  # ffmpeg, ffprobe and yt-dlp live apart from uv (D9-06)
     tools_dir.mkdir()
     for name in FAKES:
-        _fake(tools_dir if name in ("ffmpeg", "yt-dlp") else bin_dir, name, log)
+        _fake(tools_dir if name in ("ffmpeg", "ffprobe", "yt-dlp") else bin_dir, name, log)
     _fake(bin_dir, "loginctl", log, body='[ "$1" = show-user ] && echo no')
     _fake(bin_dir, "systemctl", log, body='case " $* " in *" show "*) echo 0;; esac')
     # `id -un` is not logged: it would pollute the "nothing was called" assertions.
@@ -50,6 +61,15 @@ def env(tmp_path):
             "STEMCRAFT_WORKER_SETTLE": "1",
         },
     }
+
+
+def _hermetic_path(env):
+    """PATH of only the fakes plus a dirname shim, so no real /usr/bin tool can be found."""
+    shim = env["bin"].parent / "shim"
+    shim.mkdir(exist_ok=True)
+    if not (shim / "dirname").exists():
+        (shim / "dirname").symlink_to(shutil.which("dirname"))
+    env["vars"]["PATH"] = f"{env['bin']}:{env['tools']}:{shim}"
 
 
 def _run(env, *args):
@@ -89,6 +109,7 @@ def test_install_runs_the_deploy_steps_in_order(env):
         f"npm --prefix {REPO}/frontend run build",
         "systemctl --user daemon-reload",
         "systemctl --user enable stemcraft-api.service stemcraft-worker.service",
+        "systemctl --user reset-failed stemcraft-api.service stemcraft-worker.service",
         "systemctl --user restart stemcraft-api.service stemcraft-worker.service",
     ]
     positions = [calls.index(c) for c in order]
@@ -117,11 +138,21 @@ def test_dry_run_writes_nothing_and_calls_nothing_but_prints_every_step(env):
 
 def test_a_missing_dependency_stops_the_install_and_names_it(env):
     (env["tools"] / "yt-dlp").unlink()
+    _hermetic_path(env)
     result = _run(env)
     assert result.returncode != 0
     assert "yt-dlp" in result.stderr
     assert _calls(env) == []  # refused before touching anything
     assert not env["units"].exists()
+
+
+def test_a_missing_ffprobe_is_refused_too(env):
+    (env["tools"] / "ffprobe").unlink()
+    _hermetic_path(env)
+    result = _run(env)
+    assert result.returncode != 0
+    assert "ffprobe" in result.stderr
+    assert _calls(env) == []
 
 
 def test_a_unit_that_does_not_come_up_fails_the_install_with_its_journal(env):
@@ -154,21 +185,58 @@ def _journal_calls(env):
 
 
 def test_a_worker_that_is_not_active_after_the_api_answers_fails_with_its_journal(env):
-    _fake(env["bin"], "systemctl", env["log"], body='case " $* " in *" is-active "*) exit 1;; esac')
+    body = 'case "$*" in *is-active*worker*) exit 1;; esac'
+    _fake(env["bin"], "systemctl", env["log"], body=body)
     _fake(env["bin"], "journalctl", env["log"], body='echo "worker boot check failed"')
     result = _run(env)
     assert result.returncode != 0
-    assert "the worker is not running" in result.stderr
+    assert "stemcraft-worker.service is not running" in result.stderr
     assert "worker boot check failed" in result.stdout
     assert _journal_calls(env) == ["journalctl --user -u stemcraft-worker.service -n 50 --no-pager"]
 
 
+def _counting_show(unit_word):
+    """systemctl body: `show` for that unit prints 1, 2, 3... (NRestarts rising), others 0."""
+    return (
+        'case " $* " in *" show "*) case "$*" in *' + unit_word + "*) "
+        'echo x >> "$0.count"; wc -l < "$0.count";; *) echo 0;; esac;; esac'
+    )
+
+
 def test_a_worker_that_restarts_during_the_settle_window_fails_with_its_journal(env):
-    _fake(env["bin"], "systemctl", env["log"], body='case " $* " in *" show "*) echo 2;; esac')
+    _fake(env["bin"], "systemctl", env["log"], body=_counting_show("worker"))
     result = _run(env)
     assert result.returncode != 0
-    assert "the worker restarted 2 time(s)" in result.stderr
+    assert "stemcraft-worker.service restarted 1 time(s)" in result.stderr
     assert _journal_calls(env) == ["journalctl --user -u stemcraft-worker.service -n 50 --no-pager"]
+
+
+def test_an_api_unit_that_is_not_active_fails_even_though_health_answers(env):
+    _fake(
+        env["bin"],
+        "systemctl",
+        env["log"],
+        body='case "$*" in *is-active*stemcraft-api*) exit 1;; esac',
+    )
+    _fake(env["bin"], "journalctl", env["log"], body='echo "address in use"')
+    result = _run(env)
+    assert result.returncode != 0
+    assert "stemcraft-api.service is not running" in result.stderr
+    assert "address in use" in result.stdout
+    assert _journal_calls(env) == ["journalctl --user -u stemcraft-api.service -n 50 --no-pager"]
+
+
+def test_an_api_unit_whose_restart_count_rises_fails_with_its_journal(env):
+    _fake(env["bin"], "systemctl", env["log"], body=_counting_show("api"))
+    result = _run(env)
+    assert result.returncode != 0
+    assert "stemcraft-api.service restarted 1 time(s)" in result.stderr
+    assert _journal_calls(env) == ["journalctl --user -u stemcraft-api.service -n 50 --no-pager"]
+
+
+def test_a_nonzero_restart_baseline_is_not_a_failure(env):
+    _fake(env["bin"], "systemctl", env["log"], body='case " $* " in *" show "*) echo 3;; esac')
+    assert _run(env).returncode == 0
 
 
 def test_port_lands_in_the_api_unit_and_the_health_check(env):
@@ -225,10 +293,7 @@ def test_lingering_off_without_sudo_dies_before_touching_anything(env):
     # /usr/bin holds a real sudo, so PATH here is only the fakes plus a dirname shim: the run
     # must never be able to reach the real sudo.
     (env["bin"] / "sudo").unlink()
-    shim = env["bin"].parent / "shim"
-    shim.mkdir()
-    (shim / "dirname").symlink_to(shutil.which("dirname"))
-    env["vars"]["PATH"] = f"{env['bin']}:{env['tools']}:{shim}"
+    _hermetic_path(env)
     result = _run(env)
     assert result.returncode != 0
     assert "sudo" in result.stderr

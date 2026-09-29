@@ -1,8 +1,7 @@
-# Template: ops/install.sh fills in @REPO@, @UV@ and @PATH@ and installs the result into
+# Template: ops/install.sh fills in @REPO@, @UV@, @PATH@ and @PORT@ and installs the result into
 # ~/.config/systemd/user/. Do not copy this file by hand.
 [Unit]
 Description=Stemcraft API
-After=network.target
 # D9-08: give up after 10 failed starts in 5 minutes, so a boot check that keeps failing
 # ends as a visible "failed" unit instead of a silent restart loop (N-08).
 StartLimitIntervalSec=300
@@ -12,7 +11,7 @@ StartLimitBurst=10
 Type=simple
 WorkingDirectory=@REPO@
 # D9-06: at boot there is no login session to inherit PATH from, and the boot checks
-# need ffmpeg and yt-dlp on it.
+# need ffmpeg, ffprobe and yt-dlp on it.
 Environment=PATH=@PATH@
 Environment=PYTHONUNBUFFERED=1
 Environment=STEMCRAFT_DIST_DIR=@REPO@/frontend/dist

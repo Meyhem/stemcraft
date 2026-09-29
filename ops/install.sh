@@ -33,6 +33,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UNIT_DIR="${STEMCRAFT_UNIT_DIR:-$HOME/.config/systemd/user}"
 PORT="${STEMCRAFT_PORT:-8000}"
 HEALTH_TIMEOUT="${STEMCRAFT_HEALTH_TIMEOUT:-60}"
+# Despite the name, STEMCRAFT_WORKER_SETTLE is the settle window for BOTH units.
 WORKER_SETTLE="${STEMCRAFT_WORKER_SETTLE:-30}"
 UNITS=(stemcraft-api.service stemcraft-worker.service)
 ME="$(id -un)"
@@ -57,13 +58,13 @@ PORT=$(( 10#$PORT ))
 
 # N-08: refuse before touching anything if a dependency is missing.
 declare -A BIN
-for tool in uv npm ffmpeg yt-dlp systemctl loginctl curl; do
+for tool in uv npm ffmpeg ffprobe yt-dlp systemctl loginctl curl; do
   BIN[$tool]="$(command -v "$tool")" || die "missing dependency: $tool is not on PATH"
 done
 
 # D9-06: the units get an explicit PATH -- at boot there is no login session to inherit it.
 unit_path=""
-for tool in uv ffmpeg yt-dlp; do
+for tool in uv ffmpeg ffprobe yt-dlp; do
   dir="$(dirname "${BIN[$tool]}")"
   case ":$unit_path:" in *":$dir:"*) ;; *) unit_path="${unit_path:+$unit_path:}$dir" ;; esac
 done
@@ -108,11 +109,20 @@ if (( NEED_LINGER )); then
   run sudo loginctl enable-linger "$ME"
 fi
 
+run systemctl --user reset-failed "${UNITS[@]}"  # a deploy right after a start-limit-hit must start
 run systemctl --user restart "${UNITS[@]}"
+
+declare -A BASELINE
+for unit in "${UNITS[@]}"; do
+  n=0
+  if (( ! DRY )); then n="$(systemctl --user show -p NRestarts --value "$unit" 2>/dev/null || echo 0)"; fi
+  [[ "$n" =~ ^[0-9]+$ ]] || n=0
+  BASELINE[$unit]=$n
+done
 
 if (( DRY )); then
   echo "+ wait for http://127.0.0.1:$PORT/api/health"
-  echo "+ watch stemcraft-worker.service for ${WORKER_SETTLE}s (active, no restarts)"
+  echo "+ watch ${UNITS[*]} for ${WORKER_SETTLE}s (each active, no restarts)"
   exit 0
 fi
 
@@ -131,18 +141,21 @@ for (( i = 0; i < HEALTH_TIMEOUT; i++ )); do
 done
 (( up )) || fail_with_journal stemcraft-api.service "the API did not answer on port $PORT within ${HEALTH_TIMEOUT}s"
 
-# Both units are Type=simple, so `restart` returns at fork, and the worker's boot check
-# (torch import, CUDA init, tiny inference) outlasts the API's. /api/health cannot prove the
-# worker is fresh (worker_status persists across restarts and updated_at is not exposed), so
-# this is a heuristic: the worker must stay active with zero auto-restarts for a settle window
-# (STEMCRAFT_WORKER_SETTLE). A worker that fails its boot check exits and either leaves
-# "active" or bumps NRestarts (Restart=on-failure), which we see here.
+# Both units are Type=simple, so `restart` returns at fork. The health poll above only proves
+# SOMETHING answers on the port (a stray dev server would do), and /api/health cannot prove the
+# worker is fresh (worker_status persists across restarts). So this is a heuristic: each unit
+# must stay active with no auto-restarts beyond the NRestarts baseline read right after
+# `restart`, for a settle window (STEMCRAFT_WORKER_SETTLE, which covers both units). A unit that
+# dies (address in use, failed boot check) leaves "active" or bumps NRestarts (Restart=on-failure).
 for (( i = 0; i <= WORKER_SETTLE; i++ )); do
-  systemctl --user is-active --quiet stemcraft-worker.service \
-    || fail_with_journal stemcraft-worker.service "the worker is not running"
-  restarts="$(systemctl --user show -p NRestarts --value stemcraft-worker.service)"
-  [[ "${restarts:-0}" == "0" ]] \
-    || fail_with_journal stemcraft-worker.service "the worker restarted ${restarts} time(s) after install"
+  for unit in "${UNITS[@]}"; do
+    systemctl --user is-active --quiet "$unit" \
+      || fail_with_journal "$unit" "$unit is not running"
+    restarts="$(systemctl --user show -p NRestarts --value "$unit")"
+    [[ "${restarts:-0}" =~ ^[0-9]+$ ]] || restarts=0
+    (( restarts <= ${BASELINE[$unit]} )) \
+      || fail_with_journal "$unit" "$unit restarted $(( restarts - ${BASELINE[$unit]} )) time(s) after install"
+  done
   if (( i < WORKER_SETTLE )); then sleep 1; fi
 done
 echo "Stemcraft is up on http://$(uname -n):$PORT"

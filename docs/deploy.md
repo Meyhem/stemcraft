@@ -7,16 +7,16 @@ boot and restart on failure. Re-running the script is the deploy.
 ## 1. Requirements on the prod machine
 
 The same as "Run locally" in the [README](../README.md): Linux, Python 3.12 with
-[uv](https://docs.astral.sh/uv/), Node.js with npm, `ffmpeg` and `yt-dlp` on `PATH`, and an
+[uv](https://docs.astral.sh/uv/), Node.js with npm, `ffmpeg` (with `ffprobe`) and `yt-dlp` on `PATH`, and an
 NVIDIA GPU with CUDA 12.8 or newer (the RTX 5080 needs the cu128 PyTorch wheels). In addition:
 
 - systemd with a user manager, plus `loginctl`, `curl` and `sudo`. `sudo` is used for exactly
   one command, `sudo loginctl enable-linger $USER`, and only when lingering is off.
 - A login session. `systemctl --user` needs one: ssh is fine; cron or `sudo -u` is not.
 
-`install.sh` checks `uv npm ffmpeg yt-dlp systemctl loginctl curl` before it changes anything
-and exits 1 naming the first one that is missing (N-08). The directories holding `uv`, `ffmpeg`
-and `yt-dlp` are written into the units' `PATH`, because at boot there is no login session to
+`install.sh` checks `uv npm ffmpeg ffprobe yt-dlp systemctl loginctl curl` before it changes anything
+and exits 1 naming the first one that is missing (N-08). The directories holding `uv`, `ffmpeg`,
+`ffprobe` and `yt-dlp` are written into the units' `PATH`, because at boot there is no login session to
 inherit one from (D9-06).
 
 ## 2. First install
@@ -42,9 +42,10 @@ sudo step shows; on a machine that already lingers that step is absent):
 + systemctl --user enable stemcraft-api.service stemcraft-worker.service
 Lingering is off for meyhem; enabling it needs sudo so the units start at boot.
 + sudo loginctl enable-linger meyhem
++ systemctl --user reset-failed stemcraft-api.service stemcraft-worker.service
 + systemctl --user restart stemcraft-api.service stemcraft-worker.service
 + wait for http://127.0.0.1:8000/api/health
-+ watch stemcraft-worker.service for 30s (active, no restarts)
++ watch stemcraft-api.service stemcraft-worker.service for 30s (each active, no restarts)
 ```
 
 The output above was captured with this machine's user name and paths; yours will differ, and
@@ -52,7 +53,7 @@ the port follows `STEMCRAFT_PORT`.
 
 A real run does those steps in that order: `uv sync --locked`, `npm ci`, the frontend build,
 render each unit template from `ops/systemd/` into the unit directory (temp file then rename),
-`daemon-reload`, `enable`, enable lingering if needed, `restart`, then the two checks below.
+`daemon-reload`, `enable`, enable lingering if needed, `reset-failed` (so a deploy right after a start-limit-hit can start the units), `restart`, then the two checks below.
 
 Arguments are strict: only `--dry-run` and `-h`/`--help` exist. Anything else prints the usage
 and exits 2 before doing anything.
@@ -64,15 +65,17 @@ Environment variables:
 | `STEMCRAFT_UNIT_DIR` | `~/.config/systemd/user` | where the rendered units are written |
 | `STEMCRAFT_PORT` | `8000` | rendered into the API unit, so it is the real listen port and the port the health check polls. Integer 1-65535 |
 | `STEMCRAFT_HEALTH_TIMEOUT` | `60` | seconds to wait for `/api/health` to answer |
-| `STEMCRAFT_WORKER_SETTLE` | `30` | seconds the worker must stay up (see below) |
+| `STEMCRAFT_WORKER_SETTLE` | `30` | seconds each unit must stay up (see below; the name is historical, it covers both) |
 
 **What "up" means.** After `restart` the script polls `http://127.0.0.1:$STEMCRAFT_PORT/api/health`
 until it answers or the timeout passes. If it never answers it prints the last 50 journal lines
-of the API unit and exits 1. It then watches the worker: it must stay `active` with
-`NRestarts=0` for `STEMCRAFT_WORKER_SETTLE` seconds, else the script prints the worker's journal
-and exits 1.
+of the API unit and exits 1. It then watches both units: each must stay `active` with no
+`NRestarts` increase over the baseline read right after `restart`, for `STEMCRAFT_WORKER_SETTLE`
+seconds, else the script prints that unit's journal and exits 1 naming it. This catches an API
+unit that crash-loops (for example "address in use" because another server holds the port)
+while something else answers `/api/health`.
 
-The worker check is a **heuristic**. `/api/health` does not prove the worker is healthy (the
+The settle check is a **heuristic**. `/api/health` does not prove the worker is healthy (the
 worker's status persists across restarts). The worker's boot check (torch and CUDA init plus one
 tiny inference) can, on a slow machine, take longer than the settle window and then fail;
 `install.sh` would still say "up". So after any install, confirm with:
@@ -112,6 +115,9 @@ git log --oneline
 git checkout <commit> && ops/install.sh
 ```
 
+Rollback only targets commits that contain `ops/install.sh` (it landed in Phase 9); older commits
+don't have it or carry the old hard-coded `%h/dev/stemcraft` units.
+
 Once the problem is fixed, return to the branch and redeploy:
 
 ```bash
@@ -145,6 +151,8 @@ systemctl --user reset-failed stemcraft-worker
 systemctl --user start stemcraft-worker
 ```
 
+`ops/install.sh` runs `reset-failed` on both units before it restarts them, so a redeploy after a start-limit-hit needs no manual clearing.
+
 (That start-limit output is what systemd documents for the state; it has not been reproduced on
 this machine, see section 7.)
 
@@ -165,7 +173,7 @@ If yt-dlp moved to a different directory, re-run `ops/install.sh` instead, so th
 ## 7. What has and has not been run
 
 Nothing in `install.sh` has been run against real systemd. `ops/tests/test_install.py` runs the
-script against fake `systemctl`, `loginctl`, `sudo`, `curl`, `journalctl`, `uv` and `npm` binaries, so it
+script against fake `systemctl`, `loginctl`, `sudo`, `curl`, `journalctl`, `uv`, `npm`, `ffmpeg`, `ffprobe` and `yt-dlp` binaries, so it
 proves the script's logic (order, rendering, failure behaviour), not systemd's.
 
 | Step | Status |
@@ -177,7 +185,7 @@ proves the script's logic (order, rendering, failure behaviour), not systemd's.
 | `daemon-reload`, `enable`, `restart` | tests against fakes only |
 | `sudo loginctl enable-linger` | tests against fakes only |
 | API health wait | tests against fakes only |
-| Worker settle check | tests against fakes only; heuristic (section 2) |
+| Settle check (both units) | tests against fakes only; heuristic (section 2) |
 | Deploy and rollback (`git pull` / `git checkout`, then the script) | not run |
 | `uv tool upgrade yt-dlp` and restarting the units after it | not run |
 | Start-limit-hit behaviour and `reset-failed` | not run |
@@ -193,5 +201,8 @@ proves the script's logic (order, rendering, failure behaviour), not systemd's.
    has not reported yet; wait and retry). Optionally run one job and check its device chip.
 4. `systemctl --user is-enabled stemcraft-api stemcraft-worker` prints `enabled` twice.
 5. `loginctl show-user $USER -p Linger` prints `Linger=yes`.
-6. Reboot. Without logging in, `curl http://<host>:8000/api/health` answers from another
-   machine.
+6. Reboot. Without logging in, `curl http://<host>:<port>/api/health` answers from another
+   machine AND shows `"device":"cuda"`. With lingering the user manager starts early in boot;
+   if CUDA was not ready, the worker falls back to CPU for its whole uptime. `"device":"cpu"`
+   with a `fallback_reason` means the worker started before the GPU was ready: run
+   `systemctl --user restart stemcraft-worker`.
