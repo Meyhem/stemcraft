@@ -1,0 +1,65 @@
+/* UI spec §5, "drop zone": setup tier. Ported from the design system's .drop. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--ds-t-sm);
+  font-weight: 600;
+  color: var(--ds-text-2);
+}
+
+.drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-2);
+  padding: var(--ds-8) var(--ds-5);
+  border: 2px dashed var(--ds-border-strong);
+  border-radius: var(--ds-r-panel);
+  background: color-mix(in srgb, var(--ds-text) 1.5%, transparent);
+  color: var(--ds-text-2);
+  text-align: center;
+  transition:
+    border-color var(--ds-m-flip) var(--ds-ease),
+    background var(--ds-m-flip) var(--ds-ease);
+}
+
+.drop[data-over='true'] {
+  border-color: var(--ds-accent);
+  background: color-mix(in srgb, var(--ds-accent) 8%, transparent);
+}
+
+/* The real <input type="file"> covers the zone at zero opacity: native click-to-browse
+   and native keyboard operation, no JS click forwarding, and the label stays bound to
+   an element that is genuinely the input. */
+.input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* The global :focus-visible ring lands on an invisible element, so the zone wears it. */
+.drop:has(.input:focus-visible) {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}
+
+.primary {
+  font-size: var(--ds-t-md);
+  color: var(--ds-text);
+}
+
+.hint {
+  font-size: var(--ds-t-sm);
+  color: var(--ds-text-3);
+}

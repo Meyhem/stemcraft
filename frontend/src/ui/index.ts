@@ -7,3 +7,7 @@ export { Banner } from './Banner';
 export type { BannerProps } from './Banner';
 export { TextField } from './TextField';
 export type { TextFieldProps } from './TextField';
+export { DropZone } from './DropZone';
+export type { DropZoneProps } from './DropZone';
+export { Segmented } from './Segmented';
+export type { SegmentedOption, SegmentedProps } from './Segmented';

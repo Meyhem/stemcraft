@@ -1,0 +1,34 @@
+/* UI spec §5, "segmented": setup tier.
+
+   U-01, stated plainly because the app got this wrong once: the selected segment is
+   ACCENT. It is chrome. It must never take --ds-bass or any other stem hue, even on a
+   screen that is about the bass -- the muted stem hues identify a stem, and they appear
+   only where a stem is named. */
+
+.seg {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  background: var(--ds-ground);
+}
+
+.item {
+  min-height: 34px;
+  padding: 0 var(--ds-4);
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ds-text-2);
+  font: 600 var(--ds-t-sm) / 1 var(--ds-font);
+  cursor: pointer;
+  transition: background var(--ds-m-flip) var(--ds-ease);
+}
+
+.item:hover { color: var(--ds-text); }
+
+.item[aria-pressed='true'] {
+  background: var(--ds-accent);
+  color: var(--ds-on-accent);
+}
