@@ -19,9 +19,13 @@ instrument and play along.
   to eighth notes; optional chromatic, scale or fifth approach into the next bar), in the
   detected key or another candidate, and follow the pitch shift. Loop by bar numbers or
   from the chord ribbon; playback carries on when you switch back to the Song view
-- Theory tab: a scale finder, chord finder, note finder and chords-in-a-key view with a
-  circle of fifths, for 4- and 5-string bass and guitar in any tuning, left-handed too.
-  Load an analysed song's key and chords into it with one click
+- Theory tab for 4- and 5-string bass and 6-string guitar in any tuning, left-handed too:
+  scale, chord and note finders, name a chord from notes you tap, scale positions
+  (pentatonic boxes, 3-notes-per-string, CAGED, all positions), triads and inversions,
+  arpeggios, guitar voicings and bass arpeggio shapes, chords in a key, a circle of
+  fifths, 15 progressions in any key and scales that fit a chord. Pick an analysed song
+  and one of its key candidates to load its key and chords: they show as chips in the
+  chord tools, and Progressions charts the song with numerals, borrowed chords labelled
 - Album splitter: cut a full album rip into tagged MP3s. Silence detection proposes cuts;
   on a full-length waveform you play, zoom with the wheel or by dragging across a range,
   drag, add and delete cuts, or type exact start and end times to the millisecond, then
@@ -39,11 +43,12 @@ instrument and play along.
 ![Song view](docs/screenshots/song-view.png)
 ![Play along](docs/screenshots/play-along.png)
 ![Theory](docs/screenshots/theory.png)
+![Theory: scale positions](docs/screenshots/theory-shapes.png)
 ![Album splitter](docs/screenshots/album-splitter.png)
 ![Job queue](docs/screenshots/job-queue.png)
 
-All seven are captures of the running app, made with
-`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> play-along=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" album-splitter=/splitter/<id> job-queue=/jobs`
+All eight are captures of the running app, made with
+`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> play-along=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" "theory-shapes=/theory/scale-positions?root=A&scale=minor-pentatonic" album-splitter=/splitter/<id> job-queue=/jobs`
 (API and dev server running; it loads the pages, and for Play along it presses Space to play a few bars and pause again). The design system these follow —
 tokens, components and screen mockups — is in [design/ui](design/ui) (build it with
 `python3 design/ui/build.py`), with its rules in [design/ui-spec.md](design/ui-spec.md).

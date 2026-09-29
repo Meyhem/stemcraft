@@ -30,13 +30,14 @@ const READY = {
   'song-view': '[data-testid="bass-canvas"]',
   'play-along': '[data-testid="neck-canvas"]',
   theory: '[data-cell]', // the neck's dots (SVG); the tab is a lazy chunk, so 'body' is too early
+  'theory-shapes': '[data-cell]',
   'album-splitter': '[data-testid="album-canvas"]',
   'job-queue': '[data-testid="job-stats"]',
 };
 
 // Screens taller than the default viewport: the play-along neck sits below the pickers;
 // the Theory rail's instrument footer (tuning, left-handed) sits below the fold at 900.
-const HEIGHTS = { 'play-along': 1330, theory: 960 };
+const HEIGHTS = { 'play-along': 1330, theory: 960, 'theory-shapes': 960 };
 
 // Screens that only show their point once playing: press Space, let a few bars go by,
 // press Space again so the frame is still. (The neck is empty before the first bar.)
