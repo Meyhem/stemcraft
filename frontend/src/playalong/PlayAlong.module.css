@@ -53,6 +53,16 @@
   font-size: var(--ds-t-sm);
 }
 
+/* Phone width (C-05): keep the 56 px perform targets, stack "to" on its own row. */
+@media (max-width: 520px) {
+  .loopBars {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    justify-content: start;
+  }
+  .to { grid-column: 1 / -1; }
+}
+
 .ribbon {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));

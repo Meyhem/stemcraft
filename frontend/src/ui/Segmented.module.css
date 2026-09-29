@@ -7,6 +7,9 @@
 
 .seg {
   display: inline-flex;
+  /* Wraps only when it would overflow its container (C-05, phone width). */
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: 3px;
   padding: 3px;
   border: 1px solid var(--ds-border-strong);
