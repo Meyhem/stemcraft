@@ -11,6 +11,7 @@ import { NameThatChord } from './tools/NameThatChord';
 import { NoteFinder } from './tools/NoteFinder';
 import { ScaleFinder } from './tools/ScaleFinder';
 import { ScalePositions } from './tools/ScalePositions';
+import { ScalesOverChord } from './tools/ScalesOverChord';
 import { Triads } from './tools/Triads';
 
 export type ToolGroup = 'Find' | 'Shapes' | 'Harmony' | 'Practice';
@@ -33,6 +34,7 @@ export const TOOLS: readonly ToolDef[] = [
   { slug: 'triads', label: 'Triads & inversions', group: 'Shapes', Component: Triads },
   { slug: 'arpeggios', label: 'Arpeggios', group: 'Shapes', Component: Arpeggios },
   { slug: 'chords-in-key', label: 'Chords in a key', group: 'Harmony', Component: ChordsInKey },
+  { slug: 'scales-over-chord', label: 'Scales over a chord', group: 'Harmony', Component: ScalesOverChord },
 ];
 
 export function toolBySlug(slug: string | undefined): ToolDef | undefined {
