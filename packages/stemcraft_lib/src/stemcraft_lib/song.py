@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, ValidationError
 from .atomic import atomic_write_json
 from .ids import new_song_id, song_dirname
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Fixed at HTDemucs v4 training time, not configured and not detected.
 STEM_NAMES: tuple[str, ...] = ("vocals", "drums", "bass", "other")
@@ -46,6 +46,43 @@ class Loop(BaseModel):
     end_bar: int
 
 
+# The note names theory.ts can read (sharps and flats). The key is the user's
+# pick among the analysis's candidates, so it is validated here rather than
+# trusted: an unreadable tonic would otherwise surface as a crash in the browser.
+Tonic = Literal[
+    "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B"
+]
+
+
+class PlayAlongKey(BaseModel):
+    tonic: Tonic
+    mode: Literal["major", "minor"]
+
+
+class PlayAlongPattern(BaseModel):
+    notes: Literal[
+        "root",
+        "root_fifth",
+        "root_fifth_octave",
+        "octave_pump",
+        "triad_chord",
+        "triad_diatonic",
+        "seventh",
+    ] = "triad_chord"
+    rhythm: Literal["whole", "half", "quarter", "eighth"] = "quarter"
+    approach: Literal["none", "chromatic", "scale", "fifth"] = "none"
+
+
+class PlayAlong(BaseModel):
+    """v3 (D-18). The Play along screen's recipe: which key to think in (None =
+    the analysis's top candidate) and which pattern to generate. Only the
+    choice is stored; the notes and fret positions are derived in the browser
+    on every change."""
+
+    key: PlayAlongKey | None = None
+    pattern: PlayAlongPattern = Field(default_factory=PlayAlongPattern)
+
+
 class Source(BaseModel):
     kind: Literal["upload", "url"]
     value: str
@@ -69,6 +106,8 @@ class Song(BaseModel):
     active_loop: Loop | None = None
     metronome: bool = False
     count_in_bars: int = 0
+    # v3 (D-18).
+    play_along: PlayAlong = Field(default_factory=PlayAlong)
 
 
 def new_song(*, title: str, artist: str, source_kind: str, source_value: str) -> Song:
@@ -100,6 +139,10 @@ def _migrate(raw: dict, path: Path) -> dict:
         # itself is rewritten on the next write_song (§5: migrated in place).
         raw = {**raw, "schema_version": 2}
         version = 2
+    if version == 2:
+        # v2 -> v3 (D-18) is additive in the same way: play_along defaults.
+        raw = {**raw, "schema_version": 3}
+        version = 3
     if version == SCHEMA_VERSION:
         return raw
     raise SongUnreadable(f"{path}: no migration from schema_version {version}")

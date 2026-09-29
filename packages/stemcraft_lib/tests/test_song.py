@@ -129,7 +129,7 @@ def test_find_song_dir_ignores_a_directory_with_no_song_json(tmp_path):
 
 def test_new_song_defaults_to_no_active_loop_no_metronome_no_count_in():
     song = new_song(title="T", artist="", source_kind="upload", source_value="original.mp3")
-    assert song.schema_version == 2
+    assert song.schema_version == SCHEMA_VERSION
     assert song.active_loop is None
     assert song.metronome is False
     assert song.count_in_bars == 0
@@ -170,7 +170,7 @@ def test_a_v1_song_migrates_forward_with_v1_fields_intact(tmp_path):
     )
 
     song = read_song(song_dir)
-    assert song.schema_version == 2
+    assert song.schema_version == SCHEMA_VERSION
     # Everything v1 knew is preserved verbatim; only the new fields are defaulted.
     assert song.title == "Old Song"
     assert song.mix["vocals"].muted is True
@@ -179,3 +179,64 @@ def test_a_v1_song_migrates_forward_with_v1_fields_intact(tmp_path):
     assert song.active_loop is None
     assert song.metronome is False
     assert song.count_in_bars == 0
+
+
+def test_new_song_defaults_play_along_to_top_key_and_quarter_triads():
+    song = new_song(title="T", artist="", source_kind="upload", source_value="original.mp3")
+    assert song.schema_version == 3
+    assert song.play_along.key is None
+    assert song.play_along.pattern.notes == "triad_chord"
+    assert song.play_along.pattern.rhythm == "quarter"
+    assert song.play_along.pattern.approach == "none"
+
+
+def test_a_v2_song_migrates_to_v3_with_default_play_along(tmp_path):
+    song_dir = tmp_path / "song"
+    song_dir.mkdir()
+    (song_dir / "song.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "id": "abc123",
+                "title": "V2 Song",
+                "artist": "",
+                "source": {"kind": "upload", "value": "original.mp3"},
+                "created_at": "2026-09-01T00:00:00+00:00",
+                "active_loop": {"name": "", "start_bar": 4, "end_bar": 8},
+                "metronome": True,
+                "count_in_bars": 1,
+            }
+        )
+    )
+
+    song = read_song(song_dir)
+    assert song.schema_version == 3
+    # v2's fields survive; only play_along is defaulted.
+    assert song.active_loop == Loop(name="", start_bar=4, end_bar=8)
+    assert song.metronome is True
+    assert song.play_along.key is None
+    assert song.play_along.pattern.notes == "triad_chord"
+
+
+def test_play_along_round_trips_through_disk(tmp_path):
+    from stemcraft_lib.song import PlayAlong, PlayAlongKey, PlayAlongPattern
+
+    song = new_song(title="T", artist="", source_kind="upload", source_value="original.mp3")
+    song.play_along = PlayAlong(
+        key=PlayAlongKey(tonic="Bb", mode="major"),
+        pattern=PlayAlongPattern(notes="seventh", rhythm="eighth", approach="chromatic"),
+    )
+    song_dir = tmp_path / "song"
+    song_dir.mkdir()
+    write_song(song_dir, song)
+    assert read_song(song_dir).play_along == song.play_along
+
+
+def test_play_along_rejects_an_unknown_pattern_or_tonic():
+    from pydantic import ValidationError
+    from stemcraft_lib.song import PlayAlongKey, PlayAlongPattern
+
+    with pytest.raises(ValidationError):
+        PlayAlongPattern(notes="arpeggio")
+    with pytest.raises(ValidationError):
+        PlayAlongKey(tonic="H", mode="major")

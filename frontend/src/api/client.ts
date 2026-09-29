@@ -145,6 +145,41 @@ export interface Source {
   value: string;
 }
 
+// v3 (D-18). Mirrors PlayAlong in stemcraft_lib/song.py.
+export type PatternNotes =
+  | 'root'
+  | 'root_fifth'
+  | 'root_fifth_octave'
+  | 'octave_pump'
+  | 'triad_chord'
+  | 'triad_diatonic'
+  | 'seventh';
+export type PatternRhythm = 'whole' | 'half' | 'quarter' | 'eighth';
+export type PatternApproach = 'none' | 'chromatic' | 'scale' | 'fifth';
+
+export interface PlayAlongKey {
+  tonic: string;
+  mode: 'major' | 'minor';
+}
+
+export interface PlayAlongPattern {
+  notes: PatternNotes;
+  rhythm: PatternRhythm;
+  approach: PatternApproach;
+}
+
+export interface PlayAlong {
+  /** null = the analysis's top key candidate. */
+  key: PlayAlongKey | null;
+  pattern: PlayAlongPattern;
+}
+
+/** The server's defaults, for fixtures and for code that builds a Song by hand. */
+export const DEFAULT_PLAY_ALONG: PlayAlong = {
+  key: null,
+  pattern: { notes: 'triad_chord', rhythm: 'quarter', approach: 'none' },
+};
+
 export interface Song {
   schema_version: number;
   id: string;
@@ -161,6 +196,8 @@ export interface Song {
   active_loop: Loop | null;
   metronome: boolean;
   count_in_bars: number;
+  // v3 (D-18): the Play along recipe.
+  play_along: PlayAlong;
 }
 
 // Same-origin relative paths, like every other path in this module (D-15).

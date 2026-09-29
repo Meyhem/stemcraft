@@ -94,3 +94,29 @@ def test_put_to_an_unknown_song_404s(client: TestClient):
     song["id"] = "nope"
     response = client.put("/api/songs/nope", json=song)
     assert response.status_code == 404
+
+
+def test_put_round_trips_play_along(client: TestClient):
+    song = _create(client)
+    assert song["play_along"] == {
+        "key": None,
+        "pattern": {"notes": "triad_chord", "rhythm": "quarter", "approach": "none"},
+    }
+    song["play_along"] = {
+        "key": {"tonic": "G", "mode": "major"},
+        "pattern": {"notes": "octave_pump", "rhythm": "eighth", "approach": "fifth"},
+    }
+    response = client.put(f"/api/songs/{song['id']}", json=song)
+    assert response.status_code == 200
+    reread = client.get(f"/api/songs/{song['id']}").json()["song"]
+    assert reread["play_along"] == song["play_along"]
+
+
+def test_put_rejects_an_unknown_pattern(client: TestClient):
+    song = _create(client)
+    song["play_along"] = {
+        "key": None,
+        "pattern": {"notes": "arpeggio", "rhythm": "quarter", "approach": "none"},
+    }
+    response = client.put(f"/api/songs/{song['id']}", json=song)
+    assert response.status_code == 422
