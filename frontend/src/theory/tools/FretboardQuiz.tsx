@@ -11,6 +11,7 @@ import { mod12 } from '../../music/chordTones';
 import type { Cell } from '../../music/positions';
 import {
   focusFrets,
+  focusRows,
   fretboardQuestion,
   NothingToPractise,
   pcAt,
@@ -160,7 +161,11 @@ export function FretboardQuiz() {
     if (q.mode === 'spell-chord') {
       const info = chordInfo(q.symbol);
       const tone = info.ok && info.chord.notes.some((n) => n.pc === pc);
-      return miss(a, cell, tone ? `✕ ${name} is in ${pretty(q.symbol)}, ${OUTSIDE}` : `✕ ${name} is not in ${pretty(q.symbol)}`);
+      if (!tone) return miss(a, cell, `✕ ${name} is not in ${pretty(q.symbol)}`);
+      // A chord tone the player could be asked about somewhere else: only the outline is the problem.
+      const [flo, fhi] = focusFrets(inst, focus);
+      const practised = focusRows(inst, focus).includes(cell.string) && cell.fret >= flo && cell.fret <= fhi;
+      return miss(a, cell, `✕ ${name} is in ${pretty(q.symbol)}, ${practised ? 'but outside the outlined frets' : OUTSIDE}`);
     }
     if (pc === q.pc) return miss(a, cell, `✕ that's ${name}, ${OUTSIDE}`);
     const near = q.targets.filter((t) => t.string === cell.string).sort((x, y) => Math.abs(x.fret - cell.fret) - Math.abs(y.fret - cell.fret))[0];

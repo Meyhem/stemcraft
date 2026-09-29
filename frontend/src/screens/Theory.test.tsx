@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, expect, test, vi } from 'vitest';
 
 import { DEFAULT_THEORY, type TheoryDoc } from '../api/client';
+import { forgetUnsavedTheory } from '../theory/TheoryDoc';
 import { Theory } from './Theory';
 
 const songEntry = (id: string, title: string, hasAnalysis: boolean, lastPlayed: string | null) => ({
@@ -93,6 +94,8 @@ function setup(path: string, server: Server = {}) {
 }
 
 afterEach(() => {
+  cleanup(); // leaving the tab with a failed save keeps the document for the next tab; no test leaves one behind
+  forgetUnsavedTheory();
   vi.unstubAllGlobals();
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -136,6 +139,7 @@ test('an unreadable theory.json is an error with the real reason and a confirmed
 });
 
 test('a failed save keeps the change and offers Retry', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {}); // the tab is left with the failed save still unsaved
   const { puts } = setup('/theory/scale-finder', { putStatus: 500 });
   const instrument = await screen.findByRole('combobox', { name: 'Instrument' });
   await waitFor(() => expect(instrument).toBeEnabled());

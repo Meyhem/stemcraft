@@ -8,7 +8,7 @@ import { positionAt, positionsOf, type Cell } from '../../music/positions';
 import { DEFAULT_INSTRUMENT, neckFrets, PRESETS } from '../../music/tuning';
 import { Theory } from '../../screens/Theory';
 import { cellText } from '../QuizStats';
-import { TheoryDocProvider, useTheoryDoc } from '../TheoryDoc';
+import { forgetUnsavedTheory, TheoryDocProvider, useTheoryDoc } from '../TheoryDoc';
 import { TheoryNeck } from '../TheoryNeck';
 import { HISTORY_CAP, ROUND, roundStats, seeds, useQuizRound, weakestOfRound, type Result, type Round } from '../useQuizRound';
 import { renderTool } from './testing';
@@ -16,6 +16,7 @@ import { renderTool } from './testing';
 // Unmount first: leaving the tab flushes a pending save, which needs the fetch stub still in place.
 afterEach(() => {
   cleanup();
+  forgetUnsavedTheory(); // a tab left with an unsaved document keeps it for the next one; no test may leak it
   vi.unstubAllGlobals();
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -243,12 +244,22 @@ test('spell the chord: only tones inside the outlined window count; a tone outsi
 
   tapCell(notTone);
   expect(screen.getByText(new RegExp(`is not in ${symbol}`))).toBeInTheDocument();
-  tapCell(outside);
-  expect(screen.getByText(/but not in the strings and frets you're practising/)).toBeInTheDocument();
+  tapCell(outside); // a Dm tone at a practised fret, but outside the outline
+  expect(screen.getByText(new RegExp(`is in ${symbol}, but outside the outlined frets$`))).toBeInTheDocument();
   expect(progress()).toBe('round 1 of 20');
   for (const t of inside) tapCell(t);
   expect(progress()).toBe('round 2 of 20');
   expect(screen.getByText(/first try/)).toHaveTextContent('0/1 first try');
+});
+
+test('spell the chord: a tone on a string that is not practised is refused as such, not as "outlined"', async () => {
+  renderTool('/theory/fretboard-quiz', { theory: fb({ mode: 'spell-chord', frets: [0, 5], strings: [3, 2] }) }); // E and A strings, frets 0–5
+  const prompt = await screen.findByText(/^Tap the notes of /);
+  const [, symbol] = /^Tap the notes of ([A-G]m?) in /.exec(prompt.textContent!)!;
+  const tones = new Set(CHORD_TONES[symbol!]);
+  tapCell(positionsOf(DEFAULT_INSTRUMENT, tones, 0, 5).find((p) => p.string < 2)!); // in the frets, on a string not practised
+  expect(screen.getByText(/but not in the strings and frets you're practising$/)).toBeInTheDocument();
+  expect(screen.queryByText(/outside the outlined/)).toBeNull();
 });
 
 // ---------------------------------------------------------------- rounds
@@ -737,4 +748,49 @@ test('leaving the whole tab when that save fails is reported, and the answers ar
   view.unmount();
   await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining('disk full')));
   expect((client.getQueryData(['theory']) as TheoryDoc).quiz.history).toHaveLength(1);
+});
+
+// ---------------------------------------------------------------- coming back to the tab
+
+async function playFailedRound() {
+  const view = renderTool('/theory/fretboard-quiz', { theory: nameNote });
+  await screen.findByText('Name this note');
+  failNextPut();
+  for (let i = 0; i < ROUND; i++) answerRight(view.container);
+  await screen.findByText("Couldn't save");
+  return view;
+}
+
+test('a round whose save failed is not lost by leaving the tab: coming back shows it and saves it again, once', async () => {
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const first = await playFailedRound();
+  first.unmount(); // no Retry pressed
+  expect(log).toHaveBeenCalledWith(expect.stringContaining('leaving the tab'));
+
+  // The server still has the old document (no answers), and it is what the new tab fetches.
+  const back = renderTool('/theory/fretboard-quiz', { theory: nameNote });
+  await waitFor(() => expect(back.container.querySelector('[data-heat]')).not.toBeNull());
+  await waitFor(() => expect(back.puts).toHaveLength(1));
+  expect(back.puts[0]!.quiz.history).toHaveLength(ROUND);
+  await waitFor(() => expect(screen.queryByText("Couldn't save")).toBeNull());
+  back.unmount();
+
+  const third = renderTool('/theory/fretboard-quiz', { theory: nameNote });
+  await screen.findByText('Name this note');
+  expect(third.container.querySelector('[data-heat]')).toBeNull(); // the server's document, as saved
+  expect(third.puts).toHaveLength(0);
+});
+
+test('when saving the kept round fails again, the banner and Retry are there and the answers are kept', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const first = await playFailedRound();
+  first.unmount();
+  const back = renderTool('/theory/fretboard-quiz', { theory: nameNote });
+  const failed = failNextPut(); // installed before the fetched document arrives, so it catches the re-save
+  expect(await screen.findByText("Couldn't save")).toBeInTheDocument();
+  expect(failed[0]!.quiz.history).toHaveLength(ROUND);
+  expect(back.container.querySelector('[data-heat]')).not.toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  await waitFor(() => expect(back.puts).toHaveLength(1));
+  expect(back.puts[0]!.quiz.history).toHaveLength(ROUND);
 });
