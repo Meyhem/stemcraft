@@ -174,3 +174,28 @@ test('instrument footer: guitar, drop D, custom tuning and left-handed', async (
   });
   expect(puts.at(-1)?.instrument.tuning).toEqual(['C2', 'G2', 'C3', 'G3', 'C4', 'E4']);
 });
+
+test('song card: analysed songs newest first, key candidates load the key', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const { where } = setup('/theory/scale-finder', { theory: { ...DEFAULT_THEORY, song_id: '01TIGHT' } });
+  const picker = await screen.findByRole('combobox', { name: 'Song' });
+  await waitFor(() => expect(within(picker).getAllByRole('option').map((o) => o.textContent)).toEqual([
+    'Pick an analysed song',
+    'Tightrope',
+    'Old Song',
+  ]));
+  fireEvent.click(await screen.findByRole('button', { name: 'B♭ major 18%' }));
+  expect(where()).toBe('/theory/scale-finder?root=Bb');
+  fireEvent.click(screen.getByRole('button', { name: 'G minor 72%' }));
+  expect(where()).toBe('/theory/scale-finder?root=G&scale=minor');
+});
+
+test('song card: an unanalysed or missing song says so', async () => {
+  setup('/theory/scale-finder', { theory: { ...DEFAULT_THEORY, song_id: '01RAW' } });
+  expect(await screen.findByText(/Raw Song has no analysis yet/)).toBeInTheDocument();
+});
+
+test('song card: a deleted song says so', async () => {
+  setup('/theory/scale-finder', { theory: { ...DEFAULT_THEORY, song_id: '01GONE' } });
+  expect(await screen.findByText('That song no longer exists. Pick another.')).toBeInTheDocument();
+});

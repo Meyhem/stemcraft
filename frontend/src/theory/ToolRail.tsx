@@ -4,6 +4,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 
 import { InstrumentFooter } from './InstrumentFooter';
+import { SongCard } from './SongCard';
 import styles from './Theory.module.css';
 import { GROUPS, TOOLS } from './tools';
 
@@ -11,6 +12,7 @@ export function ToolRail() {
   const { search } = useLocation();
   return (
     <nav className={styles.rail} aria-label="Theory tools">
+      <SongCard />
       {GROUPS.map((group) => {
         const tools = TOOLS.filter((t) => t.group === group);
         if (tools.length === 0) return null;
