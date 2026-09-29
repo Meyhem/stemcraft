@@ -8,6 +8,7 @@ import { ChordFinder } from './tools/ChordFinder';
 import { ChordsInKey } from './tools/ChordsInKey';
 import { NoteFinder } from './tools/NoteFinder';
 import { ScaleFinder } from './tools/ScaleFinder';
+import { ScalePositions } from './tools/ScalePositions';
 
 export type ToolGroup = 'Find' | 'Shapes' | 'Harmony' | 'Practice';
 
@@ -24,6 +25,7 @@ export const TOOLS: readonly ToolDef[] = [
   { slug: 'scale-finder', label: 'Scale finder', group: 'Find', Component: ScaleFinder },
   { slug: 'chord-finder', label: 'Chord finder', group: 'Find', Component: ChordFinder },
   { slug: 'note-finder', label: 'Note finder', group: 'Find', Component: NoteFinder },
+  { slug: 'scale-positions', label: 'Scale positions', group: 'Shapes', Component: ScalePositions },
   { slug: 'chords-in-key', label: 'Chords in a key', group: 'Harmony', Component: ChordsInKey },
 ];
 
