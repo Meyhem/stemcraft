@@ -253,3 +253,29 @@ def test_get_conn_connection_usable_from_another_thread(client):
         assert result == 1
     finally:
         gen.close()
+
+
+def test_jobs_carry_their_seeded_steps(client):
+    client.post("/api/jobs", json={"kind": "probe"})
+    job = client.get("/api/jobs").json()["jobs"][0]
+    assert [(s["id"], s["state"]) for s in job["steps"]] == [("tick", "pending")]
+
+
+def test_jobs_can_be_filtered_by_song(client):
+    mine = client.post("/api/jobs", json={"kind": "probe", "song_id": "s1"}).json()["id"]
+    client.post("/api/jobs", json={"kind": "probe", "song_id": "s2"})
+    jobs = client.get("/api/jobs", params={"song_id": "s1"}).json()["jobs"]
+    assert [j["id"] for j in jobs] == [mine]
+
+
+def test_job_kinds_lists_the_declared_steps(client):
+    kinds = client.get("/api/job-kinds").json()["kinds"]
+    assert [s["id"] for s in kinds["analyze"]] == ["key", "beats", "chords", "write"]
+    assert kinds["export"] == [{"id": "render", "label": "Render & encode", "weight": 1.0}]
+
+
+def test_enqueuing_an_undeclared_kind_is_a_422_naming_it(client):
+    response = client.post("/api/jobs", json={"kind": "nonsense"})
+    assert response.status_code == 422
+    assert "nonsense" in response.json()["detail"]
+    assert client.get("/api/jobs").json()["jobs"] == []
