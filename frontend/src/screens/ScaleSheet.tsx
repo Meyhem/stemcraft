@@ -3,7 +3,7 @@
 // candidates themselves come from analysis.json (probabilistic, shown with
 // confidence); everything below that is arithmetic.
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import { ApiError } from '../api/client';
 import { useAnalysis, useSongs } from '../api/queries';
@@ -17,6 +17,7 @@ import {
   scaleSemitones,
 } from '../music/theory';
 import type { Mode } from '../music/theory';
+import { Banner, Button, ButtonLink, Panel, Segmented } from '../ui';
 import styles from './ScaleSheet.module.css';
 
 export function ScaleSheet() {
@@ -52,19 +53,23 @@ export function ScaleSheet() {
   return (
     <section className={styles.page}>
       <div className={styles.topbar}>
-        <Link to={`/songs/${songId}`}>&larr; Back</Link>
+        <ButtonLink variant="ghost" to={`/songs/${songId}`}>
+          &larr; Back
+        </ButtonLink>
         <div className={styles.titles}>
           <h1>{entry?.song?.title ?? songId}</h1>
           <h2 className={styles.subtitle}>Scale &amp; fretboard</h2>
         </div>
-        <div className={styles.seg}>
-          <button aria-pressed={instrument === 'bass'} onClick={() => setInstrument('bass')}>
-            Bass &middot; 4 string
-          </button>
-          <button aria-pressed={instrument === 'guitar'} onClick={() => setInstrument('guitar')}>
-            Guitar &middot; 6 string
-          </button>
-        </div>
+        <Segmented
+          className={styles.seg}
+          label="Instrument"
+          value={instrument}
+          options={[
+            { value: 'bass', label: 'Bass · 4 string' },
+            { value: 'guitar', label: 'Guitar · 6 string' },
+          ]}
+          onChange={setInstrument}
+        />
       </div>
 
       {analysis.isPending && <p className={styles.note}>Loading analysis&hellip;</p>}
@@ -76,35 +81,42 @@ export function ScaleSheet() {
         </p>
       )}
 
-      {analysis.isError && !notAnalyzedYet && <p role="alert">{String(analysis.error)}</p>}
+      {analysis.isError && !notAnalyzedYet && (
+        <Banner tone="error" title="The analysis could not be read" trace={String(analysis.error)} />
+      )}
 
       {analysis.data && candidates.length === 0 && <p>No key candidates in this analysis.</p>}
 
       {candidates.length > 0 && (
         <>
           <div className={styles.candidates}>
-            <span className={styles.cap}>key candidates</span>
+            <span className="cap">key candidates</span>
             {candidates.map((c, i) => {
               const candidatePc = pitchClassOf(c.tonic);
               const candidateLabel = noteName(candidatePc, candidatePc, c.mode as Mode);
               return (
-                <button key={`${c.tonic}-${c.mode}`} aria-pressed={i === selected} onClick={() => setSelected(i)}>
-                  {candidateLabel} {c.mode} <b>{Math.round(c.confidence * 100)}%</b>
-                </button>
+                <Button
+                  key={`${c.tonic}-${c.mode}`}
+                  aria-pressed={i === selected}
+                  onClick={() => setSelected(i)}
+                >
+                  {candidateLabel} {c.mode} <b className="num">{Math.round(c.confidence * 100)}%</b>
+                </Button>
               );
             })}
-            <div className={styles.seg}>
-              <button aria-pressed={!pentatonic} onClick={() => setPentatonic(false)}>
-                Full scale
-              </button>
-              <button aria-pressed={pentatonic} onClick={() => setPentatonic(true)}>
-                Pentatonic
-              </button>
-            </div>
+            <Segmented
+              label="Scale shape"
+              value={pentatonic ? 'pentatonic' : 'full'}
+              options={[
+                { value: 'full', label: 'Full scale' },
+                { value: 'pentatonic', label: 'Pentatonic' },
+              ]}
+              onChange={(value) => setPentatonic(value === 'pentatonic')}
+            />
           </div>
 
           {active && (
-            <div className={styles.panel}>
+            <Panel className={styles.panel}>
               <h2>
                 {tonicPc !== null ? noteName(tonicPc, tonicPc, mode) : active.tonic} {active.mode}
               </h2>
@@ -127,7 +139,7 @@ export function ScaleSheet() {
                 instead of one answer as fact. But the map from a key to its notes and
                 fretboard positions is arithmetic: no model, no failure mode.
               </p>
-            </div>
+            </Panel>
           )}
         </>
       )}

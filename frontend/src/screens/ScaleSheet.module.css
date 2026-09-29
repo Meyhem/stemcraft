@@ -1,7 +1,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--ds-4);
+  gap: var(--ds-5);
 }
 
 .topbar {
@@ -22,16 +22,9 @@
   margin: 0;
 }
 
+/* Placement only -- Segmented owns how a segmented control looks. */
 .seg {
-  display: flex;
-  gap: var(--ds-1);
   margin-left: auto;
-}
-
-.seg button[aria-pressed='true'] {
-  background: var(--ds-bass);
-  color: var(--ds-ground);
-  border-color: var(--ds-bass);
 }
 
 .candidates {
@@ -41,26 +34,10 @@
   gap: var(--ds-3);
 }
 
-.cap {
-  font: 400 var(--ds-t-xs) / 1 var(--ds-mono);
-  color: var(--ds-text-3);
-  text-transform: uppercase;
-}
-
-.candidates button[aria-pressed='true'] {
-  background: var(--ds-bass);
-  color: var(--ds-ground);
-  border-color: var(--ds-bass);
-}
-
 .panel {
   display: flex;
   flex-direction: column;
   gap: var(--ds-4);
-  padding: var(--ds-4);
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-r-panel);
 }
 
 .notes {
@@ -80,10 +57,13 @@
   border: 1px solid var(--ds-border-strong);
 }
 
-.root {
-  background: var(--ds-bass) !important;
-  border-color: var(--ds-bass) !important;
-  color: var(--ds-ground);
+/* U-01: the root note marker is chrome, so it is accent -- not --ds-bass, even on the
+   bass tab. The one place a stem hue belongs on this screen is the fretboard's own root
+   dots in Fretboard.module.css, where the instrument is what is being named. */
+.notes b.root {
+  background: var(--ds-accent);
+  border-color: var(--ds-accent);
+  color: var(--ds-on-accent);
 }
 
 .note {

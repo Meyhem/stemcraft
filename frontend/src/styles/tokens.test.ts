@@ -1,9 +1,9 @@
 import { expect, test } from 'vitest';
 
-// ?raw, not node:fs: the frontend has no @types/node and `npm run build` typechecks
-// test files too. Vite reads the file at transform time, which is all this needs.
-import authority from '../../../design/ui/src/tokens.css?raw';
-import mirror from './tokens.css?raw';
+// ?source (see cssSource in vite.config.ts), not node:fs: the frontend has no @types/node
+// and `npm run build` typechecks test files too. Vite's own ?raw returns '' for CSS here.
+import authority from '../../../design/ui/src/tokens.css?source';
+import mirror from './tokens.css?source';
 
 // U-02: design/ui/src/tokens.css is the authority; frontend/src/styles/tokens.css is a
 // mirror of it. They are byte-identical today and this test exists to keep them that
