@@ -117,31 +117,89 @@ describe('numeralInKey', () => {
     }
   });
 
-  test('a whole grid of roots x qualities: a numeral exactly when every tone is in the key and the degree triad is inside the chord', () => {
+  test('a whole grid of roots x qualities: diatonic, sus on a degree, or the minor-key V and vii°, else null', () => {
     for (const mode of ['major', 'minor'] as const) {
       for (const tonicPc of TONICS) {
-        const tonic = FLAT_NAMES[tonicPc]!;
-        const key = new Set(KEY_STEPS[mode].map((s) => mod12(tonicPc + s)));
-        const degs = degrees(tonicPc, mode);
-        for (const rootPc of TONICS) {
-          for (const q of QUALITIES) {
-            const tones = CHORD_STEPS[q.id].map((s) => mod12(rootPc + s));
-            const deg = degs.find((d) => d.pc === rootPc);
-            const diatonic = deg !== undefined && tones.every((t) => key.has(t)) && deg.triadSteps.every((s) => tones.includes(mod12(rootPc + s)));
-            const symbol = `${SHARP_NAMES[rootPc]!}${q.suffix}`;
-            expect(numeralInKey(tonic, mode, symbol), `${symbol} in ${tonic} ${mode}`).toBe(diatonic ? deg!.numeral : null);
+        for (const names of [SHARP_NAMES, FLAT_NAMES]) {
+          const tonic = names[tonicPc]!;
+          const key = new Set(KEY_STEPS[mode].map((s) => mod12(tonicPc + s)));
+          const keyPlusRaised = new Set([...key, mod12(tonicPc + 11)]);
+          const degs = degrees(tonicPc, mode);
+          for (const rootPc of TONICS) {
+            for (const q of QUALITIES) {
+              const tones = CHORD_STEPS[q.id].map((s) => mod12(rootPc + s));
+              const holds = (steps: number[]) => steps.every((s) => tones.includes(mod12(rootPc + s)));
+              const deg = degs.find((d) => d.pc === rootPc);
+              let expected: string | null = null;
+              if (deg && tones.every((t) => key.has(t)) && holds(deg.triadSteps)) expected = deg.numeral;
+              else if (deg && (q.id === 'sus2' || q.id === 'sus4') && tones.every((t) => key.has(t))) expected = `${deg.numeral.replace('°', '')}${q.id}`;
+              else if (mode === 'minor' && tones.every((t) => keyPlusRaised.has(t))) {
+                if (rootPc === mod12(tonicPc + 7) && holds([0, 4, 7])) expected = 'V';
+                else if (rootPc === mod12(tonicPc + 11) && holds([0, 3, 6])) expected = 'vii°';
+              }
+              const symbol = `${(names === SHARP_NAMES ? FLAT_NAMES : SHARP_NAMES)[rootPc]!}${q.suffix}`;
+              expect(numeralInKey(tonic, mode, symbol), `${symbol} in ${tonic} ${mode}`).toBe(expected);
+            }
           }
         }
       }
     }
   });
 
-  test('borrowed chords are null: bVII, iv, bIII, bVI in major; the major V and IV in minor', () => {
+  test('sus chords whose tones are all in the key take the degree numeral and the sus', () => {
+    expect(numeralInKey('C', 'major', 'Dsus4')).toBe('iisus4');
+    expect(numeralInKey('C', 'major', 'Csus2')).toBe('Isus2');
+    expect(numeralInKey('C', 'major', 'Gsus4')).toBe('Vsus4');
+    expect(numeralInKey('A', 'minor', 'Esus4')).toBe('vsus4');
+    expect(numeralInKey('A', 'minor', 'Dsus2')).toBe('ivsus2');
+    expect(numeralInKey('A', 'minor', 'Bsus2')).toBeNull(); // C# is outside A minor
+    expect(numeralInKey('C', 'major', 'Fsus4')).toBeNull(); // Bb
+  });
+
+  test('minor keys: the major V and the diminished leading-tone chord are diatonic, Em stays v', () => {
+    expect(numeralInKey('A', 'minor', 'E')).toBe('V');
+    expect(numeralInKey('A', 'minor', 'E7')).toBe('V');
+    expect(numeralInKey('A', 'minor', 'G#dim')).toBe('vii°');
+    expect(numeralInKey('A', 'minor', 'G#dim7')).toBe('vii°');
+    expect(numeralInKey('A', 'minor', 'Em')).toBe('v');
+    expect(numeralInKey('A', 'minor', 'Em7')).toBe('v');
+    expect(numeralInKey('C', 'minor', 'G')).toBe('V');
+    expect(numeralInKey('C', 'minor', 'G7')).toBe('V');
+    expect(numeralInKey('C', 'minor', 'Bdim')).toBe('vii°');
+    expect(numeralInKey('C', 'minor', 'Bdim7')).toBe('vii°');
+    // Not the harmonic-minor chords: the half-diminished, the augmented III and i(maj7) stay borrowed.
+    expect(numeralInKey('A', 'minor', 'G#m7b5')).toBeNull();
+    expect(numeralInKey('A', 'minor', 'Caug')).toBeNull();
+    expect(numeralInKey('A', 'minor', 'AmMaj7')).toBeNull();
+    // A major key has no raised-seventh rule.
+    expect(numeralInKey('C', 'major', 'G#dim')).toBeNull();
+  });
+
+  test('secondary dominants and other chords outside the key are null', () => {
+    expect(numeralInKey('C', 'major', 'C7')).toBeNull();
+    expect(numeralInKey('C', 'major', 'A7')).toBeNull();
+    expect(numeralInKey('C', 'major', 'E7')).toBeNull();
+  });
+
+  test('enharmonic tonics give identical numerals for the new forms too', () => {
+    for (const [a, b] of [['G#', 'Ab'], ['F#', 'Gb'], ['C#', 'Db'], ['D#', 'Eb'], ['A#', 'Bb']] as const) {
+      for (const mode of ['major', 'minor'] as const) {
+        for (const rootPc of TONICS) {
+          for (const q of ['sus2', 'sus4', 'maj', '7', 'dim', 'dim7']) {
+            const suffix = QUALITIES.find((x) => x.id === q)!.suffix;
+            const symbol = `${SHARP_NAMES[rootPc]!}${suffix}`;
+            expect(numeralInKey(a, mode, symbol), `${symbol} in ${a}/${b} ${mode}`).toBe(numeralInKey(b, mode, symbol));
+          }
+        }
+      }
+    }
+  });
+
+  test('borrowed chords are null: bVII, iv, bIII, bVI in major; the major IV in minor', () => {
     expect(numeralInKey('C', 'major', 'Bb')).toBeNull();
     expect(numeralInKey('C', 'major', 'Fm')).toBeNull();
     expect(numeralInKey('C', 'major', 'Eb')).toBeNull();
     expect(numeralInKey('C', 'major', 'Ab')).toBeNull();
-    expect(numeralInKey('A', 'minor', 'E')).toBeNull();
     expect(numeralInKey('A', 'minor', 'D')).toBeNull();
     // Diatonic in the other mode, so a numeral there.
     expect(numeralInKey('C', 'minor', 'Bb')).toBe('VII');

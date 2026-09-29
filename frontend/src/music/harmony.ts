@@ -1,6 +1,7 @@
 // Harmony lookups that sit on top of spell.ts (D-19): which scales fit a
 // chord, and what a song's chord is called in its key. Both are derived on
 // every call; nothing is stored.
+import { mod12 } from './chordTones';
 import { chordInfo, keyChords, pcOf, scaleNotes, SCALES, type ChordInfo, type KeyMode, type ScaleId } from './spell';
 
 export interface ScaleFit {
@@ -25,26 +26,52 @@ export function scalesOverChord(chord: ChordInfo): ScaleFit[] {
 }
 
 /**
- * The numeral of a chord in a key when it is diatonic, else null: the caller
- * labels a null "borrowed" rather than force a numeral on it. Diatonic means
- * every chord tone is a note of the key (the natural minor for minor keys,
- * which is what keyChords numbers) and the chord holds the key triad built on
- * its root, so C7 in C major (a B-flat) is borrowed and Em7 in G major is "vi".
- * The numeral is the triad's, seventh or not: G major, Em7 -> "vi", D7 -> "V".
- * Spelling never matters: G# and Ab major give the same numerals. A chord that
- * cannot be read is null, never a numeral.
+ * The numeral of a chord in a key, or null when it is outside the key. Null
+ * means exactly that (the caller says "borrowed"); it is never "a chord I do
+ * not understand", and no chord in the forms below comes back null. Forms:
+ *  - Diatonic triads and sevenths: the degree triad's numeral, seventh or not,
+ *    so G major gives Em7 -> "vi", D7 -> "V". Uppercase for a major degree,
+ *    lowercase for a minor one, "vii°"/"ii°" for a diminished one. Every chord
+ *    tone must be a note of the key (natural minor for minor keys), so C7 in C
+ *    major (a B-flat) or Am(maj7) is null.
+ *  - sus2 and sus4 (nothing else on top): the degree numeral without its "°",
+ *    in the case of the key's own triad, plus "sus2"/"sus4": Dsus4 in C major
+ *    -> "iisus4", Esus4 in A minor -> "vsus4". Every tone must be in the key.
+ *  - Minor keys borrow the raised seventh (harmonic minor) for the dominant and
+ *    the leading-tone chord only: E and E7 in A minor -> "V", G#dim and
+ *    G#dim7 -> "vii°". Natural numerals are tried first, so Em in A minor stays "v".
+ * Spelling never matters (G# and Ab major give the same numerals). Secondary
+ * dominants (A7 in C), III+, i(mMaj7), bVII in major and the like are null.
  */
 export function numeralInKey(tonic: string, mode: KeyMode, symbol: string): string | null {
   const parsed = chordInfo(symbol);
   if (!parsed.ok) return null;
-  const pcs = new Set(parsed.chord.notes.map((n) => n.pc));
+  const chord = parsed.chord;
+  const pcs = new Set(chord.notes.map((n) => n.pc));
   const keyPcs = new Set(scaleNotes(tonic, mode).map((n) => n.pc));
-  if (![...pcs].every((pc) => keyPcs.has(pc))) return null;
-  const rootPc = pcOf(parsed.chord.root);
-  for (const kc of keyChords(tonic, mode, 'triads')) {
-    const triad = chordInfo(kc.symbol);
-    if (!triad.ok || pcOf(triad.chord.root) !== rootPc) continue;
-    return triad.chord.notes.every((n) => pcs.has(n.pc)) ? kc.numeral : null;
+  const rootPc = pcOf(chord.root)!;
+  const holds = (triad: readonly number[]) => triad.every((step) => pcs.has(mod12(rootPc + step)));
+  const within = (allowed: Set<number>) => [...pcs].every((pc) => allowed.has(pc));
+
+  const degree = keyChords(tonic, mode, 'triads').find((kc) => {
+    const t = chordInfo(kc.symbol);
+    return t.ok && pcOf(t.chord.root) === rootPc;
+  });
+  if (within(keyPcs) && degree) {
+    const triad = chordInfo(degree.symbol);
+    if (triad.ok && triad.chord.notes.every((n) => pcs.has(n.pc))) return degree.numeral;
+    const intervals = chord.notes.map((n) => n.interval).join(' ');
+    if (intervals === 'R 2 5' || intervals === 'R 4 5') return `${degree.numeral.replace('°', '')}sus${intervals[2]}`;
+  }
+
+  if (mode === 'minor') {
+    const tonicPc = pcOf(tonic)!;
+    const raised = mod12(tonicPc + 11);
+    const withRaised = new Set([...keyPcs, raised]);
+    if (within(withRaised)) {
+      if (rootPc === mod12(tonicPc + 7) && holds([0, 4, 7])) return 'V';
+      if (rootPc === raised && holds([0, 3, 6])) return 'vii°';
+    }
   }
   return null;
 }
