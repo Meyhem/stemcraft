@@ -79,3 +79,18 @@ seam at the loop wrap is obvious on a click track and easy to miss on music.
   is derived from which files exist — do not add a status field.
 - Every job kind must be idempotent by re-derivation. Re-running it must reproduce its
   outputs from inputs that never change. Lease-based crash recovery depends on this.
+
+## README upkeep
+
+Before any `git push` that completes a feature, check `README.md` against what shipped
+and update it in the same push: the feature bullets, the run instructions (commands,
+ports, env vars, requirements) and the screenshots in `docs/screenshots/` if the UI
+changed. The README must never describe behaviour the app no longer has or omit a
+user-visible feature it now has.
+
+## Git workflow
+
+Work directly on `main`; do not create feature branches or PRs. After each completed
+feature or fix (tests passing, README upkeep done), commit and `git push origin main`
+without asking. This is standing authorization from the user for this repo, and covers
+only `main`, never force-pushes.
