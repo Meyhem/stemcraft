@@ -78,6 +78,11 @@ export function TheoryNeck({
   const y = (string: number) => TOP + SH * string;
   // Mirrored for a left-handed player; text is flipped back so it still reads.
   const flip = (cx: number) => (instrument.left_handed ? `translate(${2 * cx} 0) scale(-1 1)` : undefined);
+  // Two strings can share a note name (low and high E; drop D's two Ds). Those, and only those, are named with
+  // their octave so no two click targets read alike: "E2 string", "E4 string", but plain "A string".
+  const letters = rows.map((n) => n.replace(/-?\d+$/, ''));
+  const stringName = (string: number) =>
+    `${pretty(letters.filter((l) => l === letters[string]).length > 1 ? rows[string]! : letters[string]!)} string`;
   const columns = [...(open ? [0] : []), ...Array.from({ length: frets }, (_, i) => start + i)];
 
   const key = (cell: Cell) => (event: KeyboardEvent) => {
@@ -169,10 +174,10 @@ export function TheoryNeck({
           );
         })}
         {onPick &&
-          rows.flatMap((note, string) =>
+          rows.flatMap((_, string) =>
             columns.map((fret) => {
               const cell = { string, fret };
-              const name = `${pretty(note.replace(/-?\d+$/, ''))} string, ${fret === 0 ? 'open' : `fret ${fret}`}`;
+              const name = `${stringName(string)}, ${fret === 0 ? 'open' : `fret ${fret}`}`;
               return (
                 <rect
                   key={`pick-${string}-${fret}`}

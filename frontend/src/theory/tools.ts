@@ -7,6 +7,7 @@ import type { TheoryTool } from '../api/client';
 import { Arpeggios } from './tools/Arpeggios';
 import { ChordFinder } from './tools/ChordFinder';
 import { ChordsInKey } from './tools/ChordsInKey';
+import { NameThatChord } from './tools/NameThatChord';
 import { NoteFinder } from './tools/NoteFinder';
 import { ScaleFinder } from './tools/ScaleFinder';
 import { ScalePositions } from './tools/ScalePositions';
@@ -27,6 +28,7 @@ export const TOOLS: readonly ToolDef[] = [
   { slug: 'scale-finder', label: 'Scale finder', group: 'Find', Component: ScaleFinder },
   { slug: 'chord-finder', label: 'Chord finder', group: 'Find', Component: ChordFinder },
   { slug: 'note-finder', label: 'Note finder', group: 'Find', Component: NoteFinder },
+  { slug: 'name-that-chord', label: 'Name that chord', group: 'Find', Component: NameThatChord },
   { slug: 'scale-positions', label: 'Scale positions', group: 'Shapes', Component: ScalePositions },
   { slug: 'triads', label: 'Triads & inversions', group: 'Shapes', Component: Triads },
   { slug: 'arpeggios', label: 'Arpeggios', group: 'Shapes', Component: Arpeggios },

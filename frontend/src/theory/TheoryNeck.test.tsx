@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 
-import { DEFAULT_INSTRUMENT, instrumentFor } from '../music/tuning';
+import { DEFAULT_INSTRUMENT, instrumentFor, PRESETS } from '../music/tuning';
 import { TheoryNeck, type NeckDot } from './TheoryNeck';
 
 const dots: NeckDot[] = [
@@ -85,4 +85,21 @@ test('heat cells are drawn weak or strong', () => {
   );
   expect(container.querySelector('[data-heat="s2f7"]')).toHaveClass('heatWeak');
   expect(container.querySelector('[data-heat="s3f3"]')).toHaveClass('heatStrong');
+});
+
+test('click targets have one name per string, even when two strings share a note name', () => {
+  // Low E and high E are both "E"; drop D and open G repeat D and G as well. A screen reader must hear which.
+  for (const preset of PRESETS) {
+    const instrument = { kind: preset.kind, strings: preset.notes.length, tuning: preset.notes, left_handed: false };
+    const { unmount } = render(<TheoryNeck instrument={instrument} frets={3} dots={[]} label="names" onPick={() => {}} />);
+    const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'));
+    expect(new Set(names).size, `${preset.kind} ${preset.id}`).toBe(names.length);
+    unmount();
+  }
+  const guitar = instrumentFor('guitar6', false);
+  const { unmount } = render(<TheoryNeck instrument={guitar} frets={3} dots={[]} label="guitar" onPick={() => {}} />);
+  expect(screen.getByRole('button', { name: 'E2 string, fret 3' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'E4 string, open' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'A string, fret 3' })).toBeInTheDocument();
+  unmount();
 });
