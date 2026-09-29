@@ -56,7 +56,6 @@ export function Neck({ bars, nextOf, songKey, grid, getPosition, playing, seekNo
       const hot = current && at ? noteIndexAt(current, at.frac * grid.beatsPerBar) : -1;
       const seen = last.current;
       if (seen && seen.bars === bars && seen.bar === barIndex && seen.hot === hot && seen.width === width) return;
-      last.current = { bars, bar: barIndex, hot, width };
 
       const nextIndex = at ? nextOf(at.bar) : null;
       const next = nextIndex === null ? undefined : bars[nextIndex];
@@ -69,11 +68,11 @@ export function Neck({ bars, nextOf, songKey, grid, getPosition, playing, seekNo
       if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(NECK_H * dpr)) {
         canvas.width = Math.round(width * dpr);
         canvas.height = Math.round(NECK_H * dpr);
-        canvas.style.width = `${width}px`;
         canvas.style.height = `${NECK_H}px`;
       }
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+      last.current = { bars, bar: barIndex, hot, width };
       colors.current ??= playAlongColors();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       paintNeck(ctx, width, colors.current, current ?? null, next ?? null, hot);
