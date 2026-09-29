@@ -24,14 +24,24 @@ const job = {
   steps: [],
 };
 
+let served: unknown[] = [];
+let lastClient: QueryClient;
+
+async function refetchWith(jobs: unknown[]) {
+  served = jobs;
+  await lastClient.invalidateQueries({ queryKey: ['jobs'] });
+}
+
 function renderQueue(jobs: unknown[], path = '/jobs') {
+  served = jobs;
   const fetchMock = vi.fn(async (input: RequestInfo | URL) =>
     String(input).includes('/api/jobs/stats')
       ? new Response(JSON.stringify({ passed: 0, failed: 0, durations: [] }))
-      : new Response(JSON.stringify({ jobs })),
+      : new Response(JSON.stringify({ jobs: served })),
   );
   vi.stubGlobal('fetch', fetchMock);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  lastClient = client;
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
@@ -143,4 +153,38 @@ test('?song= lists only that song and links back to every job', async () => {
   const fetchMock = renderQueue([running], '/jobs?song=s1');
   expect(await screen.findByRole('link', { name: /show all jobs/i })).toHaveAttribute('href', '/jobs');
   expect(fetchMock).toHaveBeenCalledWith('/api/jobs?song_id=s1', expect.anything());
+});
+
+test('a queued row that then fails opens by itself, traceback visible without a click', async () => {
+  renderQueue([{ ...running, state: 'queued' }]);
+  const button = await screen.findByRole('button', { name: 'Steps of separate job 7' });
+  expect(button).toHaveAttribute('aria-expanded', 'false');
+
+  await refetchWith([{
+    ...running, state: 'failed', error: 'Traceback...\nRuntimeError: late failure',
+    steps: running.steps.map((s) => (s.state === 'running' ? { ...s, state: 'failed' } : s)),
+  }]);
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Steps of separate job 7' })).toHaveAttribute('aria-expanded', 'true'),
+  );
+  expect(screen.getByText(/RuntimeError: late failure/)).toBeInTheDocument();
+});
+
+test("a user's choice survives a refetch", async () => {
+  renderQueue([running]);
+  const button = await screen.findByRole('button', { name: 'Steps of separate job 7' });
+  expect(button).toHaveAttribute('aria-expanded', 'true');
+  await userEvent.click(button);
+  expect(button).toHaveAttribute('aria-expanded', 'false');
+
+  await refetchWith([{ ...running, progress: 0.5 }]);
+  await waitFor(() => expect(screen.getByText(/50% overall/)).toBeInTheDocument());
+  expect(screen.getByRole('button', { name: 'Steps of separate job 7' })).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('?song= expands every row', async () => {
+  renderQueue([running, { ...running, id: 8, state: 'done', progress: 1 }], '/jobs?song=s1');
+  const buttons = await screen.findAllByRole('button', { name: /^Steps of/ });
+  expect(buttons).toHaveLength(2);
+  for (const b of buttons) expect(b).toHaveAttribute('aria-expanded', 'true');
 });

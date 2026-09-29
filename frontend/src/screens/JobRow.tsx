@@ -28,7 +28,10 @@ export interface JobRowProps {
 }
 
 export function JobRow({ job, defaultOpen, onCancel }: JobRowProps) {
-  const [open, setOpen] = useState(defaultOpen ?? (job.state === 'running' || job.state === 'failed'));
+  // Only the user's explicit toggle is state; the default follows the job, so a row that
+  // was queued at mount still opens when it starts running or fails (N-08).
+  const [toggled, setToggled] = useState<boolean | undefined>(undefined);
+  const open = toggled ?? defaultOpen ?? (job.state === 'running' || job.state === 'failed');
   const bodyId = useId();
   const line = summary(job);
 
@@ -41,7 +44,7 @@ export function JobRow({ job, defaultOpen, onCancel }: JobRowProps) {
           aria-expanded={open}
           aria-controls={bodyId}
           aria-label={`Steps of ${job.kind} job ${job.id}`}
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => setToggled(!open)}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z" />
