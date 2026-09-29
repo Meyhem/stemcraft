@@ -66,6 +66,18 @@ function Probe({ name }: { name: string }) {
   );
 }
 
+function PlayProbe({ name }: { name: string }) {
+  const session = useSongSession();
+  return (
+    <>
+      <p>
+        {name}: {session.playing ? 'playing' : 'paused'}
+      </p>
+      <button onClick={() => session.onPlayPause()}>toggle</button>
+    </>
+  );
+}
+
 function Nav() {
   const navigate = useNavigate();
   return (
@@ -129,5 +141,91 @@ describe('SongScope', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => renderHook(() => useSongSession())).toThrow(/SongScope/);
     spy.mockRestore();
+  });
+
+  it('keeps playback alive across screen switches', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/songs/abc123']}>
+          <Nav />
+          <Routes>
+            <Route path="/songs/:songId" element={<SongScope />}>
+              <Route index element={<PlayProbe name="view" />} />
+              <Route path="play" element={<PlayProbe name="play" />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Start playback on the view screen
+    await userEvent.click(await screen.findByRole('button', { name: 'toggle' }));
+    expect(await screen.findByText('view: playing')).toBeInTheDocument();
+
+    // Navigate to play screen
+    await userEvent.click(screen.getByRole('button', { name: 'to play' }));
+    expect(await screen.findByText('play: playing')).toBeInTheDocument();
+
+    // Verify pause was not called during navigation
+    expect(engine.pause).not.toHaveBeenCalled();
+  });
+});
+
+function Controls() {
+  const session = useSongSession();
+  return (
+    <>
+      <p>loop: {session.song?.active_loop ? `${session.song.active_loop.start_bar}-${session.song.active_loop.end_bar}` : 'none'}</p>
+      <p>notes: {session.song?.play_along.pattern.notes}</p>
+      <button onClick={() => session.onLoopBars(4, 8)}>loop 5 to 8</button>
+      <button onClick={() => session.onLoopBars(8, 8)}>empty loop</button>
+      <button
+        onClick={() =>
+          session.song &&
+          session.onPlayAlongChange({ ...session.song.play_along, pattern: { ...session.song.play_along.pattern, notes: 'root' } })
+        }
+      >
+        roots
+      </button>
+    </>
+  );
+}
+
+describe('play-along session handlers', () => {
+  function renderControls() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/songs/abc123/play']}>
+          <Routes>
+            <Route path="/songs/:songId" element={<SongScope />}>
+              <Route path="play" element={<Controls />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('sets the loop by bars and saves it, and ignores an empty range', async () => {
+    renderControls();
+    await userEvent.click(await screen.findByRole('button', { name: 'loop 5 to 8' }));
+    expect(screen.getByText('loop: 4-8')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'empty loop' }));
+    expect(screen.getByText('loop: 4-8')).toBeInTheDocument();
+    await waitFor(
+      () => {
+        const put = vi.mocked(fetch).mock.calls.find(([, init]) => init?.method === 'PUT');
+        expect(JSON.parse(String(put![1]!.body)).active_loop).toEqual({ name: '', start_bar: 4, end_bar: 8 });
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it('replaces the play_along recipe', async () => {
+    renderControls();
+    await userEvent.click(await screen.findByRole('button', { name: 'roots' }));
+    expect(screen.getByText('notes: root')).toBeInTheDocument();
   });
 });

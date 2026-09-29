@@ -21,6 +21,7 @@ import {
   type Analysis,
   type ChordSegment,
   type Loop,
+  type PlayAlong,
   type Song,
   type SongEntry,
   type StemMix,
@@ -112,6 +113,9 @@ export interface SongSession {
   onSaveActiveLoop(name: string): void;
   onDeleteLoop(name: string): void;
   onCountInChange(bars: number): void;
+  /** Sets the loop by bars: 0-based start, exclusive end. Ignored unless end > start >= 0. */
+  onLoopBars(startBar: number, endBar: number): void;
+  onPlayAlongChange(playAlong: PlayAlong): void;
 }
 
 export function useSongSessionState(songId: string): SongSession {
@@ -497,6 +501,32 @@ export function useSongSessionState(songId: string): SongSession {
     [applyRecipe],
   );
 
+  // ---- play along -------------------------------------------------------
+
+  // Play along sets the loop by bar numbers rather than from the cursor. Same
+  // shape as Set A / Set B: the loop keeps its name, and an empty or inverted
+  // range is not a loop, so it is refused rather than stored.
+  const handleLoopBars = useCallback(
+    (start_bar: number, end_bar: number) => {
+      const { song: currentSong } = latest.current;
+      if (!currentSong || start_bar < 0 || end_bar <= start_bar) return;
+      applyRecipe({
+        ...currentSong,
+        active_loop: { name: currentSong.active_loop?.name ?? '', start_bar, end_bar },
+      });
+    },
+    [applyRecipe],
+  );
+
+  const handlePlayAlongChange = useCallback(
+    (play_along: PlayAlong) => {
+      const { song: currentSong } = latest.current;
+      if (currentSong) applyRecipe({ ...currentSong, play_along });
+    },
+    [applyRecipe],
+  );
+
+  // ---- context value ---
 
   // A 404 from analysis is "not analyzed yet" (the normal state for a song that
   // has only been separated), not a failure: the screen still plays, with no
@@ -545,6 +575,8 @@ export function useSongSessionState(songId: string): SongSession {
       onSaveActiveLoop: handleSaveActiveLoop,
       onDeleteLoop: handleDeleteLoop,
       onCountInChange: handleCountInChange,
+      onLoopBars: handleLoopBars,
+      onPlayAlongChange: handlePlayAlongChange,
     }),
     [
       songId,
@@ -587,6 +619,8 @@ export function useSongSessionState(songId: string): SongSession {
       handleSaveActiveLoop,
       handleDeleteLoop,
       handleCountInChange,
+      handleLoopBars,
+      handlePlayAlongChange,
     ],
   );
 }
