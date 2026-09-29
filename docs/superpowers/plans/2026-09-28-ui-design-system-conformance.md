@@ -346,9 +346,9 @@ Tasks 2–9 is written against the literal name and fails without this setting.
 
 **This was measured, not assumed.** A throwaway module plus a one-line test was run
 against this exact Vitest version before and after the setting: before it produced
-`_btn_2b6b9a _primary_2b6b9a` and failed; after, it passed. The full suite — **32 files,
-248 tests** — passes with the setting enabled, so Step 11 below is a regression check
-with a known-good baseline, not a hope.
+`_btn_2b6b9a _primary_2b6b9a` and failed; after, it passed. The real baseline before any
+of this plan's changes is **31 files, 247 tests** (an earlier draft said 32/248; that run
+included the throwaway probe file).
 
 In `frontend/vite.config.ts`, inside the existing `test: { ... }` block:
 
@@ -372,7 +372,7 @@ In `frontend/vite.config.ts`, inside the existing `test: { ... }` block:
 npm --prefix frontend test
 ```
 
-Expected: **32 files, 248 tests, all passing** — the measured baseline before any of
+Expected: **31 files, 247 tests, all passing** (plus the 2 added by this task) — the baseline before any of
 this plan's changes. Nothing existing asserts on class names, so unhashing them must not
 change any result. If a test breaks here, it was depending on the hash — read it before
 changing it.
@@ -3493,23 +3493,79 @@ git commit -m "docs: verification log for the UI conformance plan"
 
 ---
 
+## Execution notes: where the plan was wrong
+
+Executed on branch `ui-design-system-conformance`, inline. The plan was right about the
+diagnosis and the architecture; these are the places its *details* were wrong, found by
+running it. Each is fixed in the code, not just noted here.
+
+| Plan said | Reality | Resolution |
+| --- | --- | --- |
+| `tokens.test.ts` reads files via `node:fs` / `import.meta.url` | No `@types/node`, and `npm run build` typechecks tests; under jsdom `import.meta.url` is not a `file:` URL | Read through a `?source` import (see next row) |
+| Vite `?raw` returns the CSS text | Under Vitest `foo.css?raw` is `''` and `foo.module.css?raw` is the class map. **The first draft of the parity test passed vacuously** against two empty strings; a mutation check caught it | `cssSource()` plugin in `vite.config.ts` serves `?source` via a virtual id (`.source.js` suffix: Vite and Vitest blank any id ending `.css`). Both parity and hex guards were re-mutated after |
+| ScaleSheet U-01 test asserts the segment's class is `item` and not `/bass/` | Vacuous: passes whatever colour the CSS paints | Replaced by `src/styles/chrome.test.ts`, a static guard over every CSS module. It failed on `ScaleSheet.module.css` first (red), then passed after the fix |
+| Album states include `proposed` | `AlbumState = 'uploaded' \| 'ready' \| 'split'` | Tone map uses the real values |
+| `git add design/ui/dist` | `dist/` is gitignored | Left out |
+| CPU notice as `title` + body | Existing `routes.test.tsx` finds the element containing the wording and expects the reason inside it | Kept the original one-element wording so that test passes **unmodified** |
+| Proposals fetch error as a `Banner` | A 404 there is the normal "not proposed yet" state; an alert is a false alarm, and it broke two existing tests | Reverted to the original plain note |
+| Export's D-10 notice and native checkboxes/radios | Tests address them by role; the notice carries `role=status` + `aria-label` which `Banner` lacks | Kept native inputs (styled with `accent-color`) and the notice's own markup |
+| "← Back" style links as `TextLink` | Standalone navigation targets need a hit target | `ButtonLink variant="ghost"`, matching the Task 3 rule |
+
+Three defects were invisible to every unit test and found only by measuring the rendered
+app (jsdom applies no cascade):
+
+1. Library and Album splitter **card titles were 27px** tall (U-03 floor is 32px), on each
+   card's primary navigation. Now 40px.
+2. The transport's **Play button was 32px wide** against a 56px performance target: the
+   bar is a flex row and shrank the fixed-width button. `flex: none`.
+3. The transport's text buttons were squeezed to their `min-width` with **labels spilling
+   out** (`scrollWidth` 67 vs `clientWidth` 54). The `min-width` predates this plan; it
+   replaces the browser's content-based minimum. `flex: none` on the buttons, and the bar
+   wraps instead of overflowing.
+
+## Known divergences left open
+
+- **Mute/Solo pressed colour.** The design system's reference CSS paints pressed M red
+  (`--ds-error`) and pressed S amber (`--ds-warn`); the UI spec §5 table says a pressed
+  control "uses accent, never a stem hue", and the app implements that. The two sources
+  disagree, this pass did not change the behaviour, and it needs a decision.
+- **Narrow widths.** At a 1024px viewport the song view's main column is ~617px and the
+  transport wraps to three rows (196px tall). At 1440px it is one row. Wrapping is the
+  deliberate trade against clipped labels; a leaner transport at narrow widths is a
+  Layer 2 question.
+- **Layer 2** (F21-F24), as scoped at the top: Import as a modal with the five-step
+  pipeline, library card metadata, job queue stats and history, the topbar and brand.
+
 ## Verification log
 
-*(Task 18 fills this in. Until then it is empty, and the work is not done.)*
+Suite: **43 files, 314 tests** passing (baseline 31 files / 247 tests; +67 tests, all in
+new primitives, guards and previously-uncovered screens). `tsc --noEmit` clean.
+`vite build` succeeds.
 
 | Check | Before | After |
 | --- | --- | --- |
-| `body` background | `rgba(0, 0, 0, 0)` | |
-| `body` margin | `8px` | |
-| `body` font | `"Times New Roman"` | |
-| `h1` size / margin | `36px` / `24.12px 0px` | |
-| Worst link contrast | `rgb(0,0,238)` on `#0B0C0E`, ≈1.3:1 | |
-| Button background | `rgb(239,239,239)` | |
-| Button font | `Arial 13.33px` | |
-| Smallest hit target | 21px (Delete) | |
-| Disabled submit | `rgba(16,16,16,.3)` on `rgba(239,239,239,.3)` | |
-| Drop zones on `/import` | 0 | |
-| Drop zones on `/splitter` | 0 | |
-| Stem hues in chrome | `ScaleSheet` pressed = `--ds-bass` | |
-| Files re-declaring the button rule | 7 | |
-| Raw hex outside `tokens.css` | 0 | |
+| `body` background | `rgba(0, 0, 0, 0)` | `rgb(11, 12, 14)` |
+| `body` margin | `8px` | `0px` |
+| `body` font | `"Times New Roman"` | `ui-sans-serif` stack |
+| `h1` size / margin | `36px` / `24.12px 0px` | `32px` / `0px` |
+| Links at UA blue `rgb(0,0,238)` | 3 on Library alone | 0 on every screen |
+| Worst link contrast | ≈1.3:1 | 7.0:1 (accent on ground) |
+| Buttons at `rgb(239,239,239)` or Arial | every button | 0 on every screen |
+| Smallest hit target | 21px (Delete) | 40px (32px floor respected everywhere measured) |
+| Disabled submit | `rgba(16,16,16,.3)` on `rgba(239,239,239,.3)` | accent fill at `opacity: .4`, legible |
+| Drop zones on `/import` | 0 | 1 |
+| Drop zones on `/splitter` | 0 | 1 |
+| Stem hues in chrome | `ScaleSheet` pressed = `--ds-bass` | none; only `Fretboard` root dots (guarded) |
+| Files re-declaring the button rule | 7 | 1, deliberate and commented (RightRail loop row) |
+| Raw hex outside `tokens.css` | 0 | 0 (guarded, comment-stripped) |
+| Horizontal page scroll | n/a | none on any screen |
+
+Reference comparison (Step 7): default, primary, ghost and danger buttons, the text
+input and the state chip match the design system's own reference pages property-for-
+property (background, border, radius, font size and weight, padding, height). The drop
+zone matches except height, which is content-driven (the app adds a hint and the chosen
+file name). Verified with `getComputedStyle` on both, not by eye.
+
+Screens measured live: `/`, `/import`, `/jobs`, `/splitter`, a song's `/scale` and
+`/export`, and a song's Song view (M/S measure 56×44 per spec; Play and the text buttons
+56px tall, none clipped at 1440px).
