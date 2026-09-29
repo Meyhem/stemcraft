@@ -4,6 +4,7 @@
 import type { ComponentType } from 'react';
 
 import type { TheoryTool } from '../api/client';
+import { ChordFinder } from './tools/ChordFinder';
 import { ScaleFinder } from './tools/ScaleFinder';
 
 export type ToolGroup = 'Find' | 'Shapes' | 'Harmony' | 'Practice';
@@ -19,6 +20,7 @@ export const GROUPS: readonly ToolGroup[] = ['Find', 'Shapes', 'Harmony', 'Pract
 
 export const TOOLS: readonly ToolDef[] = [
   { slug: 'scale-finder', label: 'Scale finder', group: 'Find', Component: ScaleFinder },
+  { slug: 'chord-finder', label: 'Chord finder', group: 'Find', Component: ChordFinder },
 ];
 
 export function toolBySlug(slug: string | undefined): ToolDef | undefined {
