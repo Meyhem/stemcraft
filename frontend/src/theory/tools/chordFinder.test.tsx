@@ -50,7 +50,30 @@ test("chord finder: the chosen song's chords are chips", async () => {
   const row = await screen.findByRole('group', { name: 'In Tightrope' });
   expect(within(row).getAllByRole('button').map((b) => b.textContent)).toEqual(['Gm', 'B♭m7♭5']);
   fireEvent.click(within(row).getByRole('button', { name: 'B♭m7♭5' }));
-  expect(where()).toBe('/theory/chord-finder?chord=Bbm7b5');
+  expect(where()).toBe('/theory/chord-finder?root=Bb&chord=Bbm7b5'); // the root follows the chord, as a typed one's does
+});
+
+test('a newer root picked in another tool replaces a typed chord and its bass in every chord tool', async () => {
+  const { where } = renderTool('/theory/chord-finder');
+  await screen.findByRole('heading', { name: 'Chord finder' });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Type a chord' }), { target: { value: 'Am7' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Show' }));
+  const rail = screen.getByRole('navigation', { name: 'Theory tools' });
+  fireEvent.click(within(rail).getByRole('link', { name: 'Chords in a key' }));
+  await screen.findByRole('heading', { name: 'Chords in a key' });
+  fireEvent.click(within(screen.getByRole('group', { name: 'Key' })).getByRole('button', { name: 'E' }));
+  expect(where()).toBe('/theory/chords-in-key?root=E');
+  fireEvent.click(within(rail).getByRole('link', { name: 'Chord finder' }));
+  await screen.findByRole('heading', { name: 'Chord finder' });
+  expect(screen.getByText('E major')).toBeInTheDocument();
+  expect(screen.queryByText('A minor seventh')).not.toBeInTheDocument();
+});
+
+test('a leftover slash bass goes with the old chord when a new root is picked', async () => {
+  const { where } = renderTool('/theory/scale-finder?root=A&bass=G&chord=Am7');
+  await screen.findByRole('heading', { name: 'Scale finder' });
+  fireEvent.click(within(screen.getByRole('group', { name: 'Root' })).getByRole('button', { name: 'E' }));
+  expect(where()).toBe('/theory/scale-finder?root=E');
 });
 
 test('chord finder: an unreadable chord in the link is an error, not a silent default (N-08)', async () => {

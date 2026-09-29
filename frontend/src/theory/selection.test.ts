@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { DEFAULT_SELECTION, parseSelection, selectionParams } from './selection';
+import { DEFAULT_SELECTION, parseSelection, patchSelection, selectionParams } from './selection';
 
 test('empty query string is the default selection', () => {
   expect(parseSelection(new URLSearchParams())).toEqual(DEFAULT_SELECTION);
@@ -32,4 +32,14 @@ test('values no tool knows read as defaults', () => {
   expect(sel.scale).toBe('major');
   expect(sel.quality).toBe('maj');
   expect(sel.mode).toBe('major');
+});
+
+test('a new root drops a chord and bass the patch does not set; the same pitch or a chord of its own keeps them', () => {
+  const am7 = { ...DEFAULT_SELECTION, root: 'A', chord: 'Am7', bass: 'G' };
+  expect(patchSelection(am7, { root: 'E' })).toMatchObject({ root: 'E', chord: null, bass: null });
+  expect(patchSelection(am7, { root: 'A', scale: 'minor' })).toMatchObject({ root: 'A', chord: 'Am7', bass: 'G' });
+  expect(patchSelection({ ...am7, root: 'A#', chord: 'A#m7' }, { root: 'Bb' })).toMatchObject({ root: 'Bb', chord: 'A#m7' });
+  expect(patchSelection(am7, { root: 'E', chord: 'Em' })).toMatchObject({ root: 'E', chord: 'Em', bass: null });
+  expect(patchSelection(am7, { root: 'E', bass: 'B' })).toMatchObject({ root: 'E', chord: null, bass: 'B' });
+  expect(patchSelection(am7, { scale: 'dorian' })).toMatchObject({ root: 'A', chord: 'Am7', bass: 'G' });
 });

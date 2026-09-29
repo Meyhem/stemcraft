@@ -36,6 +36,15 @@ export function chordLinkProblem(sel: { chord: string | null; root: string; qual
   return parsed.ok ? null : parsed.reason;
 }
 
+/**
+ * A chord to select, with its root, so the next tool opens on it; a double sharp or flat root (rare) has no
+ * note-picker button, and the root is then left as it was.
+ */
+export function chordAndRoot(symbol: string, root: string): { chord: string; root: string } {
+  const info = chordInfo(symbol);
+  return { chord: symbol, root: info.ok && /^[A-G](#|b)?$/.test(info.chord.root) ? info.chord.root : root };
+}
+
 export function ChordFinder() {
   const { doc } = useTheoryDoc();
   const inst = doc?.instrument ?? DEFAULT_THEORY.instrument;
@@ -61,10 +70,7 @@ export function ChordFinder() {
     }
     setError(null);
     setText('');
-    // The root follows the typed chord so the next tool opens on it; a double
-    // sharp or flat root (rare) has no note-picker button and is left as it was.
-    const root = /^[A-G](#|b)?$/.test(parsed.chord.root) ? parsed.chord.root : sel.root;
-    select({ chord: parsed.chord.symbol, root });
+    select(chordAndRoot(parsed.chord.symbol, sel.root));
   };
 
   return (
@@ -105,7 +111,7 @@ export function ChordFinder() {
         <ChipRow
           label={`In ${song.title}`}
           value={sel.chord}
-          onChange={(symbol) => select({ chord: symbol })}
+          onChange={(symbol) => select(chordAndRoot(symbol, sel.root))}
           options={song.distinct.map((s) => ({ value: s, label: pretty(s) }))}
         />
       )}

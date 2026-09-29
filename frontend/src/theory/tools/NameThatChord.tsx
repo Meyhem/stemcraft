@@ -19,6 +19,7 @@ import styles from '../Theory.module.css';
 import { TheoryNeck, type NeckDot } from '../TheoryNeck';
 import { useTheoryDoc } from '../TheoryDoc';
 import { useChosenSong } from '../useChosenSong';
+import { chordAndRoot } from './ChordFinder';
 
 // Intervals above the lowest note, for notes that make no chord.
 const SEMITONE_LABELS = ['R', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
@@ -81,11 +82,7 @@ export function NameThatChord() {
   };
 
   // Chord finder's own way of taking a typed chord: the chord, and its root when the note picker has a button for it.
-  const pickName = (symbol: string) => {
-    const info = chordInfo(symbol);
-    const root = info.ok && /^[A-G](#|b)?$/.test(info.chord.root) ? info.chord.root : sel.root;
-    select({ chord: symbol, root });
-  };
+  const pickName = (symbol: string) => select(chordAndRoot(symbol, sel.root));
 
   return (
     <>

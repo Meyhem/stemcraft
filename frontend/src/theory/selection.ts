@@ -71,11 +71,25 @@ export function selectionParams(sel: Selection): URLSearchParams {
   return p;
 }
 
+/**
+ * The selection after a tool's change. A new root (another pitch, not a respelling) replaces the chord built on the
+ * old one: a typed chord and a slash bass the change does not set itself are dropped, or they would go on overriding
+ * the newer root in every chord tool.
+ */
+export function patchSelection(current: Selection, patch: Partial<Selection>): Selection {
+  const next = { ...current, ...patch };
+  if (patch.root !== undefined && pcOf(patch.root) !== pcOf(current.root)) {
+    if (patch.chord === undefined) next.chord = null;
+    if (patch.bass === undefined) next.bass = null;
+  }
+  return next;
+}
+
 export function useSelection(): [Selection, (patch: Partial<Selection>) => void] {
   const [params, setParams] = useSearchParams();
   const selection = useMemo(() => parseSelection(params), [params]);
   const update = useCallback(
-    (patch: Partial<Selection>) => setParams(selectionParams({ ...parseSelection(params), ...patch })),
+    (patch: Partial<Selection>) => setParams(selectionParams(patchSelection(parseSelection(params), patch))),
     [params, setParams],
   );
   return [selection, update];
