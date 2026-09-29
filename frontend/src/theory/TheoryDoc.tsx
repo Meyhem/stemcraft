@@ -16,20 +16,52 @@ import {
   type ReactNode,
 } from 'react';
 
-import { api, DEFAULT_THEORY, type TheoryDoc } from '../api/client';
+import { api, DEFAULT_THEORY, type QuizAnswer, type TheoryDoc } from '../api/client';
+import { holdUnloadGuard, releaseUnloadGuard } from './unloadGuard';
 
 const KEY = ['theory'] as const;
 const DEBOUNCE_MS = 500;
 
 // The document a Theory tab was left holding unsaved (a failed save, or one still in flight or pending), kept
 // outside the query cache so that a refetch on coming back cannot overwrite it. The next tab to open applies it
-// over the fetched document and saves it again; it is cleared only by a save that succeeded. Never set from a
-// document that was not loaded (N-08: unsaved answers are not dropped, and an unreadable file is not overwritten).
+// over the fetched document and saves it again; it is cleared only by a save that succeeded (or a reset). Never set
+// from a document that was not loaded (N-08: unsaved answers are not dropped, and an unreadable file is not
+// overwritten). While it exists the browser warns before the page is closed, because nothing else holds it.
 let unsaved: TheoryDoc | null = null;
+const KEPT = {};
+
+function keepUnsaved(doc: TheoryDoc): void {
+  unsaved = doc;
+  holdUnloadGuard(KEPT);
+}
+
+function clearUnsaved(): void {
+  unsaved = null;
+  releaseUnloadGuard(KEPT);
+}
 
 /** Forgets an unsaved document without saving it. For tests; the app clears it by saving. */
 export function forgetUnsavedTheory(): void {
-  unsaved = null;
+  clearUnsaved();
+}
+
+const HISTORY_CAP = 2000; // theory.py's HISTORY_CAP: the server keeps the newest 2,000 answers
+
+const asTime = (at: string) => Date.parse(at);
+
+/**
+ * Two answer histories as one: every answer of either, once (same quiz, mode, item and time), oldest first, the
+ * newest 2,000. Another browser tab may have added answers to the file since the kept document was made.
+ */
+export function mergeHistory(fetched: readonly QuizAnswer[], kept: readonly QuizAnswer[]): QuizAnswer[] {
+  const seen = new Set<string>();
+  const all = [...fetched, ...kept].filter((a) => {
+    const key = JSON.stringify([a.quiz, a.mode, a.item, a.at]);
+    return !seen.has(key) && seen.add(key);
+  });
+  // Array.sort is stable: answers of one instant keep the order they came in. An unreadable time compares as text.
+  all.sort((a, b) => (Number.isNaN(asTime(a.at)) || Number.isNaN(asTime(b.at)) ? (a.at < b.at ? -1 : a.at > b.at ? 1 : 0) : asTime(a.at) - asTime(b.at)));
+  return all.slice(-HISTORY_CAP);
 }
 
 export interface TheoryDocState {
@@ -60,7 +92,8 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   // flight stays dirty when that save succeeds, because the save sent the document as it was.
   const rev = useRef(0);
   const savedRev = useRef(0);
-  const warning = useRef<((event: BeforeUnloadEvent) => void) | null>(null);
+  const guard = useRef({}); // this provider's hold on the unload guard
+  const lastError = useRef<string | null>(null);
   const applied = useRef(false);
 
   // One save at a time. A save asked for while one runs is remembered and run
@@ -78,34 +111,18 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
     if (query.data && local === null) latest.current = query.data;
   }, [query.data, local]);
 
-  // A page unload cannot be relied on to send a PUT (the body may exceed a keepalive request's 64 KB), so while
-  // anything is unsaved the browser is asked to warn before the page is closed or reloaded. Kept off React state:
-  // a save finishing must not cause a render of its own.
+  // While anything is unsaved the browser is asked to warn before the page is closed or reloaded. Kept off React
+  // state: a save finishing must not cause a render of its own. Once the tab is gone the kept document holds the
+  // guard instead.
   const warnIfUnsaved = useCallback(() => {
-    const want = !gone.current && rev.current > savedRev.current;
-    if (want && !warning.current) {
-      warning.current = (event) => {
-        event.preventDefault();
-        event.returnValue = '';
-      };
-      window.addEventListener('beforeunload', warning.current);
-    } else if (!want && warning.current) {
-      window.removeEventListener('beforeunload', warning.current);
-      warning.current = null;
-    }
+    if (!gone.current && rev.current > savedRev.current) holdUnloadGuard(guard.current);
+    else releaseUnloadGuard(guard.current);
   }, []);
 
-  /** The tab is gone and its document was not saved: say why, and keep it for the next tab (N-08). */
-  const leave = useCallback(
-    (reason: string) => {
-      console.error(`theory.json was not saved on leaving the tab: ${reason}`);
-      if (latest.current) {
-        unsaved = latest.current;
-        client.setQueryData(KEY, latest.current);
-      }
-    },
-    [client],
-  );
+  /** Unsaved changes were left in memory for the next tab: say so and why, once the final state is known (N-08). */
+  const leave = useCallback((reason: string | null) => {
+    console.error(`theory.json has unsaved changes, kept in memory for the next visit${reason ? `: ${reason}` : ''}`);
+  }, []);
 
   /** Resolves with the last save's error message, or null when it succeeded. */
   const save = useCallback((): Promise<string | null> => {
@@ -125,15 +142,19 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
         try {
           client.setQueryData(KEY, await api.put<TheoryDoc>('/api/theory', body));
           savedRev.current = Math.max(savedRev.current, sent);
-          if (rev.current <= savedRev.current) unsaved = null;
+          if (rev.current <= savedRev.current) clearUnsaved();
           error = null;
         } catch (caught) {
           error = caught instanceof Error ? caught.message : String(caught);
         }
       } while (again.current);
+      lastError.current = error;
       setSaveError(error);
       warnIfUnsaved();
-      if (error && gone.current) leave(error);
+      if (error && gone.current) {
+        if (latest.current) keepUnsaved(latest.current);
+        leave(error);
+      }
       return error;
     })().finally(() => {
       running.current = null;
@@ -149,6 +170,7 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
       const next = change(base);
       latest.current = next;
       rev.current += 1;
+      if (gone.current) keepUnsaved(next); // a change made while the tab is going: held until it is saved
       warnIfUnsaved();
       setLocal(next);
       if (timer.current) clearTimeout(timer.current);
@@ -158,41 +180,50 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
     [save, warnIfUnsaved],
   );
 
-  // Coming back to a tab that was left holding unsaved changes: once the file has been read (never over one that
-  // could not be), the unsaved document wins over the fetched one and is saved again through the normal path, so
-  // a failure shows the usual "Couldn't save" banner with Retry. A layout effect, so it shows no flash of the
-  // fetched document.
+  // Coming back to a tab that was left holding unsaved changes: once THIS mount has read the file (a fetch in
+  // flight, or one that failed, writes nothing: an unreadable file must not be replaced), the kept document is
+  // applied and saved again through the normal path, so a failure shows the usual "Couldn't save" banner with
+  // Retry. The kept document wins, but its answers are merged with the file's, since another browser tab may
+  // have added some meanwhile. A layout effect, so it shows no flash of the fetched document.
   useLayoutEffect(() => {
-    if (!query.data || applied.current || !unsaved) return;
+    if (!query.data || query.isFetching || query.isError || applied.current || !unsaved) return;
     applied.current = true;
-    latest.current = unsaved;
+    const merged: TheoryDoc = { ...unsaved, quiz: { ...unsaved.quiz, history: mergeHistory(query.data.quiz.history, unsaved.quiz.history) } };
+    latest.current = merged;
     rev.current += 1;
     warnIfUnsaved();
-    setLocal(unsaved);
+    setLocal(merged);
     void save();
-  }, [query.data, save, warnIfUnsaved]);
+  }, [query.data, query.isFetching, query.isError, save, warnIfUnsaved]);
 
   // Leaving the tab with a change pending or in flight still saves it. If that fails there is no provider left to
   // show a banner, so the message goes to the console and the document is kept for the next tab (N-08). React runs
   // this cleanup before those of the components below it, and a quiz saves its round from its own cleanup, so a
-  // save that starts after this one has run reports its failure the same way: `gone` is what tells it to. Changes
-  // that are already known to be unsaved (a failed save, nothing pending) are reported right here.
+  // save that starts after this one has run reports its failure the same way: `gone` is what tells it to. A save
+  // that had already failed is reported once the children's cleanups have run, when it is known whether one of
+  // them has saved it after all.
   useEffect(() => {
     gone.current = false;
+    warnIfUnsaved(); // a StrictMode remount takes the guard back
     return () => {
       gone.current = true;
       warnIfUnsaved();
       const dirtyNow = rev.current > savedRev.current;
-      if (dirtyNow && latest.current) unsaved = latest.current;
+      if (dirtyNow && latest.current) keepUnsaved(latest.current);
       if (timer.current) void save();
-      else if (!running.current && dirtyNow) leave('the last save failed and was not retried');
+      else if (!running.current && dirtyNow) {
+        void Promise.resolve().then(() => {
+          if (!gone.current || running.current || timer.current || rev.current <= savedRev.current) return;
+          leave(lastError.current);
+        });
+      }
     };
   }, [save, leave, warnIfUnsaved]);
 
   const resetToDefaults = useCallback(async () => {
     latest.current = DEFAULT_THEORY;
     rev.current += 1;
-    unsaved = null;
+    clearUnsaved();
     warnIfUnsaved();
     setLocal(DEFAULT_THEORY);
     await save();

@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 
-import { DEFAULT_THEORY, type TheoryDoc } from '../api/client';
-import { forgetUnsavedTheory, TheoryDocProvider, useTheoryDoc, type TheoryDocState } from './TheoryDoc';
+import { DEFAULT_THEORY, type QuizAnswer, type TheoryDoc } from '../api/client';
+import { forgetUnsavedTheory, mergeHistory, TheoryDocProvider, useTheoryDoc, type TheoryDocState } from './TheoryDoc';
 
 let hook!: TheoryDocState;
 function Probe() {
@@ -55,6 +56,12 @@ function mount(client = new QueryClient({ defaultOptions: { queries: { retry: fa
     </QueryClientProvider>,
   );
   return { client, ...view };
+}
+
+/** Leaves the tab now: its unsaved-changes report is made a moment later, while the console spy is still on. */
+async function leaveTab() {
+  cleanup();
+  await new Promise((r) => setTimeout(r, 0));
 }
 
 afterEach(() => {
@@ -124,6 +131,7 @@ test('a slow older success does not clear a newer failure', async () => {
   await act(async () => s.settle[1]!(500));
   await waitFor(() => expect(screen.getByTestId('save-error')).toHaveTextContent('disk full'));
   expect(screen.getByTestId('tool')).toHaveTextContent('triads');
+  await leaveTab();
 });
 
 test('a failed reset keeps the error banner and the defaults visible', async () => {
@@ -136,20 +144,29 @@ test('a failed reset keeps the error banner and the defaults visible', async () 
   });
   expect(screen.getByTestId('save-error')).toHaveTextContent('disk full');
   expect(hook.doc).toEqual(DEFAULT_THEORY);
+  await leaveTab();
 });
 
-test('a flush that fails on unmount is logged and the document is kept in the query cache', async () => {
+test('a flush that fails on unmount is logged and the document is kept in memory, with the browser asked to warn', async () => {
   const log = vi.spyOn(console, 'error').mockImplementation(() => {});
   server({ putStatus: 500 });
-  const { client, unmount } = mount();
+  const { unmount } = mount();
   await screen.findByText('scale-finder');
   act(() => hook.update(tool('note-finder')));
   unmount();
   await waitFor(() => expect(log).toHaveBeenCalledWith(expect.stringContaining('disk full')));
-  expect((client.getQueryData(['theory']) as TheoryDoc).last_tool).toBe('note-finder');
+  expect(log).toHaveBeenCalledWith(expect.stringContaining('unsaved changes, kept in memory'));
+  expect(unloadPrompted()).toBe(true);
 });
 
 // ---------------------------------------------------------------- leaving with unsaved changes (N-08)
+
+/** Whether closing the page now would be warned about. */
+function unloadPrompted(): boolean {
+  const event = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(event);
+  return event.defaultPrevented;
+}
 
 /** The app's own query defaults, but with staleness reproduced: coming back refetches the file as the server has it. */
 const appClient = () => new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, refetchOnWindowFocus: false } } });
@@ -163,7 +180,8 @@ test('a failed save left unsaved is logged on leaving, and the next tab shows it
   act(() => hook.update(tool('note-finder'), { now: true }));
   await waitFor(() => expect(screen.getByTestId('save-error')).toHaveTextContent('disk full'));
   first.unmount(); // no Retry pressed
-  expect(log).toHaveBeenCalledWith(expect.stringContaining('leaving the tab'));
+  await waitFor(() => expect(log).toHaveBeenCalledWith(expect.stringContaining('unsaved changes, kept in memory')));
+  expect(log).toHaveBeenCalledWith(expect.stringContaining('disk full')); // the reason, from the save that failed
 
   // Back on the tab: the server still has the old document, and it is refetched.
   const back = server({ putStatus: 200 });
@@ -329,4 +347,138 @@ test('the browser is asked to warn before unload only while something is unsaved
   await waitFor(() => expect(s.puts).toHaveLength(3));
   await act(async () => s.settle[2]!(200));
   expect(listeners()).toBe(0);
+});
+
+test('a kept document is never written over a file that cannot be read, with the same QueryClient across leaving and returning', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  server({ putStatus: 500 });
+  const client = appClient(); // the app's one client: the document the first tab read is still cached when the player returns
+  const first = mount(client);
+  await screen.findByText('scale-finder');
+  act(() => hook.update(tool('triads'), { now: true }));
+  await waitFor(() => expect(screen.getByTestId('save-error')).toHaveTextContent('disk full'));
+  first.unmount();
+
+  const broken = server({ getStatus: 500, putStatus: 200 }); // meanwhile theory.json became unreadable
+  mount(client);
+  await waitFor(() => expect(screen.getByTestId('load-error')).toHaveTextContent('broken'));
+  await waitFor(() => expect(client.isFetching()).toBe(0));
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 50));
+  });
+  expect(broken.puts).toHaveLength(0);
+  expect(unloadPrompted()).toBe(true); // still kept, still warned about
+});
+
+test('nothing is written while this visit’s GET is still in flight; the kept document is saved once it has read the file', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  server({ putStatus: 500 });
+  const client = appClient();
+  const first = mount(client);
+  await screen.findByText('scale-finder');
+  act(() => hook.update(tool('triads'), { now: true }));
+  await waitFor(() => expect(screen.getByTestId('save-error')).toHaveTextContent('disk full'));
+  first.unmount();
+
+  const puts: TheoryDoc[] = [];
+  let answerGet!: () => void;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        puts.push(JSON.parse(String(init.body)));
+        return new Response(String(init.body));
+      }
+      await new Promise<void>((resolve) => (answerGet = resolve));
+      return new Response(JSON.stringify(DEFAULT_THEORY));
+    }),
+  );
+  mount(client);
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 50));
+  });
+  expect(puts).toHaveLength(0); // the cached copy is not a read of the file
+  await act(async () => answerGet());
+  await waitFor(() => expect(puts.map((p) => p.last_tool)).toEqual(['triads']));
+});
+
+const answer = (i: number, at: string, item = `s0f${i}`): QuizAnswer => ({ quiz: 'fretboard', mode: 'name-note', item, correct: true, ms: 100, at });
+
+test('mergeHistory: every answer once, oldest first, the newest 2,000, mixed time formats in time order', () => {
+  const a = answer(1, '2026-01-01T00:00:00Z');
+  const b = answer(2, '2026-01-01T00:00:00.500Z');
+  const c = answer(3, '2026-01-01T00:00:01.000Z');
+  expect(mergeHistory([c, a], [b, { ...a }])).toEqual([a, b, c]);
+  const many = Array.from({ length: 2005 }, (_, i) => answer(i, new Date(2026, 0, 1, 0, 0, i).toISOString()));
+  const merged = mergeHistory(many.slice(0, 1500), many.slice(1000));
+  expect(merged).toHaveLength(2000);
+  expect(merged.at(-1)).toEqual(many[2004]);
+  expect(merged[0]).toEqual(many[5]);
+});
+
+test('coming back after another browser tab added answers: both sets are kept, deduplicated, and the kept document decides the rest', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const mine = [answer(1, '2026-03-01T00:00:10.000Z'), answer(2, '2026-03-01T00:00:20.000Z'), answer(3, '2026-03-01T00:00:30.000Z')];
+  server({ putStatus: 500 });
+  const first = mount(appClient());
+  await screen.findByText('scale-finder');
+  act(() => hook.update((d) => ({ ...d, quiz: { ...d.quiz, history: mine } }), { now: true }));
+  await waitFor(() => expect(screen.getByTestId('save-error')).toHaveTextContent('disk full'));
+  first.unmount();
+
+  const theirs = Array.from({ length: 40 }, (_, i) => answer(100 + i, `2026-03-01T00:00:${String(15 + (i % 30)).padStart(2, '0')}.${String(i).padStart(3, '0')}Z`));
+  const other: TheoryDoc = { ...DEFAULT_THEORY, instrument: { ...DEFAULT_THEORY.instrument, left_handed: true }, quiz: { ...DEFAULT_THEORY.quiz, history: [...theirs, { ...mine[0]! }] } };
+  const s = server({ putStatus: 200 });
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        s.puts.push(JSON.parse(String(init.body)));
+        return new Response(String(init.body));
+      }
+      return new Response(JSON.stringify(other));
+    }),
+  );
+  mount(appClient());
+  await waitFor(() => expect(s.puts).toHaveLength(1));
+  const sent = s.puts[0]!;
+  expect(sent.quiz.history).toHaveLength(43);
+  expect(new Set(sent.quiz.history.map((a) => `${a.item}|${a.at}`)).size).toBe(43);
+  const times = sent.quiz.history.map((a) => Date.parse(a.at));
+  expect(times).toEqual([...times].sort((x, y) => x - y));
+  expect(sent.instrument.left_handed).toBe(false); // the kept document's own fields win
+});
+
+test('the browser is asked to warn while a kept document exists after leaving, until a save succeeds', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  server({ putStatus: 500 });
+  const first = mount(appClient());
+  await screen.findByText('scale-finder');
+  expect(unloadPrompted()).toBe(false);
+  act(() => hook.update(tool('triads'), { now: true }));
+  await waitFor(() => expect(screen.getByTestId('save-error')).toHaveTextContent('disk full'));
+  first.unmount();
+  expect(unloadPrompted()).toBe(true); // nobody is left on the page to hold it but the kept document
+  const ok = server({ putStatus: 200 });
+  mount(appClient());
+  await waitFor(() => expect(ok.puts).toHaveLength(1));
+  await waitFor(() => expect(unloadPrompted()).toBe(false));
+});
+
+test('the unload guard is taken again after StrictMode’s simulated unmount', async () => {
+  const s = server({ putStatus: 200 });
+  render(
+    <QueryClientProvider client={appClient()}>
+      <StrictMode>
+        <TheoryDocProvider>
+          <Probe />
+        </TheoryDocProvider>
+      </StrictMode>
+    </QueryClientProvider>,
+  );
+  await screen.findByText('scale-finder');
+  act(() => hook.update(tool('triads')));
+  expect(unloadPrompted()).toBe(true);
+  await waitFor(() => expect(s.puts).toHaveLength(1));
+  await waitFor(() => expect(unloadPrompted()).toBe(false));
 });

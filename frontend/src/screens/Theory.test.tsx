@@ -151,6 +151,8 @@ test('a failed save keeps the change and offers Retry', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
   await waitFor(() => expect(puts.length).toBe(before + 1));
   expect(puts.at(-1)?.instrument.kind).toBe('guitar');
+  cleanup(); // leaves the tab with the change unsaved; its report is made a moment later, while the console spy is on
+  await new Promise((r) => setTimeout(r, 0));
 });
 
 test('instrument footer: guitar, drop D, custom tuning and left-handed', async () => {

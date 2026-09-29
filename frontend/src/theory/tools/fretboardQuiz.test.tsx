@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -48,6 +49,12 @@ const answers = () => within(screen.getByRole('group', { name: 'Answer' }));
 const answerRight = (container: HTMLElement) => fireEvent.click(answers().getByRole('button', { name: KEYS[questionPc(container)]! }));
 const answerWrong = (container: HTMLElement) => fireEvent.click(answers().getByRole('button', { name: KEYS[(questionPc(container) + 1) % 12]! }));
 const tapCell = (c: Cell) => fireEvent.click(screen.getByRole('button', { name: `${STRING[c.string]} string, ${c.fret === 0 ? 'open' : `fret ${c.fret}`}` }));
+/** Whether closing the page now would be warned about. */
+function unloadPrompted(): boolean {
+  const event = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(event);
+  return event.defaultPrevented;
+}
 const progress = () => screen.getByText(/^round \d+ of 20$/).textContent;
 const stored = (n: number, item = 's0f0'): QuizAnswer[] =>
   Array.from({ length: n }, (_, i) => ({ quiz: 'fretboard', mode: 'name-note', item: `${item}`, correct: i % 2 === 0, ms: 1000 + i, at: `2026-01-01T00:00:${String(i % 60).padStart(2, '0')}Z` }));
@@ -732,9 +739,8 @@ test('leaving the whole tab with answers pending saves them', async () => {
 test('leaving the whole tab when that save fails is reported, and the answers are parked for the next visit (N-08)', async () => {
   const error = vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => (init?.method === 'PUT' ? new Response('disk full', { status: 500 }) : new Response(JSON.stringify(DEFAULT_THEORY)))));
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <TheoryDocProvider>
         <Ready>
           <Probe />
@@ -747,7 +753,8 @@ test('leaving the whole tab when that save fails is reported, and the answers ar
   record(1);
   view.unmount();
   await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining('disk full')));
-  expect((client.getQueryData(['theory']) as TheoryDoc).quiz.history).toHaveLength(1);
+  expect(error).toHaveBeenCalledWith(expect.stringContaining('unsaved changes, kept in memory'));
+  expect(unloadPrompted()).toBe(true); // and the browser warns, since the kept answers live nowhere else
 });
 
 // ---------------------------------------------------------------- coming back to the tab
@@ -765,7 +772,7 @@ test('a round whose save failed is not lost by leaving the tab: coming back show
   const log = vi.spyOn(console, 'error').mockImplementation(() => {});
   const first = await playFailedRound();
   first.unmount(); // no Retry pressed
-  expect(log).toHaveBeenCalledWith(expect.stringContaining('leaving the tab'));
+  await waitFor(() => expect(log).toHaveBeenCalledWith(expect.stringContaining('unsaved changes, kept in memory')));
 
   // The server still has the old document (no answers), and it is what the new tab fetches.
   const back = renderTool('/theory/fretboard-quiz', { theory: nameNote });
@@ -793,4 +800,56 @@ test('when saving the kept round fails again, the banner and Retry are there and
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
   await waitFor(() => expect(back.puts).toHaveLength(1));
   expect(back.puts[0]!.quiz.history).toHaveLength(ROUND);
+});
+
+test('closing the page mid-round is warned about while answers are unsaved, and not once the round is saved', async () => {
+  const { container, puts } = renderTool('/theory/fretboard-quiz', { theory: nameNote });
+  await screen.findByText('Name this note');
+  expect(unloadPrompted()).toBe(false);
+  for (let i = 0; i < 3; i++) answerRight(container);
+  expect(unloadPrompted()).toBe(true);
+  for (let i = 0; i < ROUND - 3; i++) answerRight(container);
+  await waitFor(() => expect(puts).toHaveLength(1));
+  await waitFor(() => expect(unloadPrompted()).toBe(false));
+});
+
+test('the mid-round warning goes away when the quiz is left (its answers are then saved)', async () => {
+  const { container, puts, unmount } = renderTool('/theory/fretboard-quiz', { theory: nameNote });
+  await screen.findByText('Name this note');
+  answerRight(container);
+  expect(unloadPrompted()).toBe(true);
+  unmount();
+  await waitFor(() => expect(puts).toHaveLength(1));
+  await waitFor(() => expect(unloadPrompted()).toBe(false));
+});
+
+test('the unsaved-answers warning survives StrictMode', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => (init?.method === 'PUT' ? new Response(String(init.body)) : new Response(JSON.stringify(DEFAULT_THEORY)))));
+  const view = render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <StrictMode>
+        <TheoryDocProvider>
+          <Ready>
+            <Probe />
+            <p>ready</p>
+          </Ready>
+        </TheoryDocProvider>
+      </StrictMode>
+    </QueryClientProvider>,
+  );
+  await screen.findByText('ready');
+  record(1);
+  expect(unloadPrompted()).toBe(true);
+  view.unmount();
+  await waitFor(() => expect(unloadPrompted()).toBe(false));
+});
+
+test('after leaving with a kept round the warning stays until it is saved, then goes', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const first = await playFailedRound();
+  first.unmount();
+  expect(unloadPrompted()).toBe(true);
+  const back = renderTool('/theory/fretboard-quiz', { theory: nameNote });
+  await waitFor(() => expect(back.puts).toHaveLength(1));
+  await waitFor(() => expect(unloadPrompted()).toBe(false));
 });

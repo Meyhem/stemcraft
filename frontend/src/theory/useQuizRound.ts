@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { QuizAnswer } from '../api/client';
 import { mulberry32, type Rng } from '../music/quiz';
 import { useTheoryDoc } from './TheoryDoc';
+import { holdUnloadGuard, releaseUnloadGuard } from './unloadGuard';
 
 export const ROUND = 20;
 
@@ -86,6 +87,16 @@ export function useQuizRound(): Round {
     },
     [commit, flush],
   );
+
+  // Answers not yet in the document are lost if the browser tab is closed or reloaded, so the browser is asked to
+  // warn for as long as there are any. The effect's own cleanup lets go, so a StrictMode remount takes it back.
+  const owner = useRef({});
+  const unsavedCount = view.unsaved.length;
+  useEffect(() => {
+    if (unsavedCount === 0) return;
+    holdUnloadGuard(owner.current);
+    return () => releaseUnloadGuard(owner.current);
+  }, [unsavedCount]);
 
   // Leaving the quiz mid-round (another tool, another tab) still saves what was answered.
   useEffect(() => () => flush(), [flush]);
