@@ -1,6 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 
+import { chordLinkProblem } from './ChordFinder';
 import { renderTool } from './testing';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -46,4 +47,22 @@ test("chord finder: the chosen song's chords are chips", async () => {
   expect(within(row).getAllByRole('button').map((b) => b.textContent)).toEqual(['Gm', 'B♭m7♭5']);
   fireEvent.click(within(row).getByRole('button', { name: 'B♭m7♭5' }));
   expect(where()).toBe('/theory/chord-finder?chord=Bbm7b5');
+});
+
+test('chord finder: an unreadable chord in the link is an error, not a silent default (N-08)', async () => {
+  renderTool('/theory/chord-finder?chord=Xyz');
+  await screen.findByRole('heading', { name: 'Chord finder' });
+  const alerts = screen.getAllByRole('alert');
+  expect(alerts[0]).toHaveTextContent('Don\'t know "Xyz"');
+  expect(alerts[0]).toHaveTextContent('showing C instead');
+});
+
+test('chordLinkProblem: returns null for null chord or readable chord', () => {
+  expect(chordLinkProblem({ chord: null, root: 'C', quality: 'maj', bass: null })).toBe(null);
+  expect(chordLinkProblem({ chord: 'Cmaj7', root: 'C', quality: 'maj7', bass: null })).toBe(null);
+});
+
+test('chordLinkProblem: returns the error reason for unreadable chords', () => {
+  const problem = chordLinkProblem({ chord: 'Xyz', root: 'C', quality: 'maj', bass: null });
+  expect(problem).toContain('Xyz');
 });

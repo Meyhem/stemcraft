@@ -25,6 +25,14 @@ export function selectedChord(sel: { chord: string | null; root: string; quality
   throw new Error(`chord finder cannot build ${sel.root} ${sel.quality}`);
 }
 
+/** Check if sel.chord is set but unreadable. Returns null if it's null or readable,
+ * else the chordInfo error reason (N-08, fail-loud). Other theory tools reuse it. */
+export function chordLinkProblem(sel: { chord: string | null; root: string; quality: (typeof QUALITIES)[number]['id']; bass: string | null }): string | null {
+  if (!sel.chord) return null;
+  const parsed = chordInfo(sel.chord);
+  return parsed.ok ? null : parsed.reason;
+}
+
 export function ChordFinder() {
   const { doc } = useTheoryDoc();
   const inst = doc?.instrument ?? DEFAULT_THEORY.instrument;
@@ -34,6 +42,7 @@ export function ChordFinder() {
   const [error, setError] = useState<string | null>(null);
 
   const chord = selectedChord(sel);
+  const linkProblem = chordLinkProblem(sel);
   const notes = chord.extraBass ? [...chord.notes, chord.extraBass] : chord.notes;
   const homes = chordHomes(chord);
   const frets = neckFrets(inst);
@@ -67,6 +76,11 @@ export function ChordFinder() {
           <Button type="submit">Show</Button>
         </form>
       </ToolHeader>
+      {linkProblem && (
+        <p className={styles.errorText} role="alert">
+          {linkProblem}. The link's chord was ignored; showing {pretty(chord.symbol)} instead.
+        </p>
+      )}
       {error && (
         <p className={styles.errorText} role="alert">
           {error}. Nothing is guessed; the last chord stays shown.
