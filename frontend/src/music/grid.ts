@@ -87,3 +87,25 @@ export function snapToBar(grid: Grid, position: SampleIndex): number {
   const next = barStart(grid, bar + 1);
   return position - here <= next - position ? bar : bar + 1;
 }
+
+export interface BeatPosition {
+  bar: number;
+  /** Whole beat within the bar, 0-based. */
+  beat: number;
+  /** 0..1 through the bar: what the beat lane's cursor is drawn from. */
+  frac: number;
+}
+
+/**
+ * Bar, beat and fraction under the playhead, for the Play along screen. The
+ * beat is derived from the fraction and the grid's beats per bar, so a bar
+ * past the analysis (extrapolated at the median length) still has beats.
+ */
+export function beatPosition(grid: Grid, position: SampleIndex): BeatPosition | null {
+  const bar = barAt(grid, position);
+  if (bar < 0) return null;
+  const start = barStart(grid, bar);
+  const length = barStart(grid, bar + 1) - start;
+  const frac = length > 0 ? Math.min(1, Math.max(0, (position - start) / length)) : 0;
+  return { bar, beat: Math.min(grid.beatsPerBar - 1, Math.floor(frac * grid.beatsPerBar)), frac };
+}

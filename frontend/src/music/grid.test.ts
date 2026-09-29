@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { sampleIndex, SAMPLE_RATE } from '../engine/types';
-import { barAt, barStart, buildGrid, snapToBar } from './grid';
+import { barAt, barStart, beatPosition, buildGrid, snapToBar } from './grid';
 import type { BeatGrid } from '../api/client';
 
 /** 120 BPM, 4/4: a beat every 0.5 s, a bar every 2 s, at 48 kHz. */
@@ -92,5 +92,28 @@ describe('snapToBar', () => {
     expect(snapToBar(grid, sampleIndex(SAMPLE_RATE * 2 - 1000))).toBe(1);
     expect(snapToBar(grid, sampleIndex(SAMPLE_RATE * 2 + 1000))).toBe(1);
     expect(snapToBar(grid, sampleIndex(SAMPLE_RATE * 3 + 100))).toBe(2);
+  });
+});
+
+describe('beatPosition', () => {
+  // 120 bpm at 48 kHz: a beat is 24 000 samples, a 4/4 bar 96 000.
+  const grid = buildGrid({
+    bpm: 120,
+    beats: Array.from({ length: 16 }, (_, i) => i * 24_000),
+    downbeats: Array.from({ length: 4 }, (_, i) => i * 96_000),
+  })!;
+
+  it('finds the bar, the beat and how far through the bar the cursor is', () => {
+    expect(beatPosition(grid, sampleIndex(0))).toEqual({ bar: 0, beat: 0, frac: 0 });
+    expect(beatPosition(grid, sampleIndex(96_000 + 60_000))).toEqual({ bar: 1, beat: 2, frac: 0.625 });
+  });
+
+  it('is null before the first downbeat', () => {
+    const late = buildGrid({ bpm: 120, beats: [48_000, 72_000], downbeats: [48_000, 144_000] })!;
+    expect(beatPosition(late, sampleIndex(0))).toBeNull();
+  });
+
+  it('keeps counting past the analysed bars', () => {
+    expect(beatPosition(grid, sampleIndex(5 * 96_000))?.bar).toBe(5);
   });
 });
