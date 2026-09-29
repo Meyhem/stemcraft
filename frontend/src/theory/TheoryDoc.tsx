@@ -188,14 +188,22 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
       if (!base) return false;
       if (blocked.current) {
         if (!options?.keep) return false;
-        // The file cannot be read: nothing is sent. The change goes on the last document this tab had and waits with
-        // it, to be merged into the file's after the next good read (the layout effect below).
-        const kept = change(base);
-        latest.current = kept;
+        // The file cannot be read: nothing is sent. The change waits in memory, to be merged into the file's after the
+        // next good read (the layout effect below). `doc` stays null meanwhile (the file is unreadable), so nothing
+        // here touches what is shown, and `local` is not set: the document the player sees comes from the apply.
         rev.current += 1;
-        keepUnsaved(kept);
-        awaitingKept.current = true;
-        edits.current = [];
+        if (waiting()) {
+          // A kept document from an earlier visit is already waiting for this mount's read. The change goes on top
+          // of THAT (as the leave path does with `edits`), never on the cached document: replacing the kept one
+          // with the cached one would silently drop the answers it holds.
+          keepUnsaved(change(unsaved!));
+        } else {
+          const kept = change(base);
+          latest.current = kept;
+          keepUnsaved(kept);
+          awaitingKept.current = true;
+          edits.current = [];
+        }
         warnIfUnsaved();
         console.error('theory.json cannot be read, so these changes are kept in memory and saved after the next read that works');
         return true;
@@ -206,7 +214,12 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
       rev.current += 1;
       // A change made while the tab is going (a quiz's last flush): held until it is saved. Before a kept document is
       // applied it goes on top of that one, not of the cached document the change was made to.
-      if (gone.current) keepUnsaved(waiting() ? edits.current.reduce((d, edit) => edit(d), unsaved!) : next);
+      if (gone.current) {
+        if (waiting()) {
+          keepUnsaved(edits.current.reduce((d, edit) => edit(d), unsaved!));
+          edits.current = []; // folded into the kept document: a later fold must not apply them twice
+        } else keepUnsaved(next);
+      }
       warnIfUnsaved();
       setLocal(next);
       if (timer.current) clearTimeout(timer.current);
@@ -267,6 +280,7 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
       // Not yet applied: the kept document stays, with this mount's edits on top; the cached one is not what to keep.
       if (waiting() && unsaved) {
         keepUnsaved(edits.current.reduce((d, edit) => edit(d), unsaved));
+        edits.current = []; // folded into the kept document (a StrictMode remount must not apply them twice)
         if (timer.current) clearTimeout(timer.current);
         timer.current = null;
         if (dirtyNow) leave(null);

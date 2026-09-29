@@ -853,3 +853,82 @@ test('answers the hook could not hand over stay with it (and say so), instead of
   expect(round.history).toHaveLength(1); // still held by the hook, not dropped
   expect(round.results).toHaveLength(0);
 });
+
+// ---------------------------------------------------------------- a kept round, then a failing read, then more answers
+
+test('answers kept from an earlier visit are not replaced by a later keep: 5 kept, 2 more while the return GET fails, one PUT of all 7 after the next good read', async () => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-29T12:00:00Z'));
+  const puts: TheoryDoc[] = [];
+  let putOk = true;
+  let getHeld: ((ok: boolean) => void) | null = null;
+  let hold = false;
+  const stored: TheoryDoc = { ...DEFAULT_THEORY, ...tq() } as TheoryDoc;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/api/theory' && init?.method === 'PUT') {
+        if (!putOk) return new Response('disk full', { status: 500 });
+        puts.push(JSON.parse(String(init.body)));
+        return new Response(String(init.body));
+      }
+      if (url === '/api/theory') {
+        const ok = hold ? await new Promise<boolean>((resolve) => (getHeld = resolve)) : true;
+        return ok ? new Response(JSON.stringify(stored)) : new Response(JSON.stringify({ detail: 'theory.json: broken' }), { status: 500 });
+      }
+      if (url === '/api/songs') return new Response(JSON.stringify({ songs: [] }));
+      throw new Error(`unexpected fetch: ${url}`);
+    }),
+  );
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const visit = () =>
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/theory/theory-quiz']}>
+          <Routes>
+            <Route path="theory/:tool" element={<Theory />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  const answerAt = () => {
+    vi.setSystemTime(Date.now() + 1000); // every answer has its own time
+    answerRight();
+  };
+
+  // 1. A round of 5 whose save fails: the tab is left holding them.
+  const first = visit();
+  await screen.findByRole('group', { name: 'Answers' });
+  for (let i = 0; i < 5; i++) answerAt();
+  putOk = false;
+  first.unmount();
+  await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining('unsaved changes, kept in memory')));
+  putOk = true;
+
+  // 2. Back on the tab: the cached document shows while the GET is pending; two more answers.
+  hold = true;
+  const second = visit();
+  await screen.findByRole('group', { name: 'Answers' });
+  answerAt();
+  answerAt();
+
+  // 3. The GET fails: the file is unreadable. 4. The tab is left.
+  await act(async () => getHeld!(false));
+  await screen.findByText(/The quiz needs theory.json/);
+  second.unmount();
+  await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining('cannot be read')));
+  expect(puts).toHaveLength(0);
+
+  // 5. The next read works: one PUT, with all seven answers, each once.
+  hold = false;
+  visit();
+  await screen.findByRole('group', { name: 'Answers' });
+  await waitFor(() => expect(puts).toHaveLength(1));
+  const history = puts[0]!.quiz.history as QuizAnswer[];
+  expect(history).toHaveLength(7);
+  expect(new Set(history.map((a) => `${a.item}|${a.at}`)).size).toBe(7);
+  expect(history.map((a) => a.at)).toEqual([...history.map((a) => a.at)].sort());
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(puts).toHaveLength(1);
+});
