@@ -24,6 +24,8 @@ type System = 'boxes' | '3nps' | 'caged' | 'positions';
 interface Step {
   /** Carries the shape's own number, which can skip when shapes were dropped. */
   label: string;
+  /** The step button's text, the same number or letter as `label`: "4" for Box 4, "C" for the C shape. */
+  short: string;
   /** Low to high pitch, which is play order. */
   cells: Cell[];
 }
@@ -60,23 +62,24 @@ export function systems(inst: Instrument, notes: readonly Spelled[], frets: numb
   const fits = (what: string) => `No ${what} fits within ${frets} frets in this tuning`;
   return [
     system('boxes', 'Pentatonic boxes', notes.length === 5 ? null : 'Pentatonic boxes are for 5-note scales', fits('pentatonic box'), () =>
-      pentatonicBoxes(inst, notes, frets),
+      pentatonicBoxes(inst, notes, frets).map((s) => ({ ...s, short: String(s.number) })),
     ),
     system(
       '3nps',
       '3 notes per string',
       !guitar ? 'Three notes per string is a guitar system' : notes.length === 7 ? null : 'Three notes per string is for 7-note scales',
       fits('three-notes-per-string pattern'),
-      () => threeNotesPerString(inst, notes, frets),
+      () => threeNotesPerString(inst, notes, frets).map((s) => ({ ...s, short: String(s.number) })),
     ),
     system('caged', 'CAGED', !guitar ? 'CAGED is a guitar system' : caged ? null : 'CAGED shapes assume standard guitar tuning (E A D G B E)', fits('CAGED shape'), () =>
       (caged ?? [])
-        .map((w) => ({ label: `${w.label} · frets ${w.lo}–${w.hi}`, cells: windowCells(inst, notes, w.lo, w.hi) }))
+        .map((w) => ({ label: `${w.label} · frets ${w.lo}–${w.hi}`, short: w.label[0]!, cells: windowCells(inst, notes, w.lo, w.hi) }))
         .filter((s) => s.cells.length > 0),
     ),
     system('positions', guitar ? 'Positions' : '1 finger per fret', null, fits('position'), () =>
       positionWindows(inst, rootPc, notes.map((n) => n.pc)).map((w) => ({
         label: `Position ${w.index} · frets ${w.lo}–${w.hi}`,
+        short: String(w.index),
         cells: windowCells(inst, notes, w.lo, w.hi),
       })),
     ),
@@ -160,7 +163,7 @@ export function ScalePositions() {
             label="Shape"
             value={String(at)}
             onChange={(v) => setStep(Number(v))}
-            options={steps.map((_, i) => ({ value: String(i), label: String(i + 1) }))}
+            options={steps.map((s, i) => ({ value: String(i), label: s.short }))}
           />
           <Button onClick={() => setStep((s) => (Math.min(s, steps.length - 1) + 1) % steps.length)} aria-label="Next shape">
             →

@@ -9,6 +9,8 @@ import type { Instrument } from './tuning';
 
 export interface Shape {
   label: string;
+  /** The box or pattern number in `label`, which can skip when shapes were dropped. */
+  number: number;
   /** Low to high pitch, which is play order. */
   cells: Cell[];
 }
@@ -61,14 +63,14 @@ export function perStringShape(inst: Instrument, scale: readonly Spelled[], star
 /** The five pentatonic boxes (5-note scales), box 1 starting on the root. Drop boxes with no playable cells; keep original numbering. */
 export function pentatonicBoxes(inst: Instrument, scale: readonly Spelled[], maxFret: number): Shape[] {
   return scale
-    .map((_, i) => ({ label: `Box ${i + 1}`, cells: perStringShape(inst, scale, i, 2, maxFret) }))
+    .map((_, i) => ({ label: `Box ${i + 1}`, number: i + 1, cells: perStringShape(inst, scale, i, 2, maxFret) }))
     .filter((s) => s.cells.length > 0);
 }
 
 /** Seven three-notes-per-string patterns (7-note scales), pattern 1 starting on the root. Drop patterns with no playable cells; keep original numbering. */
 export function threeNotesPerString(inst: Instrument, scale: readonly Spelled[], maxFret: number): Shape[] {
   return scale
-    .map((_, i) => ({ label: `Pattern ${i + 1}`, cells: perStringShape(inst, scale, i, 3, maxFret) }))
+    .map((_, i) => ({ label: `Pattern ${i + 1}`, number: i + 1, cells: perStringShape(inst, scale, i, 3, maxFret) }))
     .filter((s) => s.cells.length > 0);
 }
 

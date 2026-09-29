@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 
 import { DEFAULT_THEORY } from '../../api/client';
@@ -62,4 +62,26 @@ test('systems: a shape dropped for not fitting keeps its number, and steps index
   expect(boxes.unavailable).toBeNull();
   // Only the fourth box fits in three frets: it is the one and only step, still called Box 4.
   expect(boxes.steps().map((s) => s.label)).toEqual(['Box 4']);
+});
+
+test('scale positions: the shape buttons carry the shapes’ own numbers when some were dropped (drop-D bass, B minor pentatonic)', async () => {
+  renderTool('/theory/scale-positions?root=B&scale=minor-pentatonic', {
+    theory: { instrument: { kind: 'bass', strings: 4, tuning: ['D1', 'A1', 'D2', 'G2'], left_handed: false } },
+  });
+  await screen.findByRole('heading', { name: 'Scale positions' });
+  const shape = screen.getByRole('group', { name: 'Shape' });
+  expect(within(shape).getAllByRole('button').map((b) => b.textContent)).toEqual(['1', '2', '4', '5']);
+  fireEvent.click(within(shape).getByRole('button', { name: '4' }));
+  expect(screen.getByText('Box 4')).toBeInTheDocument();
+});
+
+test('scale positions: CAGED steps are the shape letters, positions their own numbers', async () => {
+  renderTool('/theory/scale-positions?root=C', { theory: guitar });
+  await screen.findByRole('heading', { name: 'Scale positions' });
+  fireEvent.click(screen.getByRole('button', { name: 'CAGED' }));
+  const labels = within(screen.getByRole('group', { name: 'Shape' })).getAllByRole('button').map((b) => b.textContent);
+  expect([...labels].sort()).toEqual(['A', 'C', 'D', 'E', 'G']);
+  fireEvent.click(screen.getByRole('button', { name: 'Positions' }));
+  const positions = within(screen.getByRole('group', { name: 'Shape' })).getAllByRole('button').map((b) => b.textContent);
+  expect(positions[0]).toBe('1');
 });
