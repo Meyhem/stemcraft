@@ -202,3 +202,4 @@ def test_an_import_for_a_missing_song_fails_on_its_first_step(conn, songs_dir):
     job = get_job(conn, job_id)
     assert job.state == "failed"
     assert job.steps[0]["state"] == "failed"
+    assert job.steps[0]["detail"] == "failed before this step started"

@@ -124,7 +124,9 @@ def test_fail_marks_the_running_step(three):
 def test_fail_before_any_step_ran_lands_on_the_first_pending_step(three):
     # A kind that fails its own preconditions (no song dir, bad payload) fails
     # before its first ctx.step(). The error still needs a step to sit under.
-    assert states(job_steps.fail_running(three))[0] == ("a", "failed")
+    failed = job_steps.fail_running(three)
+    assert states(failed)[0] == ("a", "failed")
+    assert failed[0]["detail"] == "failed before this step started"
 
 
 def test_cancel_marks_the_running_step_and_keeps_its_detail(three):

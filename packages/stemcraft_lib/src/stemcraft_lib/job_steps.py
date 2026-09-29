@@ -155,6 +155,10 @@ def fail_running(steps: list[dict], *, now: float | None = None) -> list[dict]:
     steps = _copy(steps)
     step = _running(steps) or next((s for s in steps if s["state"] == "pending"), None)
     if step is not None:
+        if step["started_at"] is None:
+            # Nothing was running: the error needs a step to sit under, but say
+            # honestly that this step never began.
+            step["detail"] = "failed before this step started"
         _close(step, "failed", at)
     return steps
 

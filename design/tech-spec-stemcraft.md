@@ -495,6 +495,8 @@ audit requirement exists.
   `steps` JSON column and refuses an undeclared kind. From then on only the worker
   writes them, through `ctx.step()` / `ctx.skip()` / `ctx.detail()` / `ctx.progress()`.
   The job's overall `progress` is still stored, computed from the step weights.
+  A failure before any step began is anchored on the first pending step with the detail
+  "failed before this step started".
   *Because:* a single anonymous float cannot say which phase is running, how long each
   took, or which one failed. The kinds already work in clear phases. Seeding at enqueue
   lets a queued job, and a job not yet queued (from the declaration), show what it will

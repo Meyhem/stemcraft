@@ -89,7 +89,9 @@ their `t_*` kinds.
   the running step, and if any step is still `pending` it raises (a kind that forgot a
   step is a bug, N-08). The job then fails with that message instead of finishing.
 - **Fail.** `jobs.fail()` marks the running step `failed`. The traceback stays in
-  `error`, and the UI draws it under the failed step.
+  `error`, and the UI draws it under the failed step. If nothing was running yet, the
+  first pending step is marked `failed` with the detail "failed before this step
+  started", so the error has a place without blaming that step.
 - **Cancel.**
   - A running job: `jobs.cancelled()` marks the running step `cancelled`, keeping its
     `detail`, for example "stopped after 4 of 11".
@@ -98,6 +100,9 @@ their `t_*` kinds.
 - **Reclaim.** `reclaim_expired()` re-seeds `steps` from the declaration, because the
   job re-runs from the top (idempotent by re-derivation). This matches how `progress`
   already resets to 0.
+- **Rows from before schema v2.** Rows queued or running before the schema-v2 migration
+  have no steps; the worker seeds them from the declaration when it claims them and
+  reclaim re-seeds them, so an upgrade never fails a live job.
 
 This keeps invariant 2: the API writes `steps` only when it creates a row, just as it
 already writes `payload`. Everything after that is the worker's. Steps are job
