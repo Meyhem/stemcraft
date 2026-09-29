@@ -20,6 +20,7 @@ import {
   type Proposals,
   type QueuedExport,
   type QueuedSplit,
+  type StepDecl,
   type Song,
   type SongEntry,
 } from './client';
@@ -28,6 +29,9 @@ export const queryKeys = {
   health: ['health'] as const,
   songs: ['songs'] as const,
   jobs: (active: boolean) => ['jobs', active] as const,
+  // Under ['jobs', ...] so the job stream's prefix invalidation refreshes it live.
+  songJobs: (songId: string | undefined) => ['jobs', 'song', songId] as const,
+  jobKinds: ['job-kinds'] as const,
   exports: (songId: string | undefined) => ['exports', songId] as const,
 };
 
@@ -333,5 +337,24 @@ export function useDeleteAlbum() {
   return useMutation({
     mutationFn: (albumId: string) => api.del(`/api/albums/${albumId}`),
     onSuccess: () => client.invalidateQueries({ queryKey: ['albums'] }),
+  });
+}
+
+export function useSongJobs(songId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.songJobs(songId),
+    queryFn: () => api.get<{ jobs: Job[] }>(`/api/jobs?song_id=${encodeURIComponent(songId!)}`),
+    select: (data) => data.jobs,
+    enabled: songId !== undefined,
+  });
+}
+
+export function useJobKinds() {
+  return useQuery({
+    queryKey: queryKeys.jobKinds,
+    queryFn: () => api.get<{ kinds: Record<string, StepDecl[]> }>('/api/job-kinds'),
+    select: (data) => data.kinds,
+    // Declarations change only with a deploy.
+    staleTime: Infinity,
   });
 }

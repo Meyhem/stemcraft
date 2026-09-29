@@ -65,6 +65,31 @@ export interface Health {
 
 export type JobState = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 
+// D-17: mirrors stemcraft_lib/job_steps.py. Seeded at enqueue, advanced only by the worker.
+export type StepState = 'pending' | 'running' | 'done' | 'failed' | 'skipped' | 'cancelled';
+
+export interface JobStep {
+  id: string;
+  label: string;
+  weight: number;
+  state: StepState;
+  progress: number;
+  detail: string | null;
+  started_at: number | null;
+  finished_at: number | null;
+}
+
+export interface StepDecl {
+  id: string;
+  label: string;
+  weight: number;
+}
+
+/** A declared step drawn before its job exists (the Import modal's later groups). */
+export function pendingStep(decl: StepDecl): JobStep {
+  return { ...decl, state: 'pending', progress: 0, detail: null, started_at: null, finished_at: null };
+}
+
 export interface Job {
   id: number;
   song_id: string | null;
@@ -80,6 +105,7 @@ export interface Job {
   finished_at: number | null;
   error: string | null;
   result: Record<string, unknown> | null;
+  steps: JobStep[];
 }
 
 // Mirrors stemcraft_lib.jobs.JobStats / KindDuration (GET /api/jobs/stats).

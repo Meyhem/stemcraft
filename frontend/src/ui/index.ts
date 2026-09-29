@@ -16,3 +16,6 @@ export { Panel } from './Panel';
 export { ProgressBar } from './ProgressBar';
 export type { ProgressBarProps } from './ProgressBar';
 export { Table } from './Table';
+export { StepList } from './StepList';
+export type { StepListProps } from './StepList';
+export { StepStrip } from './StepStrip';

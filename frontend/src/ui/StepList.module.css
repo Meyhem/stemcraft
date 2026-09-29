@@ -1,0 +1,63 @@
+/* D-17 step list. Ported from the job-steps mockup's .step. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  column-gap: var(--ds-3);
+  align-items: start;
+  font-size: var(--ds-t-sm);
+  line-height: var(--ds-lh-sm);
+}
+
+.mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--ds-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 13px/1 var(--ds-mono);
+  color: var(--ds-text-3);
+}
+
+.label {
+  min-width: 0;
+  color: var(--ds-text-3);
+}
+
+.detail {
+  margin-left: var(--ds-2);
+  font-family: var(--ds-mono);
+  color: var(--ds-text-3);
+  font-weight: 400;
+}
+
+.aside {
+  font-family: var(--ds-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-text-3);
+}
+
+.extra {
+  grid-column: 2 / 4;
+  margin-top: var(--ds-2);
+}
+
+.step[data-state='done'] .mark { background: var(--ds-ok); border-color: var(--ds-ok); color: var(--ds-ground); }
+.step[data-state='done'] .label { color: var(--ds-text-2); }
+.step[data-state='running'] .mark { border-color: var(--ds-accent); color: var(--ds-accent); }
+.step[data-state='running'] .label { color: var(--ds-text); font-weight: 600; }
+.step[data-state='running'] .aside { color: var(--ds-accent); }
+.step[data-state='failed'] .mark { background: var(--ds-error); border-color: var(--ds-error); color: var(--ds-on-error); }
+.step[data-state='failed'] .label { color: var(--ds-error); font-weight: 600; }
+.step[data-state='skipped'] .mark { border-style: dashed; }
+.step[data-state='skipped'] .label { text-decoration: line-through; }

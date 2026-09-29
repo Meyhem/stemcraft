@@ -1,0 +1,5 @@
+.strip { display: inline-flex; gap: 3px; vertical-align: middle; }
+.strip i { width: 14px; height: 4px; border-radius: 2px; background: var(--ds-border-strong); }
+.strip i[data-state='done'] { background: var(--ds-ok); }
+.strip i[data-state='running'] { background: var(--ds-accent); }
+.strip i[data-state='failed'] { background: var(--ds-error); }
