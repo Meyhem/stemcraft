@@ -1,0 +1,13 @@
+/* The accent is the token's documented job: "focus rings, selected chrome, links".
+   No underline at rest -- the app's links sit inside dense rows where a permanent
+   underline turns the row into a fence -- but an underline on hover and focus, because
+   colour alone must not be the only affordance. */
+.link {
+  color: var(--ds-accent);
+  text-decoration: none;
+}
+
+.link:hover,
+.link:focus-visible {
+  text-decoration: underline;
+}

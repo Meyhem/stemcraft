@@ -1,0 +1,55 @@
+/* UI spec §5, "State chip": setup tier. queued / running / done / failed / cancelled,
+   and the device badge uses the same chip. The tones are vivid system signals (U-01);
+   a chip never takes a stem hue. */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-2);
+  height: 28px;
+  padding: 0 var(--ds-3);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-pill);
+  background: var(--ds-raised);
+  color: var(--ds-text-2);
+  font: 600 var(--ds-t-xs) / 1 var(--ds-font);
+  white-space: nowrap;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ok {
+  color: var(--ds-ok);
+  border-color: color-mix(in srgb, var(--ds-ok) 40%, transparent);
+  background: color-mix(in srgb, var(--ds-ok) 10%, transparent);
+}
+
+.warn {
+  color: var(--ds-warn);
+  border-color: color-mix(in srgb, var(--ds-warn) 40%, transparent);
+  background: color-mix(in srgb, var(--ds-warn) 10%, transparent);
+}
+
+.error {
+  color: var(--ds-error);
+  border-color: color-mix(in srgb, var(--ds-error) 40%, transparent);
+  background: color-mix(in srgb, var(--ds-error) 10%, transparent);
+}
+
+.run {
+  color: var(--ds-accent);
+  border-color: color-mix(in srgb, var(--ds-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--ds-accent) 10%, transparent);
+}
+
+.lg {
+  height: var(--ds-hit-setup);
+  padding: 0 var(--ds-4);
+  font-size: var(--ds-t-sm);
+}
