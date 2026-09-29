@@ -95,7 +95,6 @@ requirements, rollback, logs and what has been verified.
 ## More
 
 - [docs/deploy.md](docs/deploy.md): install, deploy and rollback runbook
-
 - [docs/running.md](docs/running.md): verified transcript of running the whole system
 - [design/domain-spec.md](design/domain-spec.md): what the product is
 - [design/tech-spec-stemcraft.md](design/tech-spec-stemcraft.md): architecture and decisions

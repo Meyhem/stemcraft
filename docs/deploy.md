@@ -47,6 +47,9 @@ Lingering is off for meyhem; enabling it needs sudo so the units start at boot.
 + watch stemcraft-worker.service for 30s (active, no restarts)
 ```
 
+The output above was captured with this machine's user name and paths; yours will differ, and
+the port follows `STEMCRAFT_PORT`.
+
 A real run does those steps in that order: `uv sync --locked`, `npm ci`, the frontend build,
 render each unit template from `ops/systemd/` into the unit directory (temp file then rename),
 `daemon-reload`, `enable`, enable lingering if needed, `restart`, then the two checks below.
@@ -78,7 +81,16 @@ tiny inference) can, on a slow machine, take longer than the settle window and t
 journalctl --user -u stemcraft-worker -n 50 --no-pager
 ```
 
-and open the Job queue screen, which shows the device the worker is using. On a slow machine
+and ask the API which device the worker reported (`<port>` is `STEMCRAFT_PORT`, default 8000):
+
+```bash
+curl http://127.0.0.1:<port>/api/health
+```
+
+`"device":"cuda"` is what you want. It stays `null` until the worker has reported. On a CPU
+fallback the device is `cpu`, `fallback_reason` holds the real error and the UI shows a banner.
+The Job queue screen shows a device only per finished job, so on a fresh install it has nothing
+to show yet. On a slow machine
 raise the window, for example `STEMCRAFT_WORKER_SETTLE=120 ops/install.sh`.
 
 After a real install, `Linger=yes` is what makes the units start at boot without anyone logged
@@ -140,7 +152,7 @@ this machine, see section 7.)
 
 `yt-dlp` is a refuse-to-start dependency and must be updated often; see
 [A note on yt-dlp](running.md#a-note-on-yt-dlp) in `docs/running.md`. It was installed there
-with `uv tool install yt-dlp`, which is updated with `uv tool upgrade yt-dlp` (not run here). Afterwards
+with `uv tool install yt-dlp`, which is updated with `uv tool upgrade yt-dlp`. Afterwards
 restart both units so they pick it up and re-run their boot checks:
 
 ```bash
@@ -167,6 +179,7 @@ proves the script's logic (order, rendering, failure behaviour), not systemd's.
 | API health wait | tests against fakes only |
 | Worker settle check | tests against fakes only; heuristic (section 2) |
 | Deploy and rollback (`git pull` / `git checkout`, then the script) | not run |
+| `uv tool upgrade yt-dlp` and restarting the units after it | not run |
 | Start-limit-hit behaviour and `reset-failed` | not run |
 | Start at boot without a login | not run |
 
@@ -176,7 +189,8 @@ proves the script's logic (order, rendering, failure behaviour), not systemd's.
    port are the ones you expect.
 2. `ops/install.sh` finishes with `Stemcraft is up on http://<host>:<port>`.
 3. `journalctl --user -u stemcraft-worker -n 50 --no-pager` shows a clean boot check, and the
-   Job queue screen shows the device (cuda).
+   `curl http://127.0.0.1:<port>/api/health` shows `"device":"cuda"` (`null` means the worker
+   has not reported yet; wait and retry). Optionally run one job and check its device chip.
 4. `systemctl --user is-enabled stemcraft-api stemcraft-worker` prints `enabled` twice.
 5. `loginctl show-user $USER -p Linger` prints `Linger=yes`.
 6. Reboot. Without logging in, `curl http://<host>:8000/api/health` answers from another
