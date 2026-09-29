@@ -10,6 +10,7 @@ import { ScaleSheet } from '../screens/ScaleSheet';
 import { SongView } from '../screens/SongView';
 import { ImportModal } from '../screens/import/ImportModal';
 import type { ImportLinkState } from '../screens/import/importLink';
+import { SongScope } from '../session/SongScope';
 import { AppShell } from './AppShell';
 
 // Task 8: dev-only manual verification page for the playback engine (R-01).
@@ -51,7 +52,11 @@ export function AppRoutes() {
               editor. */}
           <Route path="splitter/:albumId" element={<AlbumSplitter />} />
           <Route path="jobs" element={<JobQueue />} />
-          <Route path="songs/:songId" element={<SongView />} />
+          {/* D-18: one session per song, above the screens that play it, so
+              switching between them never stops playback. */}
+          <Route path="songs/:songId" element={<SongScope />}>
+            <Route index element={<SongView />} />
+          </Route>
           <Route path="songs/:songId/scale" element={<ScaleSheet />} />
           <Route path="songs/:songId/export" element={<Export />} />
           <Route path="*" element={<p>Not found</p>} />

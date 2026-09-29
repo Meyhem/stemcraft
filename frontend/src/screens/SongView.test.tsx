@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { SongScope } from '../session/SongScope';
 import { SongView } from './SongView';
 
 let cursor = 0;
@@ -105,7 +106,9 @@ function renderSongView() {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/songs/abc123']}>
         <Routes>
-          <Route path="/songs/:songId" element={<SongView />} />
+          <Route path="/songs/:songId" element={<SongScope />}>
+            <Route index element={<SongView />} />
+          </Route>
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
