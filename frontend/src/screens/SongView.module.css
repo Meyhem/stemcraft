@@ -97,6 +97,18 @@
   flex-direction: column;
 }
 
+/* The range a drag across the chords or lanes will zoom to. Above the overlay, under
+   the sticky heads. */
+.selection {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  background: color-mix(in srgb, var(--ds-accent) 18%, transparent);
+  border-inline: 1px solid var(--ds-accent);
+  pointer-events: none;
+}
+
 /* Four full-height lanes: the column takes every pixel the ruler and chord
    row leave, and shares it equally (mockup: .stem-row). */
 .lanes {

@@ -68,16 +68,27 @@ export function Timeline({
   const playheadRef = useRef<HTMLDivElement | null>(null);
 
   // Writes to a ref and the scroller, never to state: this runs 60 times a second.
+  //
+  // Follow pages the view while playing, and while paused only when the playhead itself
+  // moved -- first paint, or a seek (a new seekNonce). This painter also re-runs on every
+  // zoom; paging then would drag an at-the-pointer or drag-to-range zoom straight back
+  // to a paused playhead, so no anchored zoom could ever land.
+  const pagedFor = useRef<number | null>(null);
+  const followWas = useRef(false);
   const paint = useCallback(
     (position: SampleIndex) => {
       const x = xOf(scale, position);
       if (playheadRef.current) playheadRef.current.style.left = `${x}px`;
-      if (follow && scroller) {
+      // Switching follow on is also a request to see the playhead.
+      const moved = pagedFor.current !== seekNonce || (follow && !followWas.current);
+      pagedFor.current = seekNonce;
+      followWas.current = follow;
+      if (follow && scroller && (playing || moved)) {
         const next = followScrollLeft(x, scroller.scrollLeft, scroller.clientWidth - LANE_HEAD_PX, playing);
         if (next !== null) scroller.scrollLeft = next;
       }
     },
-    [scale, follow, scroller, playing],
+    [scale, follow, scroller, playing, seekNonce],
   );
   usePlayhead(getPosition, paint, playing, seekNonce);
 

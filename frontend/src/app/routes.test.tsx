@@ -32,9 +32,6 @@ vi.mock('../engine/EngineController', () => ({
     }),
   },
 }));
-vi.mock('wavesurfer.js', () => ({
-  default: { create: () => ({ destroy: vi.fn(), setOptions: vi.fn(), on: () => () => {} }) },
-}));
 
 // A realistic song entry for the song-scoped routes (/songs/01ABC, .../scale,
 // .../export), the same way ScaleSheet.test.tsx and Library.test.tsx mock

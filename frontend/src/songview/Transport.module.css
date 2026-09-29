@@ -124,3 +124,18 @@
   gap: var(--ds-3);
   margin-left: auto;
 }
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-2);
+}
+
+.zoomValue {
+  min-inline-size: 11ch;
+  text-align: center;
+  font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text-2);
+  white-space: nowrap;
+}

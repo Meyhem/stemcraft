@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -43,9 +43,6 @@ const engine = {
 vi.mock('../engine/EngineController', () => ({
   STEM_ORDER: ['vocals', 'drums', 'bass', 'other'],
   EngineController: { create: vi.fn(async () => engine) },
-}));
-vi.mock('wavesurfer.js', () => ({
-  default: { create: () => ({ destroy: vi.fn(), setOptions: vi.fn(), on: () => () => {} }) },
 }));
 
 const songEntry = {
@@ -327,16 +324,85 @@ describe('SongView', () => {
     renderSongView();
     await screen.findByRole('group', { name: 'vocals stem' });
     const axis = screen.getByTestId('time-axis');
-    // Default 1x: 16 bars at 56 px, plus the 200 px sticky head column.
+    // Default: 16 bars at 56 px, plus the 200 px sticky head column.
     await waitFor(() => expect(axis.style.width).toBe(`${200 + 896}px`));
-    expect(screen.getByRole('button', { name: '1×' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByTestId('vocals-wave').style.width).toBe('896px');
 
-    await userEvent.click(screen.getByRole('button', { name: '2×' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
     expect(axis.style.width).toBe(`${200 + 1792}px`);
     expect(screen.getByTestId('timeline-track').style.width).toBe('1792px');
     expect(screen.getByTestId('bass-wave').style.width).toBe('1792px');
     expect(screen.getByLabelText('G major').style.width).toBe('112px');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+    expect(axis.style.width).toBe(`${200 + 896}px`);
+  });
+
+  it('the wheel over the lanes zooms, and does not scroll the page', async () => {
+    renderSongView();
+    await screen.findByRole('group', { name: 'vocals stem' });
+    const axis = screen.getByTestId('time-axis');
+    await waitFor(() => expect(axis.style.width).toBe(`${200 + 896}px`));
+    const scroller = screen.getByTestId('time-axis-scroller');
+    // clientX 500 is right of the 200 px heads (jsdom boxes sit at 0).
+    const event = new WheelEvent('wheel', { deltaY: -100, clientX: 500, cancelable: true, bubbles: true });
+    act(() => {
+      scroller.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(true);
+    expect(parseFloat(axis.style.width)).toBeGreaterThan(200 + 896);
+  });
+
+  it('the wheel over the sticky heads is left alone, so it cannot zoom by accident', async () => {
+    renderSongView();
+    await screen.findByRole('group', { name: 'vocals stem' });
+    const axis = screen.getByTestId('time-axis');
+    await waitFor(() => expect(axis.style.width).toBe(`${200 + 896}px`));
+    const event = new WheelEvent('wheel', { deltaY: -100, clientX: 100, cancelable: true, bubbles: true });
+    act(() => {
+      screen.getByTestId('time-axis-scroller').dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(false);
+    expect(axis.style.width).toBe(`${200 + 896}px`);
+  });
+
+  it('a drag across a lane draws a selection and zooms to fit it', async () => {
+    // jsdom has no layout: every element reports a 900 px client width, so the scroller's
+    // measured content viewport is 700 px (minus the 200 px heads).
+    // jsdom defines clientWidth on Element.prototype; shadow it and delete the shadow after.
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 900 });
+    try {
+      renderSongView();
+      await screen.findByRole('group', { name: 'vocals stem' });
+      const axis = screen.getByTestId('time-axis');
+      await waitFor(() => expect(axis.style.width).toBe(`${200 + 896}px`));
+      const lane = screen.getByTestId('bass-wave');
+      const at = (type: string, clientX: number) =>
+        fireEvent(lane, new MouseEvent(type, { bubbles: true, clientX, clientY: 300, button: 0 }));
+      // Content x 56..168 is bars 2-3 at 56 px per bar: two bars selected.
+      at('pointerdown', 200 + 56);
+      at('pointermove', 200 + 168);
+      expect(screen.getByTestId('zoom-selection').style.width).toBe('112px');
+      at('pointerup', 200 + 168);
+      expect(screen.queryByTestId('zoom-selection')).toBeNull();
+      // Two bars fitted into 700 px is 350 px per bar: 16 bars are 5600 px.
+      expect(axis.style.width).toBe(`${200 + 5600}px`);
+    } finally {
+      delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+    }
+  });
+
+  it('a press on a lane that does not travel is not a zoom', async () => {
+    renderSongView();
+    await screen.findByRole('group', { name: 'vocals stem' });
+    const axis = screen.getByTestId('time-axis');
+    await waitFor(() => expect(axis.style.width).toBe(`${200 + 896}px`));
+    const lane = screen.getByTestId('bass-wave');
+    for (const type of ['pointerdown', 'pointermove', 'pointerup']) {
+      fireEvent(lane, new MouseEvent(type, { bubbles: true, clientX: 402, clientY: 300, button: 0 }));
+    }
+    expect(screen.queryByTestId('zoom-selection')).toBeNull();
+    expect(axis.style.width).toBe(`${200 + 896}px`);
   });
 
   it('follows the playhead by default, and the toggle turns it off', async () => {

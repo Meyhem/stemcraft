@@ -20,7 +20,7 @@ export const NEAR_SILENT_THRESHOLD = 0.02;
 
 export interface StemSummary {
   name: StemName;
-  /** Absolute peak per bucket, 0..1. wavesurfer renders this directly. */
+  /** Absolute peak per bucket, 0..1. StemLane paints this directly. */
   envelope: Float32Array;
   /** Absolute peak over the whole stem. */
   peak: number;

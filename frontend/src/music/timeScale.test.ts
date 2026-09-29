@@ -7,8 +7,10 @@ import {
   recentreScrollLeft,
   rulerLabelEvery,
   sampleAtX,
+  MAX_PX_PER_SECOND,
   timeScale,
   xOf,
+  zoomBounds,
 } from './timeScale';
 
 // 16 bars of exactly 96 000 samples (2 s at 48 kHz, 120 bpm 4/4).
@@ -20,13 +22,23 @@ const grid = buildGrid({
 const duration = sampleIndex(16 * 96_000);
 
 describe('timeScale', () => {
-  it('1x is 56 px per bar and 2x is 112, from the grid’s bar length', () => {
-    const one = timeScale({ durationSamples: duration, grid, zoom: '1x', viewportWidth: 900 });
+  it('a numeric zoom is px per bar, from the grid’s bar length', () => {
+    const one = timeScale({ durationSamples: duration, grid, zoom: 56, viewportWidth: 400 });
     expect(one.pxPerBar).toBe(56);
     expect(one.contentWidth).toBe(16 * 56);
-    const two = timeScale({ durationSamples: duration, grid, zoom: '2x', viewportWidth: 900 });
+    const two = timeScale({ durationSamples: duration, grid, zoom: 112, viewportWidth: 400 });
     expect(two.pxPerBar).toBe(112);
     expect(two.contentWidth).toBe(16 * 112);
+  });
+
+  it('clamps a numeric zoom between fit and the max, so the axis never shows a zoom it cannot hold', () => {
+    // 96 000-sample bars are 2 s; 200 px/s max is 400 px per bar.
+    const { min, max } = zoomBounds({ durationSamples: duration, grid, viewportWidth: 800 });
+    expect(max).toBe(400);
+    expect(min).toBe(50); // 16 bars into 800 px
+    expect(timeScale({ durationSamples: duration, grid, zoom: 9999, viewportWidth: 800 }).pxPerBar).toBe(400);
+    expect(timeScale({ durationSamples: duration, grid, zoom: 1, viewportWidth: 800 }).pxPerBar).toBe(50);
+    expect(max / 2).toBe(MAX_PX_PER_SECOND);
   });
 
   it('Fit makes the whole song exactly the visible width', () => {
@@ -47,21 +59,21 @@ describe('timeScale', () => {
   });
 
   it('without a grid still renders: a nominal 2 s bar stands in, so waveforms have a width', () => {
-    const one = timeScale({ durationSamples: duration, grid: null, zoom: '1x', viewportWidth: 900 });
+    const one = timeScale({ durationSamples: duration, grid: null, zoom: 56, viewportWidth: 400 });
     expect(one.contentWidth).toBe(16 * 56);
     const fit = timeScale({ durationSamples: duration, grid: null, zoom: 'fit', viewportWidth: 900 });
     expect(fit.contentWidth).toBe(900);
   });
 
   it('is linear in samples, so a bar line and the waveform agree on every pixel', () => {
-    const one = timeScale({ durationSamples: duration, grid, zoom: '1x', viewportWidth: 900 });
+    const one = timeScale({ durationSamples: duration, grid, zoom: 56, viewportWidth: 400 });
     expect(xOf(one, 96_000 * 3)).toBeCloseTo(168, 9);
     expect(xOf(one, 48_000)).toBeCloseTo(28, 9);
   });
 });
 
 describe('sampleAtX', () => {
-  const one = timeScale({ durationSamples: duration, grid, zoom: '1x', viewportWidth: 900 });
+  const one = timeScale({ durationSamples: duration, grid, zoom: 56, viewportWidth: 400 });
 
   it('inverts xOf', () => {
     expect(sampleAtX(one, 112, duration)).toBe(192_000);

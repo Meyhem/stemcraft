@@ -6,6 +6,8 @@ instrument and play along.
 - Import a file or a YouTube link; any format ffmpeg can decode is accepted
 - GPU stem separation into vocals, drums, bass and other
 - Live mixer: mute, solo and volume per stem
+- Song view time axis: the wheel zooms at the pointer, dragging across the lanes zooms to
+  that range, Shift+wheel or the scrollbar pans, and a click on the ruler seeks
 - Tempo and pitch change without re-separating; stems are never modified
 - Sample-accurate seamless loops on the beat grid, with optional count-in
 - Beat, key and chord analysis, plus a fretboard view

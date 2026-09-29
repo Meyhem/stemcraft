@@ -18,7 +18,7 @@ function grid8() {
 
 const DURATION = sampleIndex(SAMPLE_RATE * 16); // 8 bars of 2 s
 // 1x: 56 px per bar, so the 8-bar song is 448 px wide.
-const oneX = timeScale({ durationSamples: DURATION, grid: grid8(), zoom: '1x', viewportWidth: 0 });
+const oneX = timeScale({ durationSamples: DURATION, grid: grid8(), zoom: 56, viewportWidth: 0 });
 const atPxPerBar = (pxPerBar: number): TimeScale => ({
   pxPerBar,
   pxPerSample: pxPerBar / 96_000,
@@ -146,6 +146,37 @@ describe('Timeline', () => {
       expect(scroller.scrollLeft).toBe(292);
     });
 
+    it('while paused, leaves a view the user moved alone until the playhead itself moves', () => {
+      // A zoom at the pointer or onto a dragged range puts the view somewhere the paused
+      // playhead is not. The painter re-runs on every zoom; if it paged back to the
+      // playhead each time, no anchored zoom could ever land. Only a seek may page.
+      const scroller = fakeScroller(500, 0);
+      const { rerender, props } = renderTimeline({
+        getPosition: () => sampleIndex(0),
+        scroller,
+        follow: true,
+        seekNonce: 0,
+      });
+      scroller.scrollLeft = 1000; // the owner moved the view; the playhead (x 0) is off-screen
+      rerender(<Timeline {...props} getPosition={() => sampleIndex(0)} />);
+      expect(scroller.scrollLeft).toBe(1000);
+      // A seek (even to the same place) is the playhead moving: now follow pages back.
+      rerender(<Timeline {...props} getPosition={() => sampleIndex(0)} seekNonce={1} />);
+      expect(scroller.scrollLeft).toBe(0);
+    });
+
+    it('switching follow on while paused brings the playhead back into view', () => {
+      const scroller = fakeScroller(500, 0);
+      const { rerender, props } = renderTimeline({
+        getPosition: () => sampleIndex(96_000 * 7),
+        scroller,
+        follow: false,
+      });
+      expect(scroller.scrollLeft).toBe(0);
+      rerender(<Timeline {...props} follow />);
+      expect(scroller.scrollLeft).toBe(292); // x 392, to a third of the 300 px view
+    });
+
     it('leaves the view alone when follow is off', () => {
       const scroller = fakeScroller(500, 0);
       renderTimeline({ getPosition: () => sampleIndex(96_000 * 7), scroller, follow: false });
@@ -157,7 +188,7 @@ describe('Timeline', () => {
       const position = () => sampleIndex(96_000 * 4);
       const { rerender, props } = renderTimeline({ getPosition: position, scroller, follow: false });
       expect(scroller.scrollLeft).toBe(0);
-      const twoX = timeScale({ durationSamples: DURATION, grid: grid8(), zoom: '2x', viewportWidth: 0 });
+      const twoX = timeScale({ durationSamples: DURATION, grid: grid8(), zoom: 112, viewportWidth: 0 });
       rerender(<Timeline {...props} scale={twoX} />);
       // x = 4 * 112 = 448; 448 - 100 = 348.
       expect(scroller.scrollLeft).toBe(348);

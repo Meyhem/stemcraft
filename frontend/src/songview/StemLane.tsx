@@ -2,20 +2,26 @@
 // fixed order, a permanent text label and a fixed lane position (U-01); hue is
 // an accelerator, never the only signal.
 //
-// D-07: wavesurfer renders and never plays. It is constructed with precomputed
-// peaks and an explicit duration, so it has no URL to fetch and no media element
-// to start, and its own cursor is switched off -- the playhead belongs to
-// Timeline, driven by the engine clock (U-05).
+// D-07: nothing here plays. The waveform is painted from the precomputed stem
+// envelope onto a canvas; there is no URL, no media element, and no cursor -- the
+// playhead belongs to Timeline, driven by the engine clock (U-05).
+//
+// The canvas is the size of the VISIBLE part of the lane, sticky at the left edge of
+// the content area, and repaints its slice on scroll. It used to be wavesurfer laid out
+// at the full content width, which draws every pixel of that width up front: at close
+// zoom a long song is tens of thousands of px per lane, four lanes, twice over (wave
+// and progress). A viewport canvas costs the same at every zoom.
 //
 // A lane is one row of the Song view's scrolling time axis: the controls are
 // the row's sticky 200px head, and the waveform is exactly the axis's content
 // width, so it lines up with the bar ruler and the chord row above it.
 import type { CSSProperties } from 'react';
-import { useEffect, useRef } from 'react';
-import WaveSurfer from 'wavesurfer.js';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 
 import type { StemName } from '../engine/EngineController';
 import type { StemSummary } from '../engine/stemPeaks';
+import { LANE_HEAD_PX } from '../music/timeScale';
+import { columnHeights } from '../music/zoom';
 import { Button } from '../ui';
 import { resolveColor } from '../ui/resolveColor';
 import axis from './Axis.module.css';
@@ -28,11 +34,14 @@ const STEM_COLOR: Record<StemName, string> = {
   other: 'var(--ds-other)',
 };
 
+const LANE_H = 64;
+
 export interface StemLaneProps {
   summary: StemSummary;
-  durationSeconds: number;
   /** The time axis content width in px (TimeScale.contentWidth). */
   width: number;
+  /** The horizontal scroller the axis lives in; the canvas paints its visible slice. */
+  scroller: HTMLElement | null;
   muted: boolean;
   soloed: boolean;
   gainDb: number;
@@ -44,8 +53,8 @@ export interface StemLaneProps {
 
 export function StemLane({
   summary,
-  durationSeconds,
   width,
+  scroller,
   muted,
   soloed,
   gainDb,
@@ -54,41 +63,68 @@ export function StemLane({
   onSoloToggle,
   onGainChange,
 }: StemLaneProps) {
-  const container = useRef<HTMLDivElement | null>(null);
-  const waveSurfer = useRef<WaveSurfer | null>(null);
-  // Read at construction only (not an effect dependency): later changes go
-  // through setOptions below, so a zoom resizes the waveform in place instead
-  // of tearing it down and rebuilding it.
-  const latestWidth = useRef(width);
-  latestWidth.current = width;
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { name, envelope, nearSilent } = summary;
   const silenced = muted || (anySoloed && !soloed);
 
-  useEffect(() => {
-    if (!container.current) return;
-    const color = resolveColor(STEM_COLOR[name]);
-    const ws = WaveSurfer.create({
-      container: container.current,
-      height: 64,
-      cursorWidth: 0, // U-05: the playhead is ours, drawn from the engine clock
-      interact: false, // scrubbing is Timeline's job, and U-06 governs it
-      normalize: false,
-      waveColor: color,
-      progressColor: color,
-      peaks: [envelope],
-      duration: durationSeconds,
-      width: latestWidth.current,
-    });
-    waveSurfer.current = ws;
-    return () => {
-      waveSurfer.current = null;
-      ws.destroy();
-    };
-  }, [name, envelope, durationSeconds]);
+  // Canvas cannot read CSS variables (resolveColor); resolved per stem.
+  const color = useRef('');
+  useLayoutEffect(() => {
+    color.current = resolveColor(STEM_COLOR[name]);
+  }, [name]);
 
+  const paint = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const scrollLeft = scroller?.scrollLeft ?? 0;
+    const viewport = scroller ? Math.max(0, scroller.clientWidth - LANE_HEAD_PX) : width;
+    // Never wider than what is left of the lane: at Fit the content is the viewport.
+    const columns = Math.max(0, Math.min(Math.ceil(viewport), Math.ceil(width - scrollLeft)));
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(columns * dpr) || canvas.height !== Math.round(LANE_H * dpr)) {
+      canvas.width = Math.round(columns * dpr);
+      canvas.height = Math.round(LANE_H * dpr);
+      canvas.style.width = `${columns}px`;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, columns, LANE_H);
+    // Raw amplitude, not normalised: a near-silent stem must LOOK near-silent (U-10).
+    const heights = columnHeights(envelope, width, scrollLeft, columns, false);
+    const mid = LANE_H / 2;
+    const half = LANE_H / 2 - 2;
+    ctx.fillStyle = color.current;
+    for (let i = 0; i < heights.length; i++) {
+      const bar = Math.max(0.5, heights[i]! * half);
+      ctx.fillRect(i, mid - bar, 1, bar * 2);
+    }
+  }, [envelope, width, scroller]);
+
+  useLayoutEffect(() => {
+    paint();
+  }, [paint]);
+
+  // Repaint the visible slice on every pan and on a viewport resize, at most once a frame.
   useEffect(() => {
-    waveSurfer.current?.setOptions({ width });
-  }, [width]);
+    if (!scroller) return;
+    let handle = 0;
+    const schedule = () => {
+      if (handle) return;
+      handle = requestAnimationFrame(() => {
+        handle = 0;
+        paint();
+      });
+    };
+    scroller.addEventListener('scroll', schedule, { passive: true });
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
+    observer?.observe(scroller);
+    return () => {
+      scroller.removeEventListener('scroll', schedule);
+      observer?.disconnect();
+      cancelAnimationFrame(handle);
+    };
+  }, [scroller, paint]);
 
   return (
     <div
@@ -145,7 +181,9 @@ export function StemLane({
       </div>
 
       <div className={styles.waveWrap} style={{ width: `${width}px` }}>
-        <div ref={container} data-testid={`${name}-wave`} className={styles.wave} style={{ width: `${width}px` }} />
+        <div data-testid={`${name}-wave`} className={styles.wave} style={{ width: `${width}px` }}>
+          <canvas ref={canvasRef} className={styles.canvas} data-testid={`${name}-canvas`} />
+        </div>
         {nearSilent && (
           <span className={styles.pill}>
             near-silent &mdash; this song has no {name} the model could find

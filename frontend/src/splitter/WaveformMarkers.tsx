@@ -6,7 +6,7 @@
 // waveform out at its full pixel width, and a 81-minute album at useful zoom is hundreds
 // of thousands of pixels wide. Instead one viewport-sized <canvas> sticks to the left of
 // a scroll container and repaints only the visible slice, so the cost is independent of
-// zoom. (StemLane keeps wavesurfer: a song is a few thousand pixels wide.)
+// zoom. (The Song view's StemLane paints the same way.)
 //
 // Invariant 4: every position this component reports is an integer sample index at
 // 48 kHz. Pointer positions are rounded at the point of conversion, never handed on as
@@ -24,13 +24,13 @@ import {
 } from 'react';
 
 import { followScrollLeft } from '../music/timeScale';
+import { columnHeights, wheelZoom } from '../music/zoom';
 import { Button } from '../ui';
 import { resolveColor } from '../ui/resolveColor';
 import { PauseIcon, PlayIcon } from './icons';
 import { formatTimestamp, SAMPLE_RATE } from './time';
 import {
   clampZoom,
-  columnHeights,
   cutsNear,
   DRAG_THRESHOLD_PX,
   fitPxPerSecond,
@@ -178,7 +178,7 @@ export function WaveformMarkers({
     }
 
     // Waveform: played part in the accent, the rest in a light grey, split at the playhead.
-    const heights = columnHeights(envelope, total / SAMPLE_RATE, pps, scrollLeft, Math.ceil(width));
+    const heights = columnHeights(envelope, live.current.contentWidth, scrollLeft, Math.ceil(width), true);
     const playheadX = (getPlayheadSampleRef.current() / total) * live.current.contentWidth - scrollLeft;
     const mid = RULER_H + WAVE_H / 2;
     const half = WAVE_H / 2 - 4;
@@ -316,8 +316,7 @@ export function WaveformMarkers({
       // Plain (or ctrl) wheel zooms around the pointer.
       const rect = scroller.getBoundingClientRect();
       zoomToRef.current(
-        // ~1.3x per mouse-wheel notch (deltaY ~100); a trackpad's small deltas zoom smoothly.
-        live.current.pxPerSecond * Math.exp(-event.deltaY * 0.0025),
+        wheelZoom(live.current.pxPerSecond, event.deltaY),
         event.clientX - rect.left,
       );
     };

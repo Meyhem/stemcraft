@@ -37,8 +37,10 @@ function renderTransport(over: Partial<Parameters<typeof Transport>[0]> = {}) {
     onNudgeBars: vi.fn(),
     onMuteLane: vi.fn(),
     chords: [],
-    zoom: '1x' as const,
-    onZoomChange: vi.fn(),
+    zoomLabel: '16 bars in view',
+    onZoomIn: vi.fn(),
+    onZoomOut: vi.fn(),
+    onZoomFit: vi.fn(),
     follow: true,
     onFollowToggle: vi.fn(),
     ...over,
@@ -171,16 +173,16 @@ describe('Transport', () => {
     expect(props.onSetLoopEnd).not.toHaveBeenCalled();
   });
 
-  it('offers Fit / 1× / 2× zoom, showing the current one pressed', async () => {
-    const props = renderTransport({ zoom: '1x' });
+  it('offers zoom out / in / Fit with a readout of what is in view', async () => {
+    const props = renderTransport({ zoomLabel: '12 bars in view' });
     const zoom = screen.getByRole('group', { name: 'Zoom' });
-    expect(zoom).toHaveTextContent('Fit1×2×');
-    expect(screen.getByRole('button', { name: '1×' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Fit' })).toHaveAttribute('aria-pressed', 'false');
+    expect(zoom).toHaveTextContent('12 bars in view');
+    await userEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(props.onZoomIn).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+    expect(props.onZoomOut).toHaveBeenCalledOnce();
     await userEvent.click(screen.getByRole('button', { name: 'Fit' }));
-    expect(props.onZoomChange).toHaveBeenCalledWith('fit');
-    await userEvent.click(screen.getByRole('button', { name: '2×' }));
-    expect(props.onZoomChange).toHaveBeenCalledWith('2x');
+    expect(props.onZoomFit).toHaveBeenCalledOnce();
   });
 
   it('toggles follow-playhead, reporting its state through aria-pressed', async () => {

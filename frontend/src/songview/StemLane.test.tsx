@@ -1,27 +1,43 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { StemSummary } from '../engine/stemPeaks';
 import { StemLane } from './StemLane';
 
-// wavesurfer needs a real canvas and ResizeObserver; jsdom has neither, and the
-// waveform pixels are not what these tests are about. The lane's controls,
-// labels and states are. `create` is a spyable vi.fn() (not just an inert
-// arrow function) so a regression test below can pin exactly what it was
-// constructed with -- invariant #7 ("wavesurfer.js never plays audio") is a
-// non-negotiable project rule, and nothing else here would catch a future
-// edit that passed `url`/`media` instead of precomputed `peaks`.
-const { createWaveSurfer } = vi.hoisted(() => ({
-  createWaveSurfer: vi.fn((_options: Record<string, unknown>) => ({
-    destroy: vi.fn(),
-    setOptions: vi.fn(),
-    on: () => () => {},
-  })),
-}));
-vi.mock('wavesurfer.js', () => ({
-  default: { create: createWaveSurfer },
-}));
+// jsdom has no canvas: a recording 2d context stands in, so the tests can see what
+// was painted, in what colour and how wide.
+interface Rect {
+  x: number;
+  h: number;
+  style: unknown;
+}
+const rects: Rect[] = [];
+let realGetContext: typeof HTMLCanvasElement.prototype.getContext;
+beforeEach(() => {
+  rects.length = 0;
+  realGetContext = HTMLCanvasElement.prototype.getContext;
+  const ctx = {
+    fillStyle: '' as unknown,
+    setTransform: () => {},
+    clearRect: () => void (rects.length = 0),
+    fillRect(x: number, _y: number, _w: number, h: number) {
+      rects.push({ x, h, style: this.fillStyle });
+    },
+  };
+  HTMLCanvasElement.prototype.getContext = (() => ctx) as unknown as typeof realGetContext;
+});
+afterEach(() => {
+  HTMLCanvasElement.prototype.getContext = realGetContext;
+});
+
+// A stand-in scroller: the visible content is `clientWidth - 200` (the sticky head).
+function fakeScroller(clientWidth: number, scrollLeft = 0) {
+  const el = document.createElement('div');
+  Object.defineProperty(el, 'clientWidth', { configurable: true, get: () => clientWidth });
+  el.scrollLeft = scrollLeft;
+  return el;
+}
 
 const summary = (over: Partial<StemSummary> = {}): StemSummary => ({
   name: 'bass',
@@ -34,8 +50,8 @@ const summary = (over: Partial<StemSummary> = {}): StemSummary => ({
 function renderLane(over: Partial<Parameters<typeof StemLane>[0]> = {}) {
   const props = {
     summary: summary(),
-    durationSeconds: 120,
     width: 896,
+    scroller: null as HTMLElement | null,
     muted: false,
     soloed: false,
     gainDb: 0,
@@ -50,10 +66,6 @@ function renderLane(over: Partial<Parameters<typeof StemLane>[0]> = {}) {
 }
 
 describe('StemLane', () => {
-  beforeEach(() => {
-    createWaveSurfer.mockClear();
-  });
-
   it('always names the stem in text, never by colour alone', () => {
     renderLane();
     expect(screen.getByText('bass')).toBeInTheDocument();
@@ -85,18 +97,16 @@ describe('StemLane', () => {
   });
 
   it('paints the waveform with the stem\'s concrete colour, never a var() string', () => {
-    // wavesurfer draws on a canvas, which cannot resolve CSS variables: handed
-    // 'var(--ds-bass)' it ignores the colour and fills black on a near-black lane.
-    // Load-bearing: the test defines the token, so a component that passed the literal
-    // string through would fail on the string, and one that resolved the wrong token
-    // would fail on the value.
+    // A canvas cannot resolve CSS variables: handed 'var(--ds-bass)' it ignores the colour
+    // and fills black on a near-black lane. Load-bearing: the test defines the token, so
+    // passing the literal string through fails on the string, and resolving the wrong
+    // token fails on the value.
     document.documentElement.style.setProperty('--ds-bass', '#4FC3B0');
     document.documentElement.style.setProperty('--ds-text-2', '#9BA3AE');
     try {
       renderLane();
-      const options = createWaveSurfer.mock.calls[0]![0];
-      expect(options.waveColor).toBe('#4FC3B0');
-      expect(options.progressColor).toBe('#4FC3B0');
+      expect(rects.length).toBeGreaterThan(0);
+      expect(new Set(rects.map((r) => r.style))).toEqual(new Set(['#4FC3B0']));
     } finally {
       document.documentElement.style.removeProperty('--ds-bass');
       document.documentElement.style.removeProperty('--ds-text-2');
@@ -107,36 +117,45 @@ describe('StemLane', () => {
     document.documentElement.style.setProperty('--ds-text-2', '#9BA3AE');
     try {
       renderLane();
-      const options = createWaveSurfer.mock.calls[0]![0];
-      expect(options.waveColor).toBe('#9BA3AE');
+      expect(rects[0]!.style).toBe('#9BA3AE');
     } finally {
       document.documentElement.style.removeProperty('--ds-text-2');
     }
   });
 
-  it('constructs wavesurfer from precomputed peaks and duration, never a URL or media element (invariant #7)', () => {
-    renderLane({ durationSeconds: 42.5 });
-    expect(createWaveSurfer).toHaveBeenCalledOnce();
-    const options = createWaveSurfer.mock.calls[0]![0];
-    expect(options).toMatchObject({ peaks: [expect.any(Float32Array)], duration: 42.5, cursorWidth: 0 });
-    expect(typeof options.duration).toBe('number');
-    expect(options).not.toHaveProperty('url');
-    expect(options).not.toHaveProperty('media');
+  it('cannot play: it renders no media element, only a canvas (invariant #7)', () => {
+    const { container } = renderLane();
+    expect(container.querySelector('audio, video')).toBeNull();
+    expect(screen.getByTestId('bass-canvas').tagName).toBe('CANVAS');
   });
 
-  it('makes the waveform exactly the time axis content width, so it aligns with the bars', () => {
+  it('makes the lane exactly the time axis content width, so it aligns with the bars', () => {
     renderLane({ width: 896 });
-    expect(createWaveSurfer.mock.calls[0]![0]).toMatchObject({ width: 896, interact: false });
     expect(screen.getByTestId('bass-wave').style.width).toBe('896px');
   });
 
-  it('resizes the waveform on a zoom change in place, without rebuilding it', () => {
-    const { rerender, props } = renderLane({ width: 896 });
-    const instance = createWaveSurfer.mock.results[0]!.value as { setOptions: ReturnType<typeof vi.fn> };
-    rerender(<StemLane {...props} width={1792} />);
-    expect(createWaveSurfer).toHaveBeenCalledOnce();
-    expect(instance.setOptions).toHaveBeenLastCalledWith({ width: 1792 });
-    expect(screen.getByTestId('bass-wave').style.width).toBe('1792px');
+  it('paints only the visible slice, however wide the zoomed lane is', () => {
+    // 100 000 px of lane, 700 px of viewport (900 minus the 200 px head).
+    renderLane({ width: 100_000, scroller: fakeScroller(900) });
+    expect(rects).toHaveLength(700);
+    expect(screen.getByTestId('bass-canvas').style.width).toBe('700px');
+  });
+
+  it('repaints the new slice when the axis is scrolled', async () => {
+    // Envelope: quiet first half, loud second half; the lane is 1000 px, 500 visible.
+    const envelope = Float32Array.from([...Array(50).fill(0.1), ...Array(50).fill(0.9)]);
+    const scroller = fakeScroller(700, 0);
+    renderLane({ width: 1000, scroller, summary: summary({ envelope }) });
+    const quiet = Math.max(...rects.map((r) => r.h));
+    scroller.scrollLeft = 500;
+    scroller.dispatchEvent(new Event('scroll'));
+    await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    expect(Math.min(...rects.map((r) => r.h))).toBeGreaterThan(quiet);
+  });
+
+  it('draws a near-silent stem at its real, small amplitude rather than normalising it up (U-10)', () => {
+    renderLane({ summary: summary({ envelope: Float32Array.from([0.01, 0.01, 0.01]), nearSilent: true }) });
+    expect(Math.max(...rects.map((r) => r.h))).toBeLessThan(2);
   });
 
   it('emits gain changes in dB', async () => {

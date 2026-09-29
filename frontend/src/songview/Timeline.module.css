@@ -13,8 +13,15 @@
 }
 
 .track {
-  background: var(--ds-surface);
+  /* The click-to-seek strip, tinted apart from the chord row and lanes below it --
+     the same band as the Album splitter's ruler. */
+  background: color-mix(in srgb, var(--ds-accent) 10%, var(--ds-raised));
+  border-bottom-color: var(--ds-border-strong);
   cursor: pointer;
+}
+
+.track:hover {
+  background: color-mix(in srgb, var(--ds-accent) 22%, var(--ds-raised));
 }
 
 .note {

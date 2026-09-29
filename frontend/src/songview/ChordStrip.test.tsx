@@ -14,7 +14,7 @@ const grid = buildGrid({
 })!;
 
 // 1x: 56 px per 96 000-sample bar.
-const oneX = timeScale({ durationSamples: 384_000, grid, zoom: '1x', viewportWidth: 0 });
+const oneX = timeScale({ durationSamples: 384_000, grid, zoom: 56, viewportWidth: 0 });
 
 const bar = (i: number, chord: string, len = 1): ChordSegment => ({
   bar: i,
@@ -81,7 +81,7 @@ describe('ChordStrip', () => {
     const segment = screen.getByLabelText('C maj7');
     expect(segment).toHaveAttribute('title', 'C maj7');
     // Given room (2x), the same label shows.
-    const twoX = timeScale({ durationSamples: 384_000, grid, zoom: '2x', viewportWidth: 0 });
+    const twoX = timeScale({ durationSamples: 384_000, grid, zoom: 112, viewportWidth: 0 });
     renderStrip({ chords: [bar(0, 'C:maj7')], scale: twoX });
     expect(screen.getByText('Cmaj7')).toBeInTheDocument();
   });

@@ -3,8 +3,8 @@
 // the stem waveforms all lay out against the same TimeScale, so a chord's left
 // edge, its bar line and the waveform under it land on the same pixel.
 //
-// The mapping is *linear in samples*, not "N px per bar" bar-by-bar: wavesurfer
-// draws each stem linearly in time, so a piecewise bar mapping would drift the
+// The mapping is *linear in samples*, not "N px per bar" bar-by-bar: the lanes
+// draw each stem linearly in time, so a piecewise bar mapping would drift the
 // bar lines off the audio wherever the analysed tempo wanders. Zoom picks the
 // slope -- a nominal px-per-bar measured against the grid's median bar length
 // (grid.ts) -- and every position is `sample * pxPerSample`. Positions stay
@@ -13,12 +13,26 @@ import type { SampleIndex } from '../engine/types';
 import { sampleIndex } from '../engine/types';
 import type { Grid } from './grid';
 
-export type Zoom = 'fit' | '1x' | '2x';
+/**
+ * 'fit' is the whole song across the visible width; a number is a nominal px per bar
+ * (px across the grid's median bar), set continuously by the wheel, the zoom buttons
+ * and drag-to-zoom. DEFAULT_PX_PER_BAR is where a song opens.
+ */
+export type Zoom = 'fit' | number;
+
+export const DEFAULT_PX_PER_BAR = 56;
+
+/**
+ * The closest zoom. Stem peaks hold 100 buckets/s, so 200 px/s is 2 px per bucket --
+ * fine enough to put a loop on a beat. The lanes paint only their visible slice, so the
+ * cost of zooming in does not grow with the song's width.
+ */
+export const MAX_PX_PER_SECOND = 200;
+const SAMPLE_RATE = 48_000;
 
 /** Width of the sticky label/controls column every row of the axis starts with. */
 export const LANE_HEAD_PX = 200;
 
-const PX_PER_BAR: Record<Exclude<Zoom, 'fit'>, number> = { '1x': 56, '2x': 112 };
 
 /**
  * Without a beat grid (analysis not run) there are no bars to measure, but the
@@ -43,8 +57,30 @@ export interface TimeScaleInput {
   viewportWidth: number;
 }
 
+function barSamplesOf(grid: Grid | null): number {
+  return grid && grid.medianBarSamples > 0 ? grid.medianBarSamples : NOMINAL_BAR_SAMPLES;
+}
+
+/**
+ * The px-per-bar range a numeric zoom may take: from the whole song fitted to the
+ * viewport (when it has been measured) to MAX_PX_PER_SECOND. The zoom controls clamp
+ * against this, so pressing + at the limit is a no-op rather than a stored zoom the
+ * screen cannot show.
+ */
+export function zoomBounds({
+  durationSamples,
+  grid,
+  viewportWidth,
+}: Omit<TimeScaleInput, 'zoom'>): { min: number; max: number } {
+  const barSamples = barSamplesOf(grid);
+  const max = (MAX_PX_PER_SECOND / SAMPLE_RATE) * barSamples;
+  const duration = Math.max(1, durationSamples);
+  const min = viewportWidth > 0 ? Math.min(max, (viewportWidth / duration) * barSamples) : 1;
+  return { min, max };
+}
+
 export function timeScale({ durationSamples, grid, zoom, viewportWidth }: TimeScaleInput): TimeScale {
-  const barSamples = grid && grid.medianBarSamples > 0 ? grid.medianBarSamples : NOMINAL_BAR_SAMPLES;
+  const barSamples = barSamplesOf(grid);
   const duration = Math.max(1, durationSamples);
   // Fit needs a measured viewport; before the first measurement (and in jsdom,
   // which has no layout) it renders at 1x rather than collapsing to zero width.
@@ -57,7 +93,8 @@ export function timeScale({ durationSamples, grid, zoom, viewportWidth }: TimeSc
       contentWidth: Math.floor(viewportWidth),
     };
   }
-  const pxPerBar = PX_PER_BAR[zoom === 'fit' ? '1x' : zoom];
+  const { min, max } = zoomBounds({ durationSamples, grid, viewportWidth });
+  const pxPerBar = zoom === 'fit' ? DEFAULT_PX_PER_BAR : Math.min(max, Math.max(min, zoom));
   const pxPerSample = pxPerBar / barSamples;
   return { pxPerSample, pxPerBar, contentWidth: Math.round(duration * pxPerSample) };
 }

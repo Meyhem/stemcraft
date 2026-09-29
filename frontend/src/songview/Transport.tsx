@@ -6,20 +6,13 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ChordSegment } from '../api/client';
 import { chordIndexAt, displayChord, mergeChords } from '../music/chords';
 import { barAt, type Grid } from '../music/grid';
-import type { Zoom } from '../music/timeScale';
 import type { SampleIndex } from '../engine/types';
-import { Button, Segmented } from '../ui';
+import { Button } from '../ui';
 import { usePlayhead } from './usePlayhead';
 import styles from './Transport.module.css';
 
 const TEMPO_STEP = 0.05; // UI spec §7: up/down arrows move 5%
 const NO_BARS = 'Bars need analysis to have run';
-
-const ZOOM_OPTIONS = [
-  { value: 'fit', label: 'Fit' },
-  { value: '1x', label: '1×' },
-  { value: '2x', label: '2×' },
-] as const;
 
 export interface TransportProps {
   playing: boolean;
@@ -46,8 +39,11 @@ export interface TransportProps {
   onMuteLane(index: number): void;
   /** The analysis's per-bar chord segments, for the current/next readout. */
   chords: ChordSegment[];
-  zoom: Zoom;
-  onZoomChange(zoom: Zoom): void;
+  /** What the zoom shows: "Whole song", or how much of it is in view. */
+  zoomLabel: string;
+  onZoomIn(): void;
+  onZoomOut(): void;
+  onZoomFit(): void;
   follow: boolean;
   onFollowToggle(): void;
 }
@@ -72,8 +68,10 @@ export function Transport({
   onNudgeBars,
   onMuteLane,
   chords,
-  zoom,
-  onZoomChange,
+  zoomLabel,
+  onZoomIn,
+  onZoomOut,
+  onZoomFit,
   follow,
   onFollowToggle,
 }: TransportProps) {
@@ -274,7 +272,20 @@ export function Transport({
           <span className={styles.caption} aria-hidden="true">
             Zoom
           </span>
-          <Segmented label="Zoom" value={zoom} options={ZOOM_OPTIONS} onChange={onZoomChange} />
+          {/* Same controls as the Album splitter; the wheel and drag-to-zoom on the
+              time axis reach the same zoom. */}
+          <div role="group" aria-label="Zoom" className={styles.zoom}>
+            <Button aria-label="Zoom out" onClick={onZoomOut}>
+              −
+            </Button>
+            <output className={styles.zoomValue} data-testid="song-zoom">
+              {zoomLabel}
+            </output>
+            <Button aria-label="Zoom in" onClick={onZoomIn}>
+              +
+            </Button>
+            <Button onClick={onZoomFit}>Fit</Button>
+          </div>
         </div>
         <Button aria-pressed={follow} onClick={onFollowToggle}>
           Follow playhead

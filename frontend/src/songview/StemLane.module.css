@@ -104,6 +104,16 @@
   min-height: 64px;
 }
 
+/* The visible slice of the lane: sticks at the content area's left edge, just right of
+   the 200 px sticky head, and repaints on scroll. */
+.canvas {
+  position: sticky;
+  left: 200px;
+  display: block;
+  height: 64px;
+  pointer-events: none;
+}
+
 .srOnly {
   position: absolute;
   width: 1px; height: 1px;
