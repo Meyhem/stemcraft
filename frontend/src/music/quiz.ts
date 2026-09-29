@@ -61,11 +61,24 @@ export function pickItem(items: readonly string[], weight: (item: string) => num
   return pool[pool.length - 1]!;
 }
 
-/** "Practise these": keep only the listed items, unless that would leave none. */
+/** "Practise these" names items that this focus or topic no longer offers. Callers show `message` as it is (N-08). */
+export class NothingToPractise extends Error {
+  constructor() {
+    super('None of the items you chose to practise are in this focus or topic any more — start a normal round.');
+    this.name = 'NothingToPractise';
+  }
+}
+
+/**
+ * "Practise these": keep only the listed items. `undefined` or `[]` means no
+ * restriction. A non-empty list that matches nothing throws `NothingToPractise`
+ * rather than quietly asking about something else.
+ */
 export function restrict(items: readonly string[], only?: readonly string[]): string[] {
   if (!only?.length) return [...items];
   const kept = items.filter((i) => only.includes(i));
-  return kept.length ? kept : [...items];
+  if (kept.length === 0) throw new NothingToPractise();
+  return kept;
 }
 
 export function shuffle<T>(xs: readonly T[], rng: Rng): T[] {
@@ -86,10 +99,21 @@ export interface FretboardFocus {
   accidentals: boolean;
 }
 
+/** Why a focus leaves no question to ask. */
+export type FocusProblem = 'strings' | 'frets' | 'naturals' | 'interval' | 'chord';
+
+const FOCUS_MESSAGE: Record<FocusProblem, string> = {
+  strings: 'No such string: the chosen strings are not on this instrument. Pick strings it has.',
+  frets: 'The fret range is empty or reversed, or lies past the end of the neck. Pick a range that starts at or before its end and inside the neck.',
+  naturals: 'Accidentals are off and no natural note is left in the chosen strings and frets. Allow accidentals or widen the range.',
+  interval: 'No interval can be asked inside this focus: no note in it has another note in the focus a 3rd, 4th, 5th, ♭7 or octave above it. Widen the strings or frets, or allow accidentals.',
+  chord: 'No chord has a tone on the chosen strings in that fret window. Choose more strings or frets.',
+};
+
 /** A focus that leaves no question to ask. Callers show `message` as it is (N-08); never swap in another focus. */
 export class QuizFocusError extends Error {
-  constructor() {
-    super('No notes to ask about: the chosen strings, frets and accidentals leave nothing on this neck. Widen the fret range or allow accidentals.');
+  constructor(readonly problem: FocusProblem) {
+    super(`No notes to ask about. ${FOCUS_MESSAGE[problem]}`);
     this.name = 'QuizFocusError';
   }
 }
@@ -101,11 +125,30 @@ export function parseCellKey(key: string): Cell | null {
   return m ? { string: Number(m[1]), fret: Number(m[2]) } : null;
 }
 
+const CELL_MODES: readonly string[] = ['name-note', 'find-interval'];
 const NATURAL = new Set([0, 2, 4, 5, 7, 9, 11]);
 
-/** The focus's fret range clipped to the neck the tools draw (0–15 bass, 0–17 guitar). Empty when lo > hi. */
+/**
+ * The fret range questions really use: the focus's range clipped to the neck
+ * the tools draw (0–15 bass, 0–17 guitar). Empty when lo > hi. A screen that
+ * shows the range being asked about shows this, not the raw setting.
+ */
 export function focusFrets(inst: Instrument, focus: FretboardFocus): [number, number] {
   return [Math.max(0, Math.ceil(focus.frets[0])), Math.min(neckFrets(inst), Math.floor(focus.frets[1]))];
+}
+
+/** The rows the focus asks about, in the order given; empty `strings` = every string. Rows the instrument lacks are dropped. */
+export function focusRows(inst: Instrument, focus: FretboardFocus): number[] {
+  const count = rowMidi(inst).length;
+  const wanted = focus.strings.length ? focus.strings : Array.from({ length: count }, (_, i) => i);
+  return [...new Set(wanted)].filter((s) => Number.isInteger(s) && s >= 0 && s < count);
+}
+
+/** Throws the accurate `QuizFocusError` when the strings or the fret range leave no cell at all. */
+function checkFocus(inst: Instrument, focus: FretboardFocus): void {
+  if (focusRows(inst, focus).length === 0) throw new QuizFocusError('strings');
+  const [lo, hi] = focusFrets(inst, focus);
+  if (lo > hi) throw new QuizFocusError('frets');
 }
 
 /**
@@ -114,9 +157,7 @@ export function focusFrets(inst: Instrument, focus: FretboardFocus): [number, nu
  * are not cells, so a focus saved for another instrument cannot yield one.
  */
 export function focusCells(inst: Instrument, focus: FretboardFocus): Cell[] {
-  const count = rowMidi(inst).length;
-  const wanted = focus.strings.length ? focus.strings : Array.from({ length: count }, (_, i) => i);
-  const rows = [...new Set(wanted)].filter((s) => Number.isInteger(s) && s >= 0 && s < count);
+  const rows = focusRows(inst, focus);
   const [lo, hi] = focusFrets(inst, focus);
   const out: Cell[] = [];
   for (const string of rows) {
@@ -140,7 +181,17 @@ export const INTERVALS = [
 export type FretboardQuestion =
   | { mode: 'name-note'; item: string; cell: Cell; answerPc: number; prompt: string }
   | { mode: 'find-note'; item: string; pc: number; targets: Cell[]; prompt: string }
-  | { mode: 'find-interval'; item: string; cell: Cell; answerPc: number; prompt: string }
+  | {
+      mode: 'find-interval';
+      item: string;
+      /** The origin dot. Never one of `targets`. */
+      cell: Cell;
+      answerPc: number;
+      interval: { label: string; semitones: number };
+      /** Every focus cell other than the origin that holds `answerPc`; never empty. */
+      targets: Cell[];
+      prompt: string;
+    }
   | { mode: 'spell-chord'; item: string; symbol: string; window: [number, number]; targets: Cell[]; prompt: string };
 
 const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
@@ -159,8 +210,9 @@ export function fretboardQuestion(
   previous?: string,
   only?: readonly string[],
 ): FretboardQuestion {
+  checkFocus(inst, focus);
   const cells = focusCells(inst, focus);
-  if (mode !== 'spell-chord' && cells.length === 0) throw new QuizFocusError();
+  if (mode !== 'spell-chord' && cells.length === 0) throw new QuizFocusError('naturals');
   const weight = (item: string) => weakness(history, 'fretboard', mode, item);
   if (mode === 'find-note') {
     const pcs = [...new Set(cells.map((c) => positionAt(inst, c).pc))].map((pc) => `n${pc}`);
@@ -170,34 +222,53 @@ export function fretboardQuestion(
     return { mode, item, pc, targets, prompt: `Find every ${pretty(plainName(pc))}` };
   }
   if (mode === 'spell-chord') {
-    // The window is 4 frets wide (fewer if the range is) and spans every string; chord tones outside the focus's accidentals still count.
+    // The window is 4 frets wide (fewer if the range is), inside the clamped range, and holds the focus's strings.
+    // Accidentals do not restrict it: a chord tone is a chord tone, so F♯ in Bm counts with accidentals off.
     const [flo, fhi] = focusFrets(inst, focus);
-    if (flo > fhi) throw new QuizFocusError();
     const width = Math.min(4, fhi - flo + 1);
     const lo = flo + Math.floor(rng() * (fhi - flo - width + 2));
     const window: [number, number] = [lo, lo + width - 1];
-    const rows = rowMidi(inst).map((_, i) => i);
-    const inWindow = rows.flatMap((string) => Array.from({ length: width }, (_, i) => ({ string, fret: lo + i })));
+    const inWindow = focusRows(inst, focus).flatMap((string) => Array.from({ length: width }, (_, i) => ({ string, fret: lo + i })));
     const targetsOf = (symbol: string): Cell[] => {
       const info = chordInfo(symbol);
       if (!info.ok) throw new Error(`Quiz chord ${symbol} is not readable: ${info.reason}`);
       const tones = new Set(info.chord.notes.map((n) => n.pc));
       return inWindow.filter((c) => tones.has(positionAt(inst, c).pc));
     };
-    // A chord with no tone in the window would be an unanswerable question.
+    // A chord with no tone on those rows in the window would be an unanswerable question.
     const symbols = LETTERS.flatMap((l) => [l, `${l}m`]).filter((symbol) => targetsOf(symbol).length > 0);
-    if (symbols.length === 0) throw new QuizFocusError();
+    if (symbols.length === 0) throw new QuizFocusError('chord');
     const item = pickItem(restrict(symbols, only), weight, rng, previous);
     const prompt = `Tap the notes of ${pretty(item)} in ${window[0] === window[1] ? `fret ${window[0]}` : `frets ${window[0]}–${window[1]}`}`;
     return { mode, item, symbol: item, window, targets: targetsOf(item), prompt };
   }
+  if (mode === 'find-interval') {
+    // Answered by pitch class: any octave of the note counts, so "above" is not checked. Only intervals whose
+    // answer is held by some other cell of the focus are offered (the octave needs a second cell with the origin's
+    // own pitch class), so the player is never asked for a note the focus does not contain.
+    const byPc = new Map<number, Cell[]>();
+    for (const c of cells) {
+      const pc = positionAt(inst, c).pc;
+      byPc.set(pc, [...(byPc.get(pc) ?? []), c]);
+    }
+    const targetsFor = (origin: Cell, semitones: number) =>
+      (byPc.get(mod12(positionAt(inst, origin).pc + semitones)) ?? []).filter((c) => c.string !== origin.string || c.fret !== origin.fret);
+    const offered = (origin: Cell) => INTERVALS.map((iv) => ({ iv, semitones: Interval.get(iv.name).semitones! })).filter(({ semitones }) => targetsFor(origin, semitones).length > 0);
+    const origins = cells.filter((c) => offered(c).length > 0).map(cellKey);
+    if (origins.length === 0) throw new QuizFocusError('interval');
+    const item = pickItem(restrict(origins, only), weight, rng, previous);
+    const cell = parseCellKey(item)!;
+    const choices = offered(cell);
+    const { iv, semitones } = choices[Math.floor(rng() * choices.length)]!;
+    return {
+      mode, item, cell, answerPc: mod12(positionAt(inst, cell).pc + semitones),
+      interval: { label: iv.label, semitones }, targets: targetsFor(cell, semitones),
+      prompt: `Tap the ${iv.label} above this note`,
+    };
+  }
   const item = pickItem(restrict(cells.map(cellKey), only), weight, rng, previous);
   const cell = parseCellKey(item)!;
-  const pc = positionAt(inst, cell).pc;
-  if (mode === 'name-note') return { mode, item, cell, answerPc: pc, prompt: 'Name this note' };
-  const interval = INTERVALS[Math.floor(rng() * INTERVALS.length)]!;
-  const answerPc = mod12(pc + Interval.get(interval.name).semitones!);
-  return { mode, item, cell, answerPc, prompt: `Tap the ${interval.label} above this note` };
+  return { mode, item, cell, answerPc: positionAt(inst, cell).pc, prompt: 'Name this note' };
 }
 
 // ---------------------------------------------------------------- theory
@@ -311,8 +382,9 @@ export function nextTheoryQuestion(
   previous?: string,
   only?: readonly string[],
 ): TheoryQuestion {
-  const items = restrict(theoryItems(topics), only);
-  if (items.length === 0) throw new Error(`No quiz items for topics [${topics.join(', ')}]`);
+  const all = theoryItems(topics);
+  if (all.length === 0) throw new Error(`No quiz items for topics [${topics.join(', ')}]`);
+  const items = restrict(all, only);
   const item = pickItem(items, (i) => weakness(history, 'theory', TOPIC_OF[i.split(':')[0]!]!, i), rng, previous);
   return theoryQuestion(item, rng);
 }
@@ -323,11 +395,19 @@ export interface CellStat extends Cell {
   weakness: number;
 }
 
-/** Per-cell weakness from name-note, find-note and find-interval answers. Cells never asked are absent. */
+/**
+ * Per-cell weakness for the neck's heat map, from the name-note and find-interval
+ * answers, whose items are cells. find-note (`n{pc}`) and spell-chord items are
+ * not cells and never count. Unlike `weakness`, which is per mode because the
+ * mode is what is being picked, this pools both modes per cell, last 5 answers
+ * across them: the neck shows how well a position is known however it was asked,
+ * and one cell must be one entry. Cells never asked are absent; order is the
+ * order each cell was first asked in.
+ */
 export function heatmap(history: readonly Answer[]): CellStat[] {
   const byCell = new Map<string, Answer[]>();
   for (const a of history) {
-    if (a.quiz !== 'fretboard' || !parseCellKey(a.item)) continue;
+    if (a.quiz !== 'fretboard' || !CELL_MODES.includes(a.mode) || !parseCellKey(a.item)) continue;
     const answers = byCell.get(a.item);
     if (answers) answers.push(a);
     else byCell.set(a.item, [a]);

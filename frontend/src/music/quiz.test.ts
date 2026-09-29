@@ -2,6 +2,7 @@ import { Note } from 'tonal';
 import { describe, expect, test } from 'vitest';
 
 import {
+  NothingToPractise,
   QuizFocusError,
   cellKey,
   focusCells,
@@ -61,10 +62,11 @@ describe('weighting', () => {
   });
 });
 
-test('restrict keeps the listed items unless none match', () => {
+test('restrict keeps the listed items and refuses a list that matches none', () => {
   expect(restrict(['a', 'b', 'c'], ['b'])).toEqual(['b']);
-  expect(restrict(['a', 'b'], ['z'])).toEqual(['a', 'b']);
+  expect(() => restrict(['a', 'b'], ['z'])).toThrow(NothingToPractise);
   expect(restrict(['a', 'b'])).toEqual(['a', 'b']);
+  expect(restrict(['a', 'b'], [])).toEqual(['a', 'b']);
 });
 
 describe('fretboard questions', () => {
@@ -239,22 +241,34 @@ describe('property: fretboard questions over every tuning and focus', () => {
     expect(focusCells({ ...bass4, left_handed: true }, focus)).toEqual(focusCells(bass4, focus));
   });
 
-  test('an unusable focus is a clear QuizFocusError, never a guess', () => {
+  const focusError = (fn: () => unknown, problem: string, message: RegExp) => {
+    let caught: unknown;
+    try { fn(); } catch (e) { caught = e; }
+    expect(caught).toBeInstanceOf(QuizFocusError);
+    expect((caught as QuizFocusError).problem).toBe(problem);
+    expect((caught as QuizFocusError).message).toMatch(message);
+  };
+
+  test('an unusable focus is a QuizFocusError whose message names the real cause', () => {
     const halfDown = { kind: 'bass', strings: 4, tuning: ['Eb1', 'Ab1', 'Db2', 'Gb2'], left_handed: false } as Instrument;
     const nothing = { strings: [], frets: [0, 0] as [number, number], accidentals: false };
     for (const mode of ['name-note', 'find-note', 'find-interval'] as const) {
-      expect(() => fretboardQuestion(mode, halfDown, nothing, [], mulberry32(1))).toThrow(QuizFocusError);
-      expect(() => fretboardQuestion(mode, halfDown, nothing, [], mulberry32(1))).toThrow(/leave nothing/);
+      focusError(() => fretboardQuestion(mode, halfDown, nothing, [], mulberry32(1)), 'naturals', /Accidentals are off and no natural note/);
     }
-    expect(() => fretboardQuestion('name-note', bass4, { strings: [], frets: [5, 2], accidentals: true }, [], mulberry32(1))).toThrow(QuizFocusError);
-    expect(() => fretboardQuestion('name-note', bass4, { strings: [7], frets: [0, 12], accidentals: true }, [], mulberry32(1))).toThrow(QuizFocusError);
-    expect(() => fretboardQuestion('name-note', bass4, { strings: [], frets: [16, 20], accidentals: true }, [], mulberry32(1))).toThrow(QuizFocusError);
-    expect(() => fretboardQuestion('spell-chord', bass4, { strings: [], frets: [16, 20], accidentals: true }, [], mulberry32(1))).toThrow(QuizFocusError);
+    const q = (mode: 'name-note' | 'spell-chord' | 'find-interval', strings: number[], frets: [number, number]) => () =>
+      fretboardQuestion(mode, bass4, { strings, frets, accidentals: true }, [], mulberry32(1));
+    for (const mode of ['name-note', 'find-interval', 'spell-chord'] as const) {
+      focusError(q(mode, [], [5, 2]), 'frets', /fret range is empty or reversed/);
+      focusError(q(mode, [], [16, 20]), 'frets', /fret range is empty or reversed/);
+      focusError(q(mode, [7], [0, 12]), 'strings', /No such string/);
+    }
+    // One cell has no second cell to be an interval from.
+    focusError(q('find-interval', [0], [0, 0]), 'interval', /No interval can be asked/);
     // Rows that do not exist are dropped, the ones that do stay.
     expect(focusCells(bass4, { strings: [9, 2], frets: [0, 1], accidentals: true }).map(cellKey)).toEqual(['s2f0', 's2f1']);
   });
 
-  const SEMITONES: Record<string, number> = { 'minor 3rd': 3, 'major 3rd': 4, '4th': 5, '5th': 7, '♭7': 10, octave: 0 };
+  const SEMITONES: Record<string, number> = { 'minor 3rd': 3, 'major 3rd': 4, '4th': 5, '5th': 7, '♭7': 10, octave: 12 };
   const TONES = { '': [0, 4, 7], m: [0, 3, 7] } as Record<string, number[]>;
 
   test('every mode is producible or explicitly refused, and every question is sound', () => {
@@ -263,37 +277,56 @@ describe('property: fretboard questions over every tuning and focus', () => {
       const neck = neckFrets(c.inst);
       const lo = Math.max(0, c.focus.frets[0]);
       const hi = Math.min(neck, c.focus.frets[1]);
+      const rows = (c.focus.strings.length ? c.focus.strings : iota(c.inst.strings)).filter((s, i, all) => s >= 0 && s < c.inst.strings && all.indexOf(s) === i);
+      const pcOfCell = (cell: { string: number; fret: number }) => m12(midiOf(c.inst, cell));
       const inNeck = (cell: { string: number; fret: number }) =>
         Number.isInteger(cell.string) && Number.isInteger(cell.fret) && cell.string >= 0 && cell.string < c.inst.strings && cell.fret >= 0 && cell.fret <= neck;
+      // Independent oracle for find-interval: an origin qualifies when some interval's pitch class is held by another focus cell.
+      const targetsOfInterval = (origin: { string: number; fret: number }, semis: number) =>
+        expected.filter((t) => cellKey(t) !== cellKey(origin) && pcOfCell(t) === m12(pcOfCell(origin) + semis));
+      const qualifying = expected.filter((o) => Object.values(SEMITONES).some((semis) => targetsOfInterval(o, semis).length > 0));
       for (const mode of ['name-note', 'find-note', 'find-interval', 'spell-chord'] as const) {
-        const emptyFocus = mode === 'spell-chord' ? lo > hi : expected.length === 0;
+        const where0 = `${label(c)} ${mode}`;
+        const problem =
+          rows.length === 0 ? 'strings'
+          : lo > hi ? 'frets'
+          : mode === 'spell-chord' ? null
+          : expected.length === 0 ? 'naturals'
+          : mode === 'find-interval' && qualifying.length === 0 ? 'interval'
+          : null;
         const rng = mulberry32(17);
-        if (emptyFocus) {
-          expect(() => fretboardQuestion(mode, c.inst, c.focus, [], rng), `${label(c)} ${mode}`).toThrow(QuizFocusError);
+        if (problem) {
+          focusError(() => fretboardQuestion(mode, c.inst, c.focus, [], rng), problem, /^No notes to ask about\./);
           continue;
         }
         let previous: string | undefined;
         for (let n = 0; n < 6; n++) {
           const q = fretboardQuestion(mode, c.inst, c.focus, [], rng, previous);
-          const where = `${label(c)} ${mode}`;
+          const where = where0;
           expect(q.prompt.includes('NaN') || q.prompt.includes('undefined'), where).toBe(false);
           if (q.mode === 'name-note' || q.mode === 'find-interval') {
-            expect(expected.map(cellKey), where).toContain(q.item);
+            expect((q.mode === 'name-note' ? expected : qualifying).map(cellKey), where).toContain(q.item);
             expect(q.cell, where).toEqual(parseCellKey(q.item));
             expect(inNeck(q.cell), where).toBe(true);
-            const pc = m12(midiOf(c.inst, q.cell));
+            const pc = pcOfCell(q.cell);
             expect(pcAt(c.inst, q.cell), where).toBe(pc);
             if (q.mode === 'name-note') expect(q.answerPc, where).toBe(pc);
             else {
               const label_ = /^Tap the (.+) above this note$/.exec(q.prompt)?.[1];
               expect(SEMITONES[label_!], `${where} ${q.prompt}`).toBeDefined();
+              expect(q.interval, where).toEqual({ label: label_, semitones: SEMITONES[label_!] });
               expect(q.answerPc, where).toBe(m12(pc + SEMITONES[label_!]!));
+              const want = targetsOfInterval(q.cell, SEMITONES[label_!]!).map(cellKey);
+              expect(want.length, where).toBeGreaterThan(0);
+              expect(q.targets.map(cellKey).sort(), where).toEqual([...want].sort());
+              expect(q.targets.map(cellKey), where).not.toContain(q.item);
+              expect(q.targets.every((t) => pcOfCell(t) === q.answerPc && inNeck(t) && expected.some((e) => cellKey(e) === cellKey(t))), where).toBe(true);
             }
             expect(Number.isInteger(q.answerPc) && q.answerPc >= 0 && q.answerPc < 12, where).toBe(true);
           } else if (q.mode === 'find-note') {
             expect(q.item, where).toBe(`n${q.pc}`);
             expect(Number.isInteger(q.pc) && q.pc >= 0 && q.pc < 12, where).toBe(true);
-            const want = expected.filter((cell) => m12(midiOf(c.inst, cell)) === q.pc).map(cellKey);
+            const want = expected.filter((cell) => pcOfCell(cell) === q.pc).map(cellKey);
             expect(want.length, where).toBeGreaterThan(0);
             expect(q.targets.map(cellKey).sort(), where).toEqual([...want].sort());
             expect(q.targets.every(inNeck), where).toBe(true);
@@ -305,18 +338,71 @@ describe('property: fretboard questions over every tuning and focus', () => {
             expect(wHi - wLo + 1, where).toBe(Math.min(4, hi - lo + 1));
             const m = /^([A-G])(m?)$/.exec(q.symbol)!;
             const tones = new Set(TONES[m[2]!]!.map((s) => m12(LETTER_PC[m[1]!]! + s)));
-            const want = iota(c.inst.strings).flatMap((string) =>
-              iota(wHi - wLo + 1).map((i) => ({ string, fret: wLo + i })).filter((cell) => tones.has(m12(midiOf(c.inst, cell)))),
+            // Only the focus rows, in the window; accidentals do not restrict a chord tone.
+            const want = rows.flatMap((string) =>
+              iota(wHi - wLo + 1).map((i) => ({ string, fret: wLo + i })).filter((cell) => tones.has(pcOfCell(cell))),
             );
             expect(want.length, where).toBeGreaterThan(0);
             expect(q.targets.map(cellKey).sort(), where).toEqual(want.map(cellKey).sort());
-            expect(q.targets.every(inNeck), where).toBe(true);
+            expect(q.targets.every((t) => inNeck(t) && rows.includes(t.string)), where).toBe(true);
           }
           previous = q.item;
         }
       }
     }
-  }, 30_000);
+  }, 60_000);
+
+  test('find-interval: the octave is offered only when another cell holds the same pitch class', () => {
+    const oneString = { strings: [3], frets: [0, 12] as [number, number], accidentals: false }; // E F G A B C D E: the two E's
+    const seen = new Set<string>();
+    for (let seed = 0; seed < 200; seed++) {
+      const q = fretboardQuestion('find-interval', bass4, oneString, [], mulberry32(seed));
+      if (q.mode !== 'find-interval') throw new Error('mode');
+      seen.add(q.interval.label);
+      if (q.interval.label === 'octave') {
+        expect(['s3f0', 's3f12']).toContain(q.item);
+        expect(q.targets.map(cellKey)).toEqual([q.item === 's3f0' ? 's3f12' : 's3f0']);
+        expect(q.targets.map(cellKey)).not.toContain(q.item);
+      }
+    }
+    expect(seen.has('octave')).toBe(true);
+    const short = { strings: [3], frets: [0, 7] as [number, number], accidentals: true }; // 8 semitones: no pitch class repeats
+    for (let seed = 0; seed < 200; seed++) {
+      const q = fretboardQuestion('find-interval', bass4, short, [], mulberry32(seed));
+      if (q.mode !== 'find-interval') throw new Error('mode');
+      expect(q.interval.label).not.toBe('octave');
+      expect(q.targets.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('find-interval: an accidental answer is not asked when accidentals are off', () => {
+    // Open E string, naturals, frets 0..1: E and F. A 3rd above E is G#/G, neither is in focus; nothing is answerable.
+    focusError(
+      () => fretboardQuestion('find-interval', bass4, { strings: [3], frets: [0, 1], accidentals: false }, [], mulberry32(1)),
+      'interval',
+      /No interval can be asked/,
+    );
+  });
+
+  test('spell-chord: targets stay on the focus strings, and accidentals do not thin the chord', () => {
+    const only3 = { strings: [3], frets: [0, 12] as [number, number], accidentals: false };
+    for (let seed = 0; seed < 30; seed++) {
+      const q = fretboardQuestion('spell-chord', bass4, only3, [], mulberry32(seed));
+      if (q.mode !== 'spell-chord') throw new Error('mode');
+      expect(q.targets.every((t) => t.string === 3)).toBe(true);
+      expect(q.targets.length).toBeGreaterThan(0);
+    }
+    // Bm's F♯ is not a natural note, but with accidentals off it is still a chord tone. Window 0..3 of the E string has F♯ at fret 2.
+    const q = fretboardQuestion('spell-chord', bass4, { strings: [3], frets: [0, 3], accidentals: false }, [], mulberry32(1), undefined, ['Bm']);
+    if (q.mode !== 'spell-chord') throw new Error('mode');
+    expect(q.targets.map(cellKey)).toEqual(['s3f2']);
+    // A chord with no tone on the chosen strings in the window is not offered: on the open E string only chords holding E are.
+    for (let seed = 0; seed < 30; seed++) {
+      const r = fretboardQuestion('spell-chord', bass4, { strings: [3], frets: [0, 0], accidentals: true }, [], mulberry32(seed));
+      if (r.mode !== 'spell-chord') throw new Error('mode');
+      expect(r.targets).toEqual([{ string: 3, fret: 0 }]);
+    }
+  });
 
   test('never the same item twice in a row, in any mode', () => {
     const focus = { strings: [], frets: [0, 7] as [number, number], accidentals: false };
@@ -345,14 +431,24 @@ describe('property: fretboard questions over every tuning and focus', () => {
     }
   });
 
-  test('only lists work for find-note and spell-chord, and fall back when they match nothing in focus', () => {
+  test('only lists work in every mode; one that matches nothing is NothingToPractise, never another question', () => {
     const focus = { strings: [], frets: [0, 12] as [number, number], accidentals: false };
     for (let s = 0; s < 8; s++) {
       expect(fretboardQuestion('find-note', bass4, focus, [], mulberry32(s), undefined, ['n7']).item).toBe('n7');
       expect(fretboardQuestion('spell-chord', bass4, focus, [], mulberry32(s), undefined, ['Dm']).item).toBe('Dm');
+      const iv = fretboardQuestion('find-interval', bass4, focus, [], mulberry32(s), undefined, ['s2f7']);
+      expect(iv.item).toBe('s2f7');
     }
-    // n1 (C sharp) is not in a naturals-only focus, so the list matches nothing and everything is asked.
-    expect(fretboardQuestion('find-note', bass4, focus, [], mulberry32(3), undefined, ['n1']).item).toMatch(/^n(0|2|4|5|7|9|11)$/);
+    // n1 (C sharp) is not in a naturals-only focus; Zm is not a chord we ask; s0f99 is off the neck; s3f1x is not a cell.
+    expect(() => fretboardQuestion('find-note', bass4, focus, [], mulberry32(3), undefined, ['n1'])).toThrow(NothingToPractise);
+    expect(() => fretboardQuestion('spell-chord', bass4, focus, [], mulberry32(3), undefined, ['Zm'])).toThrow(NothingToPractise);
+    expect(() => fretboardQuestion('name-note', bass4, focus, [], mulberry32(3), undefined, ['s0f99'])).toThrow(NothingToPractise);
+    expect(() => fretboardQuestion('name-note', bass4, focus, [], mulberry32(3), undefined, ['s3f1x'])).toThrow(/normal round/);
+    // An origin that cannot be asked as an interval (its only target would be itself) does not count as in focus.
+    const lone = { strings: [3], frets: [0, 12] as [number, number], accidentals: false };
+    expect(() => fretboardQuestion('find-interval', bass4, lone, [], mulberry32(3), undefined, ['s3f99'])).toThrow(NothingToPractise);
+    // [] and undefined mean unrestricted.
+    expect(fretboardQuestion('find-note', bass4, focus, [], mulberry32(3), undefined, []).item).toMatch(/^n\d+$/);
   });
 
   test('a weak cell is asked about more often (probability 0.15 + weakness)', () => {
@@ -542,6 +638,8 @@ describe('property: theory questions for every item', () => {
 
   test('next question: topics, only, previous and history weighting', () => {
     expect(() => nextTheoryQuestion([], [], mulberry32(1))).toThrow(/no quiz items/i);
+    expect(() => nextTheoryQuestion(['keys'], [], mulberry32(1), undefined, ['notes:Cm'])).toThrow(NothingToPractise);
+    expect(nextTheoryQuestion(['keys'], [], mulberry32(1), undefined, []).topic).toBe('keys');
     for (const topics of [['keys'], ['chords'], ['intervals'], ['keys', 'chords']] as const) {
       const rng = mulberry32(8);
       let previous: string | undefined;
@@ -718,6 +816,7 @@ describe('property: derived stats', () => {
       ans('Dm', false, 6000, 'spell-chord'),
       th('keys', 's1f1', false, 6000), // a theory fact that happens to look like a cell
       th('keys', 'v:C', false, 6000),
+      ans('s1f1', false, 6000, 'find-note'), // a find-note answer never counts, whatever its item looks like
       ans('s10', false, 6000), // not a cell key
       ans('sxf1', false, 6000),
       ans('s1f', false, 6000),
