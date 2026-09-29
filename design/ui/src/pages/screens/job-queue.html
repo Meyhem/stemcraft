@@ -23,12 +23,13 @@
 .step.now .dur{color:var(--ds-accent)}
 /* ---- job rows ---- */
 .jobrow{display:grid;grid-template-columns:28px 112px 1fr auto;gap:var(--ds-4);align-items:center;padding:var(--ds-4);border-bottom:1px solid var(--ds-border)}
-.card > .job:last-child .jobrow,.card > .job:last-child .jobsteps{border-bottom:0}
+/* The card's own border closes the last job. An open job keeps its row/steps divider. */
+.card > .job:last-child .jobsteps,.card > .job[data-open=false]:last-child .jobrow{border-bottom:0}
 .disc{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--ds-text-2);border-radius:var(--ds-r-input);cursor:pointer}
 .disc svg{width:18px;height:18px;fill:currentColor;transition:transform var(--ds-m-flip) var(--ds-ease)}
 .job[data-open=true] .disc svg{transform:rotate(90deg)}
 .jobsteps{padding:0 var(--ds-4) var(--ds-5) calc(var(--ds-4) + 28px + 112px + 2 * var(--ds-4));border-bottom:1px solid var(--ds-border)}
-.job.running .jobrow,.job.running .jobsteps{background:rgba(79,163,255,.05)}
+.job.running .jobrow,.job.running .jobsteps{background:color-mix(in srgb, var(--ds-accent) 5%, transparent)}
 .ministeps{display:inline-flex;gap:3px;vertical-align:middle;margin-left:var(--ds-2)}
 .ministeps i{width:14px;height:4px;border-radius:2px;background:var(--ds-border-strong)}
 .ministeps i.d{background:var(--ds-ok)} .ministeps i.n{background:var(--ds-accent)} .ministeps i.f{background:var(--ds-error)}

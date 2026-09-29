@@ -1,7 +1,7 @@
 <!-- @dsCard group="Screens" name="Import" subtitle="One source zone, then the song's jobs step by step" viewport="1200x840" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Import — Stemcraft</title><style>/* @inject */
 /* source zone */
-.source{border:2px dashed var(--ds-border-strong);border-radius:var(--ds-r-panel);padding:var(--ds-5);display:flex;flex-direction:column;gap:var(--ds-4);background:rgba(255,255,255,.015)}
+.source{border:2px dashed var(--ds-border-strong);border-radius:var(--ds-r-panel);padding:var(--ds-5);display:flex;flex-direction:column;gap:var(--ds-4);background:color-mix(in srgb, var(--ds-text) 1.5%, transparent)}
 .source .filepart{text-align:center;color:var(--ds-text-2)}
 .or{display:flex;align-items:center;gap:var(--ds-3);color:var(--ds-text-3)}
 .or::before,.or::after{content:"";flex:1;height:1px;background:var(--ds-border)}
@@ -33,27 +33,27 @@
 .modal{max-width:560px}
 </style></head><body><div class="pair">
 <div class="scrim"><div class="modal">
-      <div class="modal-head">
-        <div class="col" style="gap:2px"><span class="t-lg">Add song</span><span class="t-sm dim">No format whitelist. If ffmpeg decodes it, it is accepted.</span></div>
-        <button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button>
-      </div>
-      <div class="modal-body">
-        <div class="source">
-          <div class="filepart">
-            <svg viewBox="0 0 24 24" width="36" height="36" fill="var(--ds-text-3)"><path d="M12 3l5 5h-3v6h-4V8H7l5-5zM5 18h14v2H5z"/></svg>
-            <div class="t-md" style="color:var(--ds-text);margin-top:var(--ds-2)">Drop an audio or video file</div>
-            <div class="t-sm" style="margin-top:var(--ds-1)">For video, the audio track is extracted</div>
-            <button class="btn" style="margin-top:var(--ds-4)">Choose file…</button>
-          </div>
-          <div class="or t-sm">or paste a link</div>
-          <div class="field"><label for="u1" class="t-sm dim">Link</label><input class="input" id="u1" placeholder="https://… (YouTube and direct media links)"></div>
+    <div class="modal-head">
+      <div class="col" style="gap:2px"><span class="t-lg">Add song</span><span class="t-sm dim">No format whitelist. If ffmpeg decodes it, it is accepted.</span></div>
+      <button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="source">
+        <div class="filepart">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="var(--ds-text-3)"><path d="M12 3l5 5h-3v6h-4V8H7l5-5zM5 18h14v2H5z"/></svg>
+          <div class="t-md" style="color:var(--ds-text);margin-top:var(--ds-2)">Drop an audio or video file</div>
+          <div class="t-sm" style="margin-top:var(--ds-1)">For video, the audio track is extracted</div>
+          <button class="btn" style="margin-top:var(--ds-4)">Choose file…</button>
         </div>
-        <div class="grid2">
-          <div class="field"><label for="title">Title</label><input class="input" id="title"></div>
-          <div class="field"><label for="artist">Artist</label><input class="input" id="artist"></div>
-        </div>
+        <div class="or t-sm">or paste a link</div>
+        <div class="field"><label for="u1" class="t-sm dim">Link</label><input class="input" id="u1" placeholder="https://… (YouTube and direct media links)"></div>
       </div>
-      <div class="modal-foot"><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary" disabled>Import &amp; separate</button></div>
+      <div class="grid2">
+        <div class="field"><label for="title">Title</label><input class="input" id="title"></div>
+        <div class="field"><label for="artist">Artist</label><input class="input" id="artist"></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost">Cancel</button><button class="btn btn-primary" disabled>Import &amp; separate</button></div>
 </div></div>
 <div class="scrim"><div class="modal">
   <div class="modal-head"><div class="col" style="gap:2px"><span class="t-lg">Tightrope</span><span class="t-sm dim">Walk the Moon · tightrope.flac</span></div><button class="iconbtn" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>

@@ -452,7 +452,7 @@ audit requirement exists.
   *Reversibility:* two-way.
 
 - **D-14 — React Router, one route per screen, song id in the path.**
-  *Because:* the seven screens in `design/ui/` are already separate destinations, and a
+  *Because:* the screens in `design/ui/` are already separate destinations, and a
   practice session wants a link a phone on the LAN can bookmark (C-05). The song id is
   the only parameter the app needs.
   *Rejected:* conditional rendering with no router (loses back button and deep links);
@@ -509,12 +509,34 @@ audit requirement exists.
   before it render as "No step record".
   Design: `docs/superpowers/specs/2026-09-29-job-steps-design.md`.
 
+- **D-18 — Play-along patterns are generated in the browser; the engine is song-scoped.**
+  A separate Play along screen (`/songs/:songId/play`) draws a live bass neck and beat
+  lane for the current and next bar. The notes come from pure TypeScript
+  (`music/patterns.ts`, `music/fingering.ts`) over `analysis.json`'s chords and the
+  `play_along` recipe in `song.json` (schema v3). Nothing derived is stored. The
+  `EngineController` moves from `SongView` into a `SongScope` layout route that wraps
+  Song view and Play along, so switching between them never stops playback. Notes
+  reach the screen through a `TabSource` interface, which a later transcription job
+  also implements.
+  *Because:* generation is arithmetic over the chord chart, like the scale view
+  (R-05). It has no model and no failure mode, and doing it in the browser makes every
+  picker change instant while playing. A song-scoped engine is the only way the two
+  screens share one playhead without re-decoding four stems on every switch.
+  *Rejected:* a worker job writing `playalong.json` (a queue round-trip for every
+  picker change, and a file that is purely derived from the recipe); computing in the
+  API (a second music-theory implementation beside `theory.ts`); a drawer inside Song
+  view (the neck needs the full width, and editing and playing along are different
+  activities); per-loop pattern overrides (dropped for simplicity).
+  *Reversibility:* two-way. The `song.json` field is additive (v2 → v3).
+  Design: `docs/superpowers/specs/2026-09-29-play-along-design.md`.
+
 ## 12. Deferred decisions
 
 - **Tabs / transcription pipeline** (bass → torchcrepe → MIDI → fretboard → alphaTab,
   `.gp5`/MusicXML export). Opt-in per Song and explicitly a bonus. *Seam:* it is
   simply another job kind writing another file into the Song folder; no existing
-  contract changes to add it.
+  contract changes to add it. In the browser it becomes a second `TabSource` for the
+  Play along screen (D-18).
 - **Job history pruning.** Retained indefinitely for now. *Seam:* a `DELETE` on
   `jobs.sqlite` by `finished_at`; nothing depends on old rows but the stats view.
 - **Mel-Band Roformer for vocals.** *Seam:* model selection is job payload, so a

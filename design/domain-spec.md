@@ -88,7 +88,11 @@ The Song list is a scan of `songs/*/song.json`. At a single user's library size 
   "last_played_at": null,
   "mix": { "bass": { "gain_db": 0, "muted": true } },
   "playback": { "tempo": 0.8, "pitch_semitones": 0 },
-  "loops": [ { "name": "Chorus", "start_bar": 17, "end_bar": 25 } ]
+  "loops": [ { "name": "Chorus", "start_bar": 17, "end_bar": 25 } ],
+  "play_along": {
+    "key": null,
+    "pattern": { "notes": "triad_chord", "rhythm": "quarter", "approach": "none" }
+  }
 }
 ```
 
@@ -200,6 +204,25 @@ Runs after separation, on CPU, in a few seconds.
 - **A–B loop** snapped to bars
 - Count-in and metronome click locked to the beat grid
 - All settings auto-save to song.json
+- A **Play along** button opens the Play along screen for the same song. Playback, position and loop carry over in both directions without stopping.
+
+### Play along: bass patterns
+
+A separate practice screen for playing *with* the song rather than editing it. It shows what to play in the current bar and the next one, on a bass neck, in time with the music. Design: `docs/superpowers/specs/2026-09-29-play-along-design.md`.
+
+- **Live neck:** a 12-fret 4-string bass neck (EADG). This bar's notes are filled and numbered in play order, the note to play now is highlighted, and the next bar's notes are hollow.
+- **Beat lane:** under the neck, the current and next bar as note chips on their beats, with a cursor sweeping in time. At each downbeat, next becomes current.
+- **Patterns, not transcription:** the notes are generated from the bar's detected chord and the chosen key, using the user's pattern. They are a practice line, not what the record plays. One pattern per song, saved to song.json:
+  - *Notes:* root; root–5th; root–5th–octave; octave pump; chord triad (the detected chord's quality); diatonic triad (the triad the key builds on that root); 7th arpeggio
+  - *Rhythm:* whole, half, quarter or eighth notes; the pattern cycles over the slots, so it fits 3/4 as well as 4/4
+  - *Approach:* none, chromatic, scale step or fifth. The bar's last note leads into the next bar's root, and into the loop start at a loop's end
+- **Key:** the top detected candidate by default, switchable among the candidates
+- **Slash chords** put the slash note in the bass (C/E plays E)
+- **Pitch shift** transposes the neck and chord names to what is heard
+- **Fingering** is chosen automatically to stay in one hand position across bars, deterministically
+- **Looping by bar numbers:** start and end bar steppers, or click and shift-click the chord ribbon. It is the same loop as Song view's.
+- **Honest about the chords:** a bar with no chord or an unclassified chord shows an empty neck saying so. When a pattern can't apply (e.g. a diatonic triad on a borrowed chord), the substitute is drawn and labelled; nothing is silently guessed.
+- Guitar, other tunings and a tab or Guitar Pro export are later work
 
 ### Export
 
@@ -237,6 +260,8 @@ Opt-in per Song, bass first. The output is an editable starting point, not a fin
 3. Render in the browser with alphaTab; export `.gp5` (PyGuitarPro) or MusicXML (music21)
 
 Guitar comes later via basic-pitch. Clean single-note lines transcribe well; distorted chords, bends and palm mutes don't.
+
+When it lands, transcription is a second note source for the Play along screen next to the generated patterns. The neck and beat lane show it unchanged.
 
 ## Backlog
 
