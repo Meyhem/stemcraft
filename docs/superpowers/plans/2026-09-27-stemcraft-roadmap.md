@@ -247,8 +247,6 @@ ordinary import, needing no shared write path.
 
 - Two systemd user units finalised with restart-on-failure.
 - Stats view: pass/fail counts, average duration by kind and by device.
-- Backup script for `original.*` + `song.json` only (~2 % of the bytes, the only
-  irreplaceable part).
 - Deploy runbook, and **this is where the dev-setup skill gets written** — against
   commands that have actually been run, not intended ones.
 
@@ -260,6 +258,6 @@ Deferred by §12 and the domain spec's backlog, listed so their absence is a dec
 rather than an oversight: the tabs/transcription pipeline (R-06), per-stem EQ and
 per-stem pitch shift, Mel-Band Roformer for vocals, job-history pruning, concurrent-
 session safety (ETag on the Song resource), practice timer, setlists, batch folder
-import, song zip export.
+import, song zip export, a backup script (dropped from Phase 9 by the user, 2026-09-29).
 
 Each has a named seam in §12. None requires a contract change to add later.
