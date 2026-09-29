@@ -159,6 +159,20 @@ describe('WaveformMarkers', () => {
     }
   });
 
+  it('a press on the highlighted ruler band seeks, and never adds a cut', () => {
+    const rect = boxAt(0, 100);
+    try {
+      render(<WaveformMarkers {...props} />);
+      const ruler = screen.getByTestId('album-ruler');
+      pointer(ruler, 'pointerdown', 25, 10);
+      pointer(ruler, 'pointerup', 25, 10);
+      expect(props.onScrub).toHaveBeenCalledWith(120000);
+      expect(props.onAdd).not.toHaveBeenCalled();
+    } finally {
+      rect.mockRestore();
+    }
+  });
+
   it('seeks when the ruler is clicked, and adds a cut when the waveform below it is', () => {
     const rect = boxAt(0, 100);
     try {

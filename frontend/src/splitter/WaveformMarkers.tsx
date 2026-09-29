@@ -569,6 +569,11 @@ export function WaveformMarkers({
           onPointerCancel={handlePointerCancel}
           onPointerLeave={() => setHoverCut(false)}
         >
+          {/* The ruler's clickable band. Drawn in the DOM, behind the canvas (which paints
+              the ticks and labels over a transparent background), so it can take a hover
+              state and a pointer cursor -- it is the one strip where a click seeks rather
+              than cuts, and it has to look it. */}
+          <div className={styles.ruler} data-testid="album-ruler" title="Click to seek" />
           <canvas ref={canvasRef} className={styles.canvas} data-testid="album-canvas" />
 
           {selection && (

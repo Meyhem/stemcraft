@@ -71,10 +71,27 @@
   pointer-events: none;
 }
 
+/* The seek strip: RULER_H (24 px) tall, full content width. */
+.ruler {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 24px;
+  background: color-mix(in srgb, var(--ds-accent) 10%, var(--ds-raised));
+  border-block-end: 1px solid var(--ds-border-strong);
+  cursor: pointer;
+}
+
+.ruler:hover {
+  background: color-mix(in srgb, var(--ds-accent) 22%, var(--ds-raised));
+}
+
 .canvas {
   position: sticky;
   inset-inline-start: 0;
   display: block;
+  /* Paint only: presses and hover pass through to the ruler band and the content. */
+  pointer-events: none;
 }
 
 /* D-07: the playhead is never animated by CSS -- it is redrawn from the <audio>
