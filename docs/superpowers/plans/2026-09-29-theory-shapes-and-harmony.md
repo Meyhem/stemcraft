@@ -42,6 +42,20 @@
   - Work on `main`, and push once, at the end of Task 11.
   - Stage **only the files the task lists**.
 
+
+> **As shipped (read this before the task text):** this plan was executed with a review after every task and a whole-branch review at the end. The code blocks below are the *starting prototypes*; review-driven changes made the shipped code differ. The ledger of rulings and per-task reports lived in the git-ignored `.superpowers/sdd/` workspaces; the differences that matter are:
+- T1: `isPlayable` rejects any open string inside the lowest-fret barre span (F major's first card is 133211); the validity test uses an independent oracle.
+- T2: `cardStart` keeps every fretted note inside the 5-fret window (unit-tested); changes were applied on top of the committed Chord finder, not by replacing it.
+- T3: `perStringShape` enforces `maxFret`; boxes/patterns that cannot fit are dropped but keep their numbers (`Box 4` may be the first box); guards for an empty scale or bad start; invariant tests over every root, scale and tuning.
+- T4: `systems()` marks a system unavailable when its shapes are empty (with a reason); `SystemDef` is exported; step buttons carry the shapes' own numbers (`short`).
+- T5: Triads derives the triad from the selected chord (`triadIn`), says when it shows the triad inside a 7th, alerts when there is none (sus/power), and a 5-string bass offers all three adjacent string sets; the chosen set is keyed by tuning; `.chip:disabled` styling.
+- T6: Arpeggios shows the `chordLinkProblem` alert, a status line naming chord tones a 4-fret box lacks, disables Play order until a position is chosen, and breaks ties lower-string-first.
+- T7: `nameChord` re-reads every tonal candidate through `chordInfo` (tonal's `Chord.detect` returns wrong names), rewrites `m/ma7`, respells roots; `TheoryNeck` string names disambiguated by octave; stale taps are cleared with a notice when the tuning changes.
+- T8: `numeralInKey` requires every chord tone in the key, returns `Xsus2`/`Xsus4` numerals for sus chords, and accepts the harmonic-minor V/V7 and vii°/vii°7 in minor keys; null means outside the key (borrowed). Scales over a chord keys its pick by chord and shows the link alert.
+- T9: Circle neighbours keep the selected mode and derive from the pitch class; keys needing more than 7 accidentals are shown respelled, with a note.
+- T10: the D7-in-G-minor 'borrowed' test is obsolete (it is `V`); unreadable song chords read `unreadable`, never `borrowed`; a song that is not usable shows its state; stock minor progressions spell roots with the minor table; the help text notes that no-chord bars are left out.
+- T11: `capture-screens.mjs` gives the Theory shots a 960 px viewport.
+
 ---
 
 ## File map

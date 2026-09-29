@@ -46,7 +46,7 @@ area (mockup option B).
 
 Rail, top to bottom:
 
-1. **From a song** card: the picked song's title, key and chord count, with **Load**.
+1. **From a song** card: the picked song's title, key and chord count, and its key candidates as chips (pick a song, then click a candidate to load its key; the chord chips appear in Chord finder, Name that chord and Progressions).
 2. Tools, grouped:
    - **Find:** Scale finder · Chord finder · Note finder · Name that chord
    - **Shapes:** Scale positions · Triads & inversions · Arpeggios
@@ -190,7 +190,7 @@ It never falls back to another song silently.
   `name-that-chord`, `scale-positions`, `triads`, `arpeggios`, `chords-in-key`,
   `circle-of-fifths`, `progressions`, `scales-over-chord`, `fretboard-quiz`,
   `theory-quiz`. The shared selection is in the **query string** (`?root=A&scale=minor-pentatonic`,
-  `?chord=Am7`, `?key=G&mode=major`), so back/forward and bookmarks work. The query
+  `?chord=Am7`, `?root=G&mode=major`), so back/forward and bookmarks work. The query
   string is the source of truth for selection; `theory.json` does not store it.
 - **Dependency:** `tonal` (MIT, no runtime deps), pinned in `package.json`. It is
   the only new frontend dependency.
@@ -219,7 +219,7 @@ It never falls back to another song silently.
     "song_id": null,
     "quiz": {
       "settings": {
-        "fretboard": { "mode": "find-note", "strings": [0, 1, 2, 3], "frets": [0, 12], "accidentals": false },
+        "fretboard": { "mode": "find-note", "strings": [], "frets": [0, 12], "accidentals": false },
         "theory": { "topics": ["keys", "chords", "intervals"] }
       },
       "history": [
@@ -231,7 +231,7 @@ It never falls back to another song silently.
   ```
 
   `tuning` is ordered low string to high, as scientific pitch. `item` is a stable
-  key for the thing asked (`s<string>f<fret>` on the neck, `v-of-Eb` and so on for
+  key for the thing asked (`s<string>f<fret>` on the neck, `v:Eb` and so on for
   theory facts). Nothing derived (stats, weak spots, heatmap) is stored.
 - **Saving:** instrument and last-tool changes are sent as they happen, debounced
   500 ms. Quiz answers are held in memory and sent with the document at the end of
@@ -242,7 +242,7 @@ It never falls back to another song silently.
 **Round:** 20 questions. The mode and focus settings are chosen before starting and
 saved in `quiz.settings`. Each answer gets immediate feedback:
 
-- right: the dot turns green;
+- right: the next question follows at once (single-answer modes) or the found dots turn green (find-note, spell-chord);
 - wrong: a red ✕ and an explanation ("that's G♯, one fret too high"), and the
   question stays until it is answered right. Only the first attempt is scored and
   recorded.

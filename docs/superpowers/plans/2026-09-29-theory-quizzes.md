@@ -42,6 +42,13 @@ Both weight questions towards the player's weak spots, keep the answer history i
   - Work on `main`, and push once, at the end of Task 4.
   - Stage **only the files the task lists**.
 
+
+> **As shipped (read this before the task text):** this plan was executed with a review after every task and a whole-branch review at the end. The code blocks below are the *starting prototypes*; review-driven changes made the shipped code differ. The ledger of rulings and per-task reports lived in the git-ignored `.superpowers/sdd/` workspaces; the differences that matter are:
+- T1 (`quiz.ts`): `restrict` throws `NothingToPractise` when a practise list matches nothing (no silent fallback); `QuizFocusError` carries a `problem` and a per-cause message; `focusCells`/`focusFrets`/`focusRows` clamp to real strings and frets; find-interval offers only origins that have another cell with the answer in the focus and exposes `interval` and `targets`; spell-chord targets stay on the focus rows and never ask a chord with no target; the heatmap counts only name-note and find-interval answers.
+- Item keys (final review): name-note and find-interval items carry the tuning, e.g. `E1-A1-D2-G2/s2f7` (`cellItem`; `cellKey` stays the bare cell id), so history and weak spots are per instrument/tuning; older bare `s{row}f{fret}` answers no longer count. Practise-strings/frets settings are remapped when the instrument changes.
+- T2: the persistence design is the TheoryDoc keep-store (see the foundation note); `useQuizRound.flush` passes `keep: true` and clears its unsaved answers only when the document took them; answers are trimmed to the server's 2,000 cap oldest-first; `beforeunload` guards while answers are unsaved; the quiz tools do nothing (and ask nothing) while no document can be read; wrong-tap reasons include 'outside the outlined frets'; `quizKey` has a `{ shift }` option (AZERTY/QWERTZ) used by both quizzes.
+- T3: `quizExplain.ts` explains each wrong option without revealing the right one; RoundSummary's Enter yields only to buttons inside the summary; a wrong-then-right answer is stored once as wrong.
+
 ---
 
 ## File map

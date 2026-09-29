@@ -37,6 +37,19 @@
   - Work on `main` (CLAUDE.md), and push once, at the end of Task 13.
   - Another session may be committing to `main` at the same time. Stage **only the files the task lists** (`git add <paths>`, never `git add -A`).
 
+
+> **As shipped (read this before the task text):** this plan was executed with a review after every task and a whole-branch review at the end. The code blocks below are the *starting prototypes*; review-driven changes made the shipped code differ. The ledger of rulings and per-task reports lived in the git-ignored `.superpowers/sdd/` workspaces; the differences that matter are:
+- T1/T2 (backend): `read_theory` also maps `OSError`/`UnicodeDecodeError` to `TheoryUnreadable`; `_PITCH` uses `fullmatch`; `put_theory` turns an `OSError` into a 500 that names the path.
+- T3: `analysisChordSymbol` returns `null` for an unknown quality (no `?? ''` fallback to major).
+- T4: `parseTuning` checks the server's pitch pattern, with a hint per string count.
+- T6/T7 (later): `TheoryNeck` string names carry the octave when a note letter repeats (`E2 string`/`E4 string`).
+- T8: `TheoryDoc` was rebuilt: serialized saves, dirty tracking (`rev`/`savedRev`), a module-level keep-store for unsaved documents, apply-on-read with a history merge, held saves while a kept document waits for a read, `isError` means no document, `update` returns a boolean (`{now, keep}`), `reload()` and `fileUnreadable` (Try again next to Reset), and `unloadGuard.ts` (`beforeunload`). The plan's TheoryDoc code and tests are obsolete.
+- T9: `useChosenSong` has an `error` state for a failed songs fetch.
+- T10: `chordLinkProblem` + inline alert for an unreadable `?chord=`; a typed chord or a song chord moves the root (`chordAndRoot`).
+- T12/selection: `patchSelection` — a new root clears a stale `chord`/`bass`. Circle helpers `circleKeyName`, `circleNeighbours`, `keyAccidentalCount` were added by plan 2 T9.
+- T13: `capture-screens.mjs` splits on the first `=` and rejects arguments without one; per-screen viewport heights and ready selectors.
+- H1 (not in the plan): a hardening pass for serialized PUTs, OSError paths, tuning strictness.
+
 ---
 
 ## File map
