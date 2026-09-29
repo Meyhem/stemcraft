@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 import { useHealth } from '../api/queries';
 import { useJobStream } from '../api/useJobStream';
+import { Banner } from '../ui';
 import styles from './AppShell.module.css';
 
 const NAV = [
@@ -33,22 +34,21 @@ export function AppShell() {
 
       {/* N-08: a missing dependency is visible, named, and quotes the real error. */}
       {broken.length > 0 && (
-        <div className={styles.banner} role="alert">
-          {broken.map((dep) => (
-            <div key={dep.name}>
-              <strong>{dep.name}</strong>: {dep.detail}
-            </div>
-          ))}
-        </div>
+        <Banner
+          className={styles.notice}
+          tone="error"
+          title={broken.length === 1 ? 'A dependency is not usable' : 'Dependencies are not usable'}
+          trace={broken.map((dep) => `${dep.name}: ${dep.detail}`).join('\n')}
+        />
       )}
 
       {broken.length === 0 && health.data?.device === 'cpu' && (
-        <div className={styles.bannerWarn} role="status">
+        <Banner className={styles.notice} tone="warn">
           Running separation on CPU
           {health.data.fallback_reason ? ` (${health.data.fallback_reason})` : ''}
           {' '}
           — this is slower than GPU (N-01).
-        </div>
+        </Banner>
       )}
 
       <main className={styles.main}>
