@@ -332,6 +332,9 @@ export function SongView() {
             <h1>{song?.title ?? fetchedSong?.title ?? songId}</h1>
             <p className={styles.artist}>{song?.artist ?? fetchedSong?.artist}</p>
           </div>
+          <Link className={styles.link} to={`/songs/${songId}/play`}>
+            Play along
+          </Link>
           <Link className={styles.link} to={`/songs/${songId}/export`}>
             Export
           </Link>

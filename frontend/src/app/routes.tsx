@@ -6,6 +6,7 @@ import { AlbumSplitter } from '../screens/AlbumSplitter';
 import { Export } from '../screens/Export';
 import { JobQueue } from '../screens/JobQueue';
 import { Library } from '../screens/Library';
+import { PlayAlong } from '../screens/PlayAlong';
 import { ScaleSheet } from '../screens/ScaleSheet';
 import { SongView } from '../screens/SongView';
 import { ImportModal } from '../screens/import/ImportModal';
@@ -56,6 +57,7 @@ export function AppRoutes() {
               switching between them never stops playback. */}
           <Route path="songs/:songId" element={<SongScope />}>
             <Route index element={<SongView />} />
+            <Route path="play" element={<PlayAlong />} />
           </Route>
           <Route path="songs/:songId/scale" element={<ScaleSheet />} />
           <Route path="songs/:songId/export" element={<Export />} />

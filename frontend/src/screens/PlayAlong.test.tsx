@@ -1,0 +1,155 @@
+// frontend/src/screens/PlayAlong.test.tsx
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { SongScope } from '../session/SongScope';
+import { PlayAlong } from './PlayAlong';
+import { SongView } from './SongView';
+
+let cursor = 0;
+const engine = {
+  play: vi.fn(async () => {}),
+  pause: vi.fn(),
+  seek: vi.fn(),
+  setLoop: vi.fn(),
+  setTempo: vi.fn(),
+  setPitchSemitones: vi.fn(),
+  setStemGain: vi.fn(),
+  setMetronome: vi.fn(),
+  setGrid: vi.fn(),
+  countInAndPlay: vi.fn(async () => {}),
+  onEnded: vi.fn(() => () => {}),
+  getPositionSamples: vi.fn(() => cursor),
+  dispose: vi.fn(async () => {}),
+  durationSamples: 48_000 * 8,
+  durationSeconds: 8,
+  stemSummaries: ['vocals', 'drums', 'bass', 'other'].map((name) => ({
+    name,
+    envelope: Float32Array.from([0.3]),
+    peak: 0.3,
+    nearSilent: false,
+  })),
+};
+
+vi.mock('../engine/EngineController', () => ({
+  STEM_ORDER: ['vocals', 'drums', 'bass', 'other'],
+  EngineController: { create: vi.fn(async () => engine) },
+}));
+
+const songEntry = {
+  dir: 'abc123-test',
+  state: 'analyzed',
+  unreadable: null,
+  files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: true },
+  song: {
+    schema_version: 3,
+    id: 'abc123',
+    title: 'Test Song',
+    artist: 'Someone',
+    source: { kind: 'upload', value: 'original.mp3' },
+    created_at: '2026-09-29T00:00:00+00:00',
+    last_played_at: null,
+    mix: {},
+    playback: { tempo: 1, pitch_semitones: 0 },
+    loops: [],
+    active_loop: null,
+    metronome: false,
+    count_in_bars: 0,
+    play_along: { key: null, pattern: { notes: 'triad_chord', rhythm: 'quarter', approach: 'none' } },
+  },
+};
+
+const analysis = {
+  schema_version: 1,
+  key_candidates: [{ tonic: 'G', mode: 'major', confidence: 0.6 }],
+  beat_grid: {
+    bpm: 120,
+    beats: Array.from({ length: 16 }, (_, i) => i * 24_000),
+    downbeats: Array.from({ length: 4 }, (_, i) => i * 96_000),
+  },
+  chords: ['G', 'C', 'D', 'G'].map((chord, bar) => ({ bar, start_sample: bar * 96_000, end_sample: (bar + 1) * 96_000, chord })),
+};
+
+function mockFetch(analysisBody: unknown = analysis) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') return new Response(String(init.body), { status: 200 });
+      if (url.endsWith('/analysis')) {
+        return analysisBody === 404
+          ? new Response('not found', { status: 404 })
+          : new Response(JSON.stringify(analysisBody), { status: 200 });
+      }
+      return new Response(JSON.stringify(songEntry), { status: 200 });
+    }),
+  );
+}
+
+function renderAt(path: string) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/songs/:songId" element={<SongScope />}>
+            <Route index element={<SongView />} />
+            <Route path="play" element={<PlayAlong />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(() => {
+  cursor = 0;
+  mockFetch();
+});
+afterEach(() => vi.unstubAllGlobals());
+
+describe('PlayAlong', () => {
+  it('shows the neck for the bar under the playhead', async () => {
+    renderAt('/songs/abc123/play');
+    const neck = await screen.findByTestId('neck-canvas');
+    await waitFor(() => expect(neck.getAttribute('aria-label')).toBe('Bar 1, G: G B D B. Next: Bar 2, C: C E G E'));
+    expect(screen.getByRole('heading', { name: 'Test Song' })).toBeInTheDocument();
+    expect(screen.getByText(/not a transcription/i)).toBeInTheDocument();
+  });
+
+  it('saves a pattern change to song.json', async () => {
+    renderAt('/songs/abc123/play');
+    await userEvent.click(await screen.findByRole('button', { name: 'Octave' }));
+    await waitFor(
+      () => {
+        const put = vi.mocked(fetch).mock.calls.find(([, init]) => init?.method === 'PUT');
+        expect(JSON.parse(String(put![1]!.body)).play_along.pattern.notes).toBe('octave_pump');
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it('says the song needs analysis rather than drawing an empty neck', async () => {
+    mockFetch(404);
+    renderAt('/songs/abc123/play');
+    expect(await screen.findByText(/needs analysis/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('neck-canvas')).not.toBeInTheDocument();
+  });
+
+  it('is linked from Song view, and links back', async () => {
+    renderAt('/songs/abc123');
+    await userEvent.click(await screen.findByRole('link', { name: /play along/i }));
+    expect(await screen.findByTestId('neck-canvas')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('link', { name: /song view/i }));
+    expect(await screen.findByTestId('time-axis')).toBeInTheDocument();
+  });
+
+  it('toggles playback with the Space key', async () => {
+    renderAt('/songs/abc123/play');
+    await screen.findByTestId('neck-canvas');
+    await userEvent.keyboard(' ');
+    await waitFor(() => expect(engine.play).toHaveBeenCalled());
+  });
+});

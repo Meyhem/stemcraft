@@ -25,23 +25,23 @@ export function LoopBars({ loop, barCount, onLoopBars }: LoopBarsProps) {
     <div className={styles.picker}>
       <span className={styles.caption}>Loop bars</span>
       <div className={styles.loopBars}>
-        <Button aria-label="Start bar earlier" disabled={start <= 0} onClick={() => setStart(start - 1)}>
+        <Button tier="perform" aria-label="Start bar earlier" disabled={start <= 0} onClick={() => setStart(start - 1)}>
           −
         </Button>
         <output className={styles.barValue} aria-label="Loop start bar">
           {start + 1}
         </output>
-        <Button aria-label="Start bar later" disabled={start >= barCount - 1} onClick={() => setStart(start + 1)}>
+        <Button tier="perform" aria-label="Start bar later" disabled={start >= barCount - 1} onClick={() => setStart(start + 1)}>
           +
         </Button>
         <span className={styles.to}>to</span>
-        <Button aria-label="End bar earlier" disabled={end <= start + 1} onClick={() => onLoopBars(start, end - 1)}>
+        <Button tier="perform" aria-label="End bar earlier" disabled={end <= start + 1} onClick={() => onLoopBars(start, end - 1)}>
           −
         </Button>
         <output className={styles.barValue} aria-label="Loop end bar">
           {end}
         </output>
-        <Button aria-label="End bar later" disabled={end >= barCount} onClick={() => onLoopBars(start, end + 1)}>
+        <Button tier="perform" aria-label="End bar later" disabled={end >= barCount} onClick={() => onLoopBars(start, end + 1)}>
           +
         </Button>
       </div>
