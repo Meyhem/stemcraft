@@ -4,7 +4,17 @@
 // ends. A failed save keeps the unsaved document in memory and says so with a
 // Retry; nothing is dropped and nothing is retried silently (N-08).
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { api, DEFAULT_THEORY, type TheoryDoc } from '../api/client';
 
@@ -35,21 +45,49 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
   const latest = useRef<TheoryDoc | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const doc = local ?? query.data ?? null;
-  latest.current = doc;
+  // One save at a time. A save asked for while one runs is remembered and run
+  // once more, with the newest document, when the current one finishes; only
+  // the last save to finish decides saveError, so a slow older success can
+  // never clear a newer failure.
+  const running = useRef<Promise<string | null> | null>(null);
+  const again = useRef(false);
 
-  const save = useCallback(async () => {
+  const doc = local ?? query.data ?? null;
+
+  // The server's document is the base until the player edits. A layout effect,
+  // so the ref is set before any child's effect asks `update` for it.
+  useLayoutEffect(() => {
+    if (query.data && local === null) latest.current = query.data;
+  }, [query.data, local]);
+
+  /** Resolves with the last save's error message, or null when it succeeded. */
+  const save = useCallback((): Promise<string | null> => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
-    const body = latest.current;
-    if (!body) return;
-    try {
-      const saved = await api.put<TheoryDoc>('/api/theory', body);
-      client.setQueryData(KEY, saved);
-      setSaveError(null);
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : String(error));
+    if (running.current) {
+      again.current = true;
+      return running.current;
     }
+    const run = (async () => {
+      let error: string | null = null;
+      do {
+        again.current = false;
+        const body = latest.current;
+        if (!body) break;
+        try {
+          client.setQueryData(KEY, await api.put<TheoryDoc>('/api/theory', body));
+          error = null;
+        } catch (caught) {
+          error = caught instanceof Error ? caught.message : String(caught);
+        }
+      } while (again.current);
+      setSaveError(error);
+      return error;
+    })().finally(() => {
+      running.current = null;
+    });
+    running.current = run;
+    return run;
   }, [client]);
 
   const update = useCallback<TheoryDocState['update']>(
@@ -66,12 +104,20 @@ export function TheoryDocProvider({ children }: { children: ReactNode }) {
     [save],
   );
 
-  // Leaving the tab with a debounced change pending still saves it.
+  // Leaving the tab with a change pending or in flight still saves it. If that
+  // fails there is no provider left to show a banner, so the message goes to
+  // the console and the document is parked in the query cache: coming back
+  // shows the unsaved document rather than silently dropping it (N-08).
   useEffect(
     () => () => {
-      if (timer.current) void save();
+      const finishing = timer.current ? save() : running.current;
+      void finishing?.then((error) => {
+        if (!error) return;
+        console.error(`theory.json was not saved on leaving the tab: ${error}`);
+        if (latest.current) client.setQueryData(KEY, latest.current);
+      });
     },
-    [save],
+    [save, client],
   );
 
   const resetToDefaults = useCallback(async () => {

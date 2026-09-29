@@ -153,6 +153,17 @@ describe('chords', () => {
     expect(analysisChordSymbol('C:weird', flat)).toBeNull();
   });
 
+  test.each([
+    ['C:minmaj7', 'CmMaj7'],
+    ['C:min6', 'Cm6'],
+    ['C:maj6', 'C6'],
+    ['C:aug', 'Caug'],
+    ['C:sus2', 'Csus2'],
+    ['C:sus4', 'Csus4'],
+  ])('analysis quality %s is spelled %s', (label, symbol) => {
+    expect(analysisChordSymbol(label, namer(['C']))).toBe(symbol);
+  });
+
   test('chordHomes names the major keys a chord is diatonic to', () => {
     const r = chordInfo('Am7');
     expect(r.ok && chordHomes(r.chord)).toEqual(['vi7 in C major', 'iii7 in F major', 'ii7 in G major']);

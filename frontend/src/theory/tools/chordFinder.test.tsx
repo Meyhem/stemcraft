@@ -1,10 +1,14 @@
-import { fireEvent, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 
 import { chordLinkProblem } from './ChordFinder';
 import { renderTool } from './testing';
 
-afterEach(() => vi.unstubAllGlobals());
+// Unmount first: leaving the tab flushes a pending save, which needs the fetch stub still in place.
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const analysis = {
   schema_version: 1,

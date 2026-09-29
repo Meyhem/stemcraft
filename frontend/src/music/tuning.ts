@@ -76,6 +76,9 @@ export function tuningLabel(inst: Instrument): string {
   return inst.tuning.map((n) => Note.pitchClass(n)).join(' ');
 }
 
+// The pitches theory.json accepts (stemcraft_lib.theory._PITCH): tonal alone would let "E###1" through to a 422.
+const PITCH = /^[A-G](#{1,2}|b{1,2})?-?\d$/;
+
 /**
  * A typed custom tuning, "D1 A1 D2 G2", low string first. Refused unless it has
  * one valid scientific pitch per string, each higher than the one before.
@@ -86,10 +89,11 @@ export function parseTuning(
 ): { ok: true; notes: string[] } | { ok: false; reason: string } {
   const notes = text.trim().split(/\s+/).filter(Boolean);
   if (notes.length !== strings) {
-    return { ok: false, reason: `Need ${strings} notes, low string first, e.g. "${strings === 6 ? 'E2 A2 D3 G3 B3 E4' : 'E1 A1 D2 G2'}"` };
+    const example = strings === 6 ? 'E2 A2 D3 G3 B3 E4' : strings === 5 ? 'B0 E1 A1 D2 G2' : 'E1 A1 D2 G2';
+    return { ok: false, reason: `Need ${strings} notes, low string first, e.g. "${example}"` };
   }
   const midis = notes.map((n) => Note.midi(n.charAt(0).toUpperCase() + n.slice(1)));
-  const bad = notes.find((_, i) => midis[i] == null || !/\d$/.test(notes[i]!));
+  const bad = notes.find((_, i) => midis[i] == null || !PITCH.test(notes[i]!.charAt(0).toUpperCase() + notes[i]!.slice(1)));
   if (bad !== undefined) return { ok: false, reason: `"${bad}" is not a note with an octave, like E1 or F#2` };
   for (let i = 1; i < midis.length; i++) {
     if (midis[i]! <= midis[i - 1]!) return { ok: false, reason: 'Each string must be higher than the one before it' };

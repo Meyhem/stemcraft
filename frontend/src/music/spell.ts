@@ -238,8 +238,11 @@ export function analysisChordSymbol(label: string, name: (pc: number) => string)
   const parsed = parseChord(label, 0);
   if (parsed.kind !== 'chord') return null;
   const { rootPc, bassPc, quality } = parsed.tones;
+  // A quality this table lacks is unreadable, not a bare major chord (N-08).
+  const suffix = BTC_SUFFIX[quality];
+  if (suffix === undefined) return null;
   const slash = bassPc !== rootPc ? `/${name(bassPc)}` : '';
-  return `${name(rootPc)}${BTC_SUFFIX[quality] ?? ''}${slash}`;
+  return `${name(rootPc)}${suffix}${slash}`;
 }
 
 // ---------------------------------------------------------------- keys

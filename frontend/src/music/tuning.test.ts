@@ -37,6 +37,17 @@ describe('tuning', () => {
     expect(parseTuning('d1 A1 D2 G2', 4)).toEqual({ ok: true, notes: ['D1', 'A1', 'D2', 'G2'] });
     expect(parseTuning('E A D G', 4)).toEqual({ ok: false, reason: '"E" is not a note with an octave, like E1 or F#2' });
     expect(parseTuning('E1 A1 D2', 4).ok).toBe(false);
+    expect(parseTuning('E###1 A1 D2 G2', 4)).toEqual({ ok: false, reason: '"E###1" is not a note with an octave, like E1 or F#2' });
     expect(parseTuning('G2 D2 A1 E1', 4)).toEqual({ ok: false, reason: 'Each string must be higher than the one before it' });
+  });
+
+  test("the wrong-count hint uses the instrument's own example", () => {
+    const hint = (strings: number) => {
+      const r = parseTuning('E1', strings);
+      return r.ok ? '' : r.reason;
+    };
+    expect(hint(6)).toContain('"E2 A2 D3 G3 B3 E4"');
+    expect(hint(5)).toContain('"B0 E1 A1 D2 G2"');
+    expect(hint(4)).toContain('"E1 A1 D2 G2"');
   });
 });

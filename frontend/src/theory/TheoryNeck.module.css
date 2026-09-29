@@ -1,7 +1,8 @@
 /* The Theory tab's neck (D-19). Colours per U-13: the root takes the bass hue,
-   "act on this" is accent, right/wrong are the vivid ok/error signals. This and
-   Fretboard.module.css are the only stylesheets where a note dot names the
-   instrument (chrome.test.ts allows them the bass hue). */
+   "act on this" is accent, right/wrong are the vivid ok/error signals. This,
+   Fretboard.module.css and Theory.module.css (the root note chip) are the only
+   stylesheets where a note names the instrument (chrome.test.ts allows them the
+   bass hue). */
 .svg {
   width: 100%;
   height: auto;

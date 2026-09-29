@@ -1,9 +1,13 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 
 import { renderTool } from './testing';
 
-afterEach(() => vi.unstubAllGlobals());
+// Unmount first: leaving the tab flushes a pending save, which needs the fetch stub still in place.
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 test('/theory opens the tool used last, keeping the selection', async () => {
   const { where } = renderTool('/theory?root=A', { theory: { last_tool: 'chords-in-key' } });
