@@ -11,11 +11,14 @@
   gap: var(--ds-4);
 }
 
-/* Progress takes the slack; everything else is sized by its content. */
-.progressHead {
-  width: 30%;
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+  overflow: hidden;
 }
 
-.actions {
-  text-align: right;
-}
+.filter { margin: 0; font-size: var(--ds-t-sm); color: var(--ds-text-2); }
