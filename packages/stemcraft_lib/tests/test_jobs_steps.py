@@ -125,3 +125,32 @@ def test_a_v3_database_is_still_refused(tmp_path):
     setup.close()
     with pytest.raises(JobsSchemaError):
         connect(path)
+
+
+def _v1_database(path, *, with_steps_column=False):
+    old = sqlite3.connect(path)
+    old.executescript(
+        "CREATE TABLE jobs (id INTEGER PRIMARY KEY, song_id TEXT, kind TEXT, payload TEXT,"
+        " state TEXT, cancel_requested INTEGER DEFAULT 0, progress REAL DEFAULT 0,"
+        " device TEXT, lease_until REAL, created_at REAL, started_at REAL,"
+        " finished_at REAL, error TEXT, result TEXT"
+        + (", steps TEXT" if with_steps_column else "")
+        + "); PRAGMA user_version = 1;"
+    )
+    old.close()
+
+
+def test_connecting_twice_to_a_v1_database_is_idempotent(tmp_path):
+    path = tmp_path / "j.sqlite"
+    _v1_database(path)
+    connect(path).close()
+    conn = connect(path)
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+
+
+def test_a_half_migrated_database_is_finished_not_refused(tmp_path):
+    # The crash scenario: the column exists but user_version was never stamped.
+    path = tmp_path / "j.sqlite"
+    _v1_database(path, with_steps_column=True)
+    conn = connect(path)
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == JOBS_SCHEMA_VERSION == 2

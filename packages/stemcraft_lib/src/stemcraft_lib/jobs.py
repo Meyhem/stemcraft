@@ -51,8 +51,9 @@ CREATE TABLE IF NOT EXISTS worker_status (
 JOBS_SCHEMA_VERSION = 2
 
 # v2 (D-17): `steps`, the job kind's declared steps and their live states.
+# Each entry is (column it adds, SQL); the column check makes a re-run harmless.
 _MIGRATIONS = {
-    2: "ALTER TABLE jobs ADD COLUMN steps TEXT",
+    2: ("steps", "ALTER TABLE jobs ADD COLUMN steps TEXT"),
 }
 
 
@@ -120,12 +121,29 @@ def connect(path: Path, *, check_same_thread: bool = True) -> sqlite3.Connection
         )
     # A fresh database (never stamped) takes CREATE TABLE IF NOT EXISTS with
     # today's columns. An older stamped one is walked forward one migration at
-    # a time first; CREATE TABLE IF NOT EXISTS is then a no-op on it.
+    # a time first, all inside one write transaction so the API and worker
+    # booting together cannot both ALTER, and a crash cannot leave the column
+    # added but the version unstamped. CREATE TABLE IF NOT EXISTS is then a
+    # no-op on it.
     if 0 < version < JOBS_SCHEMA_VERSION:
-        for target in range(version + 1, JOBS_SCHEMA_VERSION + 1):
-            conn.execute(_MIGRATIONS[target])
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            # Re-read under the lock: another process may have migrated already.
+            current = conn.execute("PRAGMA user_version").fetchone()[0]
+            columns = {r[1] for r in conn.execute("PRAGMA table_info(jobs)")}
+            for target in range(current + 1, JOBS_SCHEMA_VERSION + 1):
+                column, sql = _MIGRATIONS[target]
+                if column not in columns:
+                    conn.execute(sql)
+            if current < JOBS_SCHEMA_VERSION:
+                conn.execute(f"PRAGMA user_version = {JOBS_SCHEMA_VERSION}")
+            conn.execute("COMMIT")
+        except BaseException:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK")
+            raise
     conn.executescript(SCHEMA)
-    if version != JOBS_SCHEMA_VERSION:
+    if version == 0:
         conn.execute(f"PRAGMA user_version = {JOBS_SCHEMA_VERSION}")
     return conn
 
@@ -406,7 +424,7 @@ def reclaim_expired(conn: sqlite3.Connection, *, now: float | None = None) -> li
     for row in rows:
         if row["steps"]:
             conn.execute(
-                "UPDATE jobs SET steps = ? WHERE id = ?",
+                "UPDATE jobs SET steps = ? WHERE id = ? AND state = 'queued'",
                 (json.dumps(job_steps.reset(json.loads(row["steps"]))), row["id"]),
             )
     return [r["id"] for r in rows]
