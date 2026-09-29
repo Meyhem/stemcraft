@@ -118,11 +118,30 @@ export class QuizFocusError extends Error {
   }
 }
 
+/** A cell as a key: "s2f7" (row 2 from the highest string, fret 7). The same text the neck's `data-cell` uses. */
 export const cellKey = (c: Cell) => `s${c.string}f${c.fret}`;
 
+/** The tuning a cell item was asked on, low string first: "E1-A1-D2-G2". */
+export const tuningTag = (inst: Instrument) => inst.tuning.join('-');
+
+/**
+ * A name-note or find-interval item: the cell with the tuning it was asked on, "E1-A1-D2-G2/s2f7". A row and fret is
+ * another note on another instrument or in another tuning, so answers given in one never weigh, colour or name a
+ * position in another. Answers stored before items carried a tuning ("s2f7") are never asked again under that key:
+ * they count for nothing and drop out of the heatmap.
+ */
+export const cellItem = (inst: Instrument, c: Cell) => `${tuningTag(inst)}/${cellKey(c)}`;
+
+/** The cell of a cell item or a bare cell key; null for anything else. */
 export function parseCellKey(key: string): Cell | null {
-  const m = /^s(\d+)f(\d+)$/.exec(key);
+  const m = /^(?:[^/]+\/)?s(\d+)f(\d+)$/.exec(key);
   return m ? { string: Number(m[1]), fret: Number(m[2]) } : null;
+}
+
+/** The tuning tag of a cell item; null for a bare cell key or anything that is not a cell. */
+export function cellItemTuning(key: string): string | null {
+  const m = /^([^/]+)\/s\d+f\d+$/.exec(key);
+  return m ? m[1]! : null;
 }
 
 const CELL_MODES: readonly string[] = ['name-note', 'find-interval'];
@@ -270,7 +289,7 @@ export function fretboardQuestion(
     const targetsFor = (origin: Cell, semitones: number) =>
       (byPc.get(mod12(positionAt(inst, origin).pc + semitones)) ?? []).filter((c) => c.string !== origin.string || c.fret !== origin.fret);
     const offered = (origin: Cell) => INTERVALS.map((iv) => ({ iv, semitones: Interval.get(iv.name).semitones! })).filter(({ semitones }) => targetsFor(origin, semitones).length > 0);
-    const origins = cells.filter((c) => offered(c).length > 0).map(cellKey);
+    const origins = cells.filter((c) => offered(c).length > 0).map((c) => cellItem(inst, c));
     if (origins.length === 0) throw new QuizFocusError('interval');
     const item = pickItem(restrict(origins, only), weight, rng, previous);
     const cell = parseCellKey(item)!;
@@ -282,7 +301,7 @@ export function fretboardQuestion(
       prompt: `Tap the ${iv.label} above this note`,
     };
   }
-  const item = pickItem(restrict(cells.map(cellKey), only), weight, rng, previous);
+  const item = pickItem(restrict(cells.map((c) => cellItem(inst, c)), only), weight, rng, previous);
   const cell = parseCellKey(item)!;
   return { mode, item, cell, answerPc: positionAt(inst, cell).pc, prompt: 'Name this note' };
 }
@@ -413,17 +432,19 @@ export interface CellStat extends Cell {
 
 /**
  * Per-cell weakness for the neck's heat map, from the name-note and find-interval
- * answers, whose items are cells. find-note (`n{pc}`) and spell-chord items are
- * not cells and never count. Unlike `weakness`, which is per mode because the
+ * answers asked in this instrument's tuning, whose items are its cells (`cellItem`).
+ * Answers from another tuning, bare cell keys from before items carried one,
+ * and find-note (`n{pc}`) and spell-chord items never count. Unlike `weakness`, which is per mode because the
  * mode is what is being picked, this pools both modes per cell, last 5 answers
  * across them: the neck shows how well a position is known however it was asked,
  * and one cell must be one entry. Cells never asked are absent; order is the
  * order each cell was first asked in.
  */
-export function heatmap(history: readonly Answer[]): CellStat[] {
+export function heatmap(history: readonly Answer[], inst: Instrument): CellStat[] {
+  const tag = tuningTag(inst);
   const byCell = new Map<string, Answer[]>();
   for (const a of history) {
-    if (a.quiz !== 'fretboard' || !CELL_MODES.includes(a.mode) || !parseCellKey(a.item)) continue;
+    if (a.quiz !== 'fretboard' || !CELL_MODES.includes(a.mode) || cellItemTuning(a.item) !== tag) continue;
     const answers = byCell.get(a.item);
     if (answers) answers.push(a);
     else byCell.set(a.item, [a]);

@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest';
 import {
   NothingToPractise,
   QuizFocusError,
+  cellItem,
   cellKey,
   focusCells,
   focusFor,
@@ -29,6 +30,8 @@ import { DEFAULT_INSTRUMENT, PRESETS, instrumentFor, neckFrets, type Instrument 
 const bass4 = DEFAULT_INSTRUMENT;
 const at = '2026-09-29T00:00:00Z';
 const ans = (item: string, correct: boolean, ms: number, mode = 'name-note'): Answer => ({ quiz: 'fretboard', mode, item, correct, ms, at });
+/** A cell item of the default bass, written out rather than built with cellItem. */
+const B = (cell: string) => `E1-A1-D2-G2/${cell}`;
 
 describe('weighting', () => {
   test('never asked is weakest; weakness uses only the last five answers', () => {
@@ -99,7 +102,7 @@ describe('fretboard questions', () => {
 
   test('name the note and find the interval ask about a cell in focus', () => {
     const rng = mulberry32(3);
-    const allowed = new Set(focusCells(bass4, focus).map(cellKey));
+    const allowed = new Set(focusCells(bass4, focus).map((c) => B(cellKey(c))));
     for (const mode of ['name-note', 'find-interval'] as const) {
       const q = fretboardQuestion(mode, bass4, focus, [], rng);
       expect(allowed.has(q.item)).toBe(true);
@@ -108,7 +111,7 @@ describe('fretboard questions', () => {
 
   test('only asks about the listed items', () => {
     const rng = mulberry32(4);
-    for (let i = 0; i < 10; i++) expect(fretboardQuestion('name-note', bass4, focus, [], rng, undefined, ['s2f7']).item).toBe('s2f7');
+    for (let i = 0; i < 10; i++) expect(fretboardQuestion('name-note', bass4, focus, [], rng, undefined, [B('s2f7')]).item).toBe(B('s2f7'));
     expect(nextTheoryQuestion(['keys'], [], rng, undefined, ['v:D']).item).toBe('v:D');
   });
 
@@ -118,6 +121,39 @@ describe('fretboard questions', () => {
     expect(q.window[1] - q.window[0]).toBe(3);
     for (const c of q.targets) expect(c.fret >= q.window[0] && c.fret <= q.window[1]).toBe(true);
     expect(q.targets.length).toBeGreaterThan(0);
+  });
+});
+
+describe('cell items carry the tuning they were asked on', () => {
+  const dropD: Instrument = { ...bass4, tuning: ['D1', 'A1', 'D2', 'G2'] };
+  const focus = { strings: [], frets: [0, 12] as [number, number], accidentals: true };
+
+  test('the item is the tuning, low string first, then the cell; a bare cell key still parses', () => {
+    expect(cellItem(bass4, { string: 2, fret: 7 })).toBe('E1-A1-D2-G2/s2f7');
+    expect(parseCellKey('E1-A1-D2-G2/s2f7')).toEqual({ string: 2, fret: 7 });
+    expect(parseCellKey('s2f7')).toEqual({ string: 2, fret: 7 });
+    expect(parseCellKey('E1-A1-D2-G2/n7')).toBeNull();
+    expect(parseCellKey('/s2f7')).toBeNull();
+  });
+
+  test('name the note and find the interval ask under the tuning; find the note and spell the chord do not', () => {
+    for (const mode of ['name-note', 'find-interval'] as const) {
+      expect(fretboardQuestion(mode, dropD, focus, [], mulberry32(1)).item).toMatch(/^D1-A1-D2-G2\/s\df\d+$/);
+    }
+    expect(fretboardQuestion('find-note', dropD, focus, [], mulberry32(1)).item).toMatch(/^n\d+$/);
+  });
+
+  test('answers from another tuning, or from before items carried one, neither weigh a cell nor colour the heatmap', () => {
+    const wrong = (item: string) => Array.from({ length: 5 }, () => ans(item, false, 6000));
+    const history = [...wrong('E1-A1-D2-G2/s3f3'), ...wrong('s3f5'), ...wrong('D1-A1-D2-G2/s3f1')];
+    expect(heatmap(history, dropD)).toEqual([{ string: 3, fret: 1, weakness: 1 }]);
+    expect(heatmap(history, bass4)).toEqual([{ string: 3, fret: 3, weakness: 1 }]);
+    expect(weakness(history, 'fretboard', 'name-note', 'D1-A1-D2-G2/s3f3')).toBe(1); // never asked in drop D: unknown, so weak
+  });
+
+  test('a practise list from another tuning matches nothing here', () => {
+    expect(() => fretboardQuestion('name-note', dropD, focus, [], mulberry32(3), undefined, ['E1-A1-D2-G2/s3f3'])).toThrow(NothingToPractise);
+    expect(fretboardQuestion('name-note', dropD, focus, [], mulberry32(3), undefined, ['D1-A1-D2-G2/s3f3']).item).toBe('D1-A1-D2-G2/s3f3');
   });
 });
 
@@ -185,7 +221,7 @@ describe('theory questions', () => {
 
 describe('stats', () => {
   test('heatmap per cell from the last five answers', () => {
-    const h = heatmap([ans('s2f7', false, 6000), ans('s2f7', false, 6000), ans('n7', true, 100, 'find-note')]);
+    const h = heatmap([ans(B('s2f7'), false, 6000), ans(B('s2f7'), false, 6000), ans('n7', true, 100, 'find-note')], bass4);
     expect(h).toEqual([{ string: 2, fret: 7, weakness: 1 }]);
   });
 
@@ -312,6 +348,8 @@ describe('property: fretboard questions over every tuning and focus', () => {
       const targetsOfInterval = (origin: { string: number; fret: number }, semis: number) =>
         expected.filter((t) => cellKey(t) !== cellKey(origin) && pcOfCell(t) === m12(pcOfCell(origin) + semis));
       const qualifying = expected.filter((o) => Object.values(SEMITONES).some((semis) => targetsOfInterval(o, semis).length > 0));
+      // Cell items from the spec: the tuning low string first, joined by '-', then the cell.
+      const itemOf = (cell: { string: number; fret: number }) => `${c.inst.tuning.join('-')}/s${cell.string}f${cell.fret}`;
       for (const mode of ['name-note', 'find-note', 'find-interval', 'spell-chord'] as const) {
         const where0 = `${label(c)} ${mode}`;
         const problem =
@@ -332,7 +370,7 @@ describe('property: fretboard questions over every tuning and focus', () => {
           const where = where0;
           expect(q.prompt.includes('NaN') || q.prompt.includes('undefined'), where).toBe(false);
           if (q.mode === 'name-note' || q.mode === 'find-interval') {
-            expect((q.mode === 'name-note' ? expected : qualifying).map(cellKey), where).toContain(q.item);
+            expect((q.mode === 'name-note' ? expected : qualifying).map(itemOf), where).toContain(q.item);
             expect(q.cell, where).toEqual(parseCellKey(q.item));
             expect(inNeck(q.cell), where).toBe(true);
             const pc = pcOfCell(q.cell);
@@ -346,7 +384,7 @@ describe('property: fretboard questions over every tuning and focus', () => {
               const want = targetsOfInterval(q.cell, SEMITONES[label_!]!).map(cellKey);
               expect(want.length, where).toBeGreaterThan(0);
               expect(q.targets.map(cellKey).sort(), where).toEqual([...want].sort());
-              expect(q.targets.map(cellKey), where).not.toContain(q.item);
+              expect(q.targets.map(cellKey), where).not.toContain(cellKey(q.cell));
               expect(q.targets.every((t) => pcOfCell(t) === q.answerPc && inNeck(t) && expected.some((e) => cellKey(e) === cellKey(t))), where).toBe(true);
             }
             expect(Number.isInteger(q.answerPc) && q.answerPc >= 0 && q.answerPc < 12, where).toBe(true);
@@ -387,9 +425,9 @@ describe('property: fretboard questions over every tuning and focus', () => {
       if (q.mode !== 'find-interval') throw new Error('mode');
       seen.add(q.interval.label);
       if (q.interval.label === 'octave') {
-        expect(['s3f0', 's3f12']).toContain(q.item);
-        expect(q.targets.map(cellKey)).toEqual([q.item === 's3f0' ? 's3f12' : 's3f0']);
-        expect(q.targets.map(cellKey)).not.toContain(q.item);
+        expect([B('s3f0'), B('s3f12')]).toContain(q.item);
+        expect(q.targets.map(cellKey)).toEqual([q.item === B('s3f0') ? 's3f12' : 's3f0']);
+        expect(q.targets.map(cellKey)).not.toContain(cellKey(q.cell));
       }
     }
     expect(seen.has('octave')).toBe(true);
@@ -446,8 +484,8 @@ describe('property: fretboard questions over every tuning and focus', () => {
 
   test('a single possible item may repeat (there is nothing else to ask)', () => {
     const one = { strings: [0], frets: [0, 0] as [number, number], accidentals: true };
-    const q = fretboardQuestion('name-note', bass4, one, [], mulberry32(1), 's0f0');
-    expect(q.item).toBe('s0f0');
+    const q = fretboardQuestion('name-note', bass4, one, [], mulberry32(1), B('s0f0'));
+    expect(q.item).toBe(B('s0f0'));
   });
 
   test('the same seed gives the same question, whatever the mode', () => {
@@ -463,28 +501,30 @@ describe('property: fretboard questions over every tuning and focus', () => {
     for (let s = 0; s < 8; s++) {
       expect(fretboardQuestion('find-note', bass4, focus, [], mulberry32(s), undefined, ['n7']).item).toBe('n7');
       expect(fretboardQuestion('spell-chord', bass4, focus, [], mulberry32(s), undefined, ['Dm']).item).toBe('Dm');
-      const iv = fretboardQuestion('find-interval', bass4, focus, [], mulberry32(s), undefined, ['s2f7']);
-      expect(iv.item).toBe('s2f7');
+      const iv = fretboardQuestion('find-interval', bass4, focus, [], mulberry32(s), undefined, [B('s2f7')]);
+      expect(iv.item).toBe(B('s2f7'));
     }
     // n1 (C sharp) is not in a naturals-only focus; Zm is not a chord we ask; s0f99 is off the neck; s3f1x is not a cell.
     expect(() => fretboardQuestion('find-note', bass4, focus, [], mulberry32(3), undefined, ['n1'])).toThrow(NothingToPractise);
     expect(() => fretboardQuestion('spell-chord', bass4, focus, [], mulberry32(3), undefined, ['Zm'])).toThrow(NothingToPractise);
-    expect(() => fretboardQuestion('name-note', bass4, focus, [], mulberry32(3), undefined, ['s0f99'])).toThrow(NothingToPractise);
-    expect(() => fretboardQuestion('name-note', bass4, focus, [], mulberry32(3), undefined, ['s3f1x'])).toThrow(/normal round/);
+    expect(() => fretboardQuestion('name-note', bass4, focus, [], mulberry32(3), undefined, [B('s0f99')])).toThrow(NothingToPractise);
+    expect(() => fretboardQuestion('name-note', bass4, focus, [], mulberry32(3), undefined, [B('s3f1x')])).toThrow(/normal round/);
+    // A bare cell key (an answer from before items carried their tuning) is not an item any more.
+    expect(() => fretboardQuestion('name-note', bass4, focus, [], mulberry32(3), undefined, ['s2f7'])).toThrow(NothingToPractise);
     // An origin that cannot be asked as an interval (its only target would be itself) does not count as in focus.
     const lone = { strings: [3], frets: [0, 12] as [number, number], accidentals: false };
-    expect(() => fretboardQuestion('find-interval', bass4, lone, [], mulberry32(3), undefined, ['s3f99'])).toThrow(NothingToPractise);
+    expect(() => fretboardQuestion('find-interval', bass4, lone, [], mulberry32(3), undefined, [B('s3f99')])).toThrow(NothingToPractise);
     // [] and undefined mean unrestricted.
     expect(fretboardQuestion('find-note', bass4, focus, [], mulberry32(3), undefined, []).item).toMatch(/^n\d+$/);
   });
 
   test('a weak cell is asked about more often (probability 0.15 + weakness)', () => {
     const focus = { strings: [3], frets: [0, 5] as [number, number], accidentals: false }; // s3f0 s3f1 s3f3 s3f5
-    const strong = ['s3f0', 's3f1', 's3f5'].flatMap((k) => Array.from({ length: 5 }, () => ans(k, true, 0)));
-    const history = [...strong, ...Array.from({ length: 5 }, () => ans('s3f3', false, 6000))];
+    const strong = ['s3f0', 's3f1', 's3f5'].flatMap((k) => Array.from({ length: 5 }, () => ans(B(k), true, 0)));
+    const history = [...strong, ...Array.from({ length: 5 }, () => ans(B('s3f3'), false, 6000))];
     const rng = mulberry32(2026);
     let weak = 0;
-    for (let i = 0; i < 4000; i++) if (fretboardQuestion('name-note', bass4, focus, history, rng).item === 's3f3') weak++;
+    for (let i = 0; i < 4000; i++) if (fretboardQuestion('name-note', bass4, focus, history, rng).item === B('s3f3')) weak++;
     expect(weak / 4000).toBeGreaterThan(1.15 / 1.6 - 0.03);
     expect(weak / 4000).toBeLessThan(1.15 / 1.6 + 0.03);
   });
@@ -836,35 +876,37 @@ describe('property: derived stats', () => {
 
   test('heatmap: last five across modes per cell, ignoring non-cells and the theory quiz', () => {
     const history: Answer[] = [
-      ans('s0f0', false, 6000),
-      ans('s0f0', true, 0, 'find-interval'),
-      ans('s3f12', true, 0),
+      ans(B('s0f0'), false, 6000),
+      ans(B('s0f0'), true, 0, 'find-interval'),
+      ans(B('s3f12'), true, 0),
       ans('n7', false, 6000, 'find-note'),
       ans('Dm', false, 6000, 'spell-chord'),
-      th('keys', 's1f1', false, 6000), // a theory fact that happens to look like a cell
+      th('keys', B('s1f1'), false, 6000), // a theory fact that happens to look like a cell
       th('keys', 'v:C', false, 6000),
-      ans('s1f1', false, 6000, 'find-note'), // a find-note answer never counts, whatever its item looks like
-      ans('s10', false, 6000), // not a cell key
-      ans('sxf1', false, 6000),
-      ans('s1f', false, 6000),
-      ans('s1f1x', false, 6000),
+      ans(B('s1f1'), false, 6000, 'find-note'), // a find-note answer never counts, whatever its item looks like
+      ans(B('s10'), false, 6000), // not a cell key
+      ans(B('sxf1'), false, 6000),
+      ans(B('s1f'), false, 6000),
+      ans(B('s1f1x'), false, 6000),
+      ans('s2f2', false, 6000), // a bare cell key from before items carried their tuning
+      ans('D1-A1-D2-G2/s2f2', false, 6000), // another tuning
     ];
     const before = JSON.stringify(history);
-    expect(heatmap(history)).toEqual([
+    expect(heatmap(history, bass4)).toEqual([
       { string: 0, fret: 0, weakness: 0.5 },
       { string: 3, fret: 12, weakness: 0 },
     ]);
     expect(JSON.stringify(history)).toBe(before);
-    expect(heatmap([])).toEqual([]);
+    expect(heatmap([], bass4)).toEqual([]);
   });
 
   test('heatmap: matches an independent computation on a random history and is repeatable', () => {
     const rng = mulberry32(2);
-    const cells = ['s0f0', 's1f3', 's2f7', 's3f12'];
+    const cells = ['s0f0', 's1f3', 's2f7', 's3f12'].map(B);
     const modes = ['name-note', 'find-interval'];
     const history = Array.from({ length: 200 }, () => ans(cells[Math.floor(rng() * 4)]!, rng() < 0.6, Math.floor(rng() * 9000), modes[Math.floor(rng() * 2)]));
-    const got = heatmap(history);
-    expect(heatmap(history)).toEqual(got);
+    const got = heatmap(history, bass4);
+    expect(heatmap(history, bass4)).toEqual(got);
     for (const cell of cells) {
       const last = history.filter((a) => a.item === cell).slice(-5);
       const want = 0.6 * (last.filter((a) => !a.correct).length / last.length) + 0.4 * Math.min(last.reduce((s, a) => s + a.ms, 0) / last.length / 6000, 1);
@@ -875,8 +917,8 @@ describe('property: derived stats', () => {
   });
 
   test('heatmap order is fixed by the history (first time each cell was asked), not by chance', () => {
-    const h = [ans('s2f2', true, 0), ans('s0f5', true, 0), ans('s2f2', false, 0), ans('s1f1', true, 0)];
-    expect(heatmap(h).map(cellKey)).toEqual(['s2f2', 's0f5', 's1f1']);
+    const h = [ans(B('s2f2'), true, 0), ans(B('s0f5'), true, 0), ans(B('s2f2'), false, 0), ans(B('s1f1'), true, 0)];
+    expect(heatmap(h, bass4).map(cellKey)).toEqual(['s2f2', 's0f5', 's1f1']);
   });
 
   test('weakestFacts: theory answers only, weakest first, ties keep the order first asked', () => {

@@ -649,8 +649,8 @@ test('theory.json unreadable: the quiz says it cannot save instead of asking que
 test('weak spots come from the history; reset asks first', async () => {
   const at = '2026-09-29T00:00:00Z';
   const history = [
-    { quiz: 'fretboard' as const, mode: 'name-note', item: 's2f7', correct: false, ms: 6000, at },
-    { quiz: 'fretboard' as const, mode: 'name-note', item: 's3f3', correct: true, ms: 500, at },
+    { quiz: 'fretboard' as const, mode: 'name-note', item: 'E1-A1-D2-G2/s2f7', correct: false, ms: 6000, at },
+    { quiz: 'fretboard' as const, mode: 'name-note', item: 'E1-A1-D2-G2/s3f3', correct: true, ms: 500, at },
   ];
   const { container, puts } = renderTool('/theory/fretboard-quiz', { theory: fb({}, { history }) });
   await screen.findByText(/^Find every /);
@@ -666,10 +666,21 @@ test('weak spots come from the history; reset asks first', async () => {
   await waitFor(() => expect(puts.at(-1)?.quiz.history).toEqual([]));
 });
 
+test('weak spots belong to the tuning they were asked in: drop D does not show standard-tuning answers', async () => {
+  const at = '2026-09-29T00:00:00Z';
+  const wrong = (item: string) => ({ quiz: 'fretboard' as const, mode: 'name-note', item, correct: false, ms: 6000, at });
+  const dropD = { kind: 'bass' as const, strings: 4, tuning: ['D1', 'A1', 'D2', 'G2'], left_handed: false };
+  const history = [wrong('E1-A1-D2-G2/s3f3'), wrong('s3f5'), wrong('D1-A1-D2-G2/s2f7')];
+  const { container } = renderTool('/theory/fretboard-quiz', { theory: { ...fb({}, { history }), instrument: dropD } });
+  await screen.findByText(/^Find every /);
+  expect([...container.querySelectorAll('[data-heat]')].map((e) => e.getAttribute('data-heat'))).toEqual(['s2f7']);
+  expect(screen.getByText(/Weakest:/)).toHaveTextContent('Weakest: A string, fret 7.');
+});
+
 test('the heat overlay only draws positions this neck has', async () => {
   const at = '2026-09-29T00:00:00Z';
   const wrong = (item: string) => ({ quiz: 'fretboard' as const, mode: 'name-note', item, correct: false, ms: 6000, at });
-  const { container } = renderTool('/theory/fretboard-quiz', { theory: fb({}, { history: [wrong('s5f3'), wrong(`s2f${MAX_FRET + 1}`), wrong('s2f7'), wrong('s0f0')] }) });
+  const { container } = renderTool('/theory/fretboard-quiz', { theory: fb({}, { history: [wrong('E1-A1-D2-G2/s5f3'), wrong(`E1-A1-D2-G2/s2f${MAX_FRET + 1}`), wrong('E1-A1-D2-G2/s2f7'), wrong('E1-A1-D2-G2/s0f0')] }) });
   await screen.findByText(/^Find every /);
   expect([...container.querySelectorAll('[data-heat]')].map((e) => e.getAttribute('data-heat')).sort()).toEqual(['s0f0', 's2f7']);
   expect(screen.getByText(/Weakest:/).textContent).not.toMatch(/s5f3|fret 16/);
@@ -716,6 +727,10 @@ test('cellText reads a repeated note letter with its octave, and a key that is n
   expect(cellText(DEFAULT_INSTRUMENT, 's2f7')).toBe('A string, fret 7');
   expect(cellText(DEFAULT_INSTRUMENT, 's9f7')).toBe('s9f7');
   expect(cellText(DEFAULT_INSTRUMENT, 'n7')).toBe('n7');
+  // A cell item is named in its own tuning; one from another tuning is not a position of this one.
+  expect(cellText(dropD, 'D1-A1-D2-G2/s3f0')).toBe('D1 string, open');
+  expect(cellText(DEFAULT_INSTRUMENT, 'E1-A1-D2-G2/s2f7')).toBe('A string, fret 7');
+  expect(cellText(dropD, 'E1-A1-D2-G2/s3f0')).toBe('E1-A1-D2-G2/s3f0');
 });
 
 // ---------------------------------------------------------------- rounds without the screen
