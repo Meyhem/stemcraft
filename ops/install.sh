@@ -6,17 +6,37 @@
 #   ops/install.sh             do it
 #   ops/install.sh --dry-run   print every step, change nothing
 #
+# `systemctl --user` needs a login session (ssh is fine; cron or `sudo -u` is not).
+#
 # Env: STEMCRAFT_UNIT_DIR (default ~/.config/systemd/user), STEMCRAFT_PORT (default 8000),
 #      STEMCRAFT_HEALTH_TIMEOUT (seconds to wait for the API, default 60).
 set -euo pipefail
+
+usage() {
+  cat <<USAGE
+usage: ops/install.sh [--dry-run]
+  --dry-run   print every step, change nothing
+  -h, --help  show this help
+USAGE
+}
+
+DRY=0
+case "${1:-}" in
+  "") ;;
+  --dry-run) DRY=1 ;;
+  -h|--help) usage; exit 0 ;;
+  *) usage >&2; exit 2 ;;
+esac
+if (( $# > 1 )); then usage >&2; exit 2; fi
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UNIT_DIR="${STEMCRAFT_UNIT_DIR:-$HOME/.config/systemd/user}"
 PORT="${STEMCRAFT_PORT:-8000}"
 HEALTH_TIMEOUT="${STEMCRAFT_HEALTH_TIMEOUT:-60}"
+WORKER_SETTLE="${STEMCRAFT_WORKER_SETTLE:-30}"
 UNITS=(stemcraft-api.service stemcraft-worker.service)
-DRY=0
-[[ "${1:-}" == "--dry-run" ]] && DRY=1
+ME="$(id -un)"
+tmp=""
 
 run() {
   echo "+ $*"
@@ -27,6 +47,13 @@ die() {
   echo "install.sh: $*" >&2
   exit 1
 }
+
+cleanup() { if [[ -n "$tmp" ]]; then rm -f "$tmp"; fi; }
+trap cleanup EXIT
+
+[[ "$PORT" =~ ^[0-9]+$ ]] && (( 10#$PORT >= 1 && 10#$PORT <= 65535 )) \
+  || die "STEMCRAFT_PORT must be an integer 1-65535, got: $PORT"
+PORT=$(( 10#$PORT ))
 
 # N-08: refuse before touching anything if a dependency is missing.
 declare -A BIN
@@ -42,6 +69,20 @@ for tool in uv ffmpeg yt-dlp; do
 done
 unit_path="$unit_path:/usr/local/bin:/usr/bin:/bin"
 
+# These land in unit files (and a sed script): keep them to characters that are safe in both.
+for pair in "REPO=$REPO" "uv=${BIN[uv]}" "PATH=$unit_path"; do
+  [[ "${pair#*=}" =~ ^[A-Za-z0-9._/+:-]+$ ]] \
+    || die "unsafe character in ${pair%%=*} for a systemd unit (allowed: A-Za-z0-9._/+:-): ${pair#*=}"
+done
+
+# D9-10: lingering lets the user manager start these at boot and keep them after logout.
+# Decided up front so a doomed run (no sudo) does nothing.
+NEED_LINGER=0
+if [[ "$(loginctl show-user "$ME" -p Linger --value 2>/dev/null || true)" != "yes" ]]; then
+  NEED_LINGER=1
+  command -v sudo > /dev/null || die "lingering is off for $ME and sudo is not available to enable it"
+fi
+
 cd "$REPO"
 run uv sync --locked
 run npm --prefix "$REPO/frontend" ci
@@ -53,35 +94,55 @@ for unit in "${UNITS[@]}"; do
     mkdir -p "$UNIT_DIR"
     tmp="$(mktemp "$UNIT_DIR/.$unit.XXXXXX")"
     sed -e "s|@REPO@|$REPO|g" -e "s|@UV@|${BIN[uv]}|g" -e "s|@PATH@|$unit_path|g" \
-      "$REPO/ops/systemd/$unit" > "$tmp"
+      -e "s|@PORT@|$PORT|g" "$REPO/ops/systemd/$unit" > "$tmp"
     mv "$tmp" "$UNIT_DIR/$unit"  # atomic: temp file then rename
+    tmp=""
   fi
 done
 
 run systemctl --user daemon-reload
 run systemctl --user enable "${UNITS[@]}"
 
-# D9-10: lingering lets the user manager start these at boot and keep them after logout.
-if [[ "$(loginctl show-user "$USER" -p Linger --value 2>/dev/null || true)" != "yes" ]]; then
-  echo "Lingering is off for $USER; enabling it needs sudo so the units start at boot."
-  run sudo loginctl enable-linger "$USER"
+if (( NEED_LINGER )); then
+  echo "Lingering is off for $ME; enabling it needs sudo so the units start at boot."
+  run sudo loginctl enable-linger "$ME"
 fi
 
 run systemctl --user restart "${UNITS[@]}"
 
 if (( DRY )); then
   echo "+ wait for http://127.0.0.1:$PORT/api/health"
+  echo "+ watch stemcraft-worker.service for ${WORKER_SETTLE}s (active, no restarts)"
   exit 0
 fi
 
+fail_with_journal() {  # $1 unit, $2 message
+  journalctl --user -u "$1" -n 50 --no-pager || true
+  die "$2"
+}
+
+up=0
 for (( i = 0; i < HEALTH_TIMEOUT; i++ )); do
-  if curl -fsS "http://127.0.0.1:$PORT/api/health" > /dev/null 2>&1; then
-    systemctl --user is-active --quiet stemcraft-worker.service \
-      || { journalctl --user -u stemcraft-worker.service -n 50 --no-pager; die "the worker is not running"; }
-    echo "Stemcraft is up on http://$(hostname):$PORT"
-    exit 0
+  if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/api/health" > /dev/null 2>&1; then
+    up=1
+    break
   fi
   sleep 1
 done
-journalctl --user -u stemcraft-api.service -n 50 --no-pager
-die "the API did not answer on port $PORT within ${HEALTH_TIMEOUT}s"
+(( up )) || fail_with_journal stemcraft-api.service "the API did not answer on port $PORT within ${HEALTH_TIMEOUT}s"
+
+# Both units are Type=simple, so `restart` returns at fork, and the worker's boot check
+# (torch import, CUDA init, tiny inference) outlasts the API's. /api/health cannot prove the
+# worker is fresh (worker_status persists across restarts and updated_at is not exposed), so
+# this is a heuristic: the worker must stay active with zero auto-restarts for a settle window
+# (STEMCRAFT_WORKER_SETTLE). A worker that fails its boot check exits and either leaves
+# "active" or bumps NRestarts (Restart=on-failure), which we see here.
+for (( i = 0; i <= WORKER_SETTLE; i++ )); do
+  systemctl --user is-active --quiet stemcraft-worker.service \
+    || fail_with_journal stemcraft-worker.service "the worker is not running"
+  restarts="$(systemctl --user show -p NRestarts --value stemcraft-worker.service)"
+  [[ "${restarts:-0}" == "0" ]] \
+    || fail_with_journal stemcraft-worker.service "the worker restarted ${restarts} time(s) after install"
+  if (( i < WORKER_SETTLE )); then sleep 1; fi
+done
+echo "Stemcraft is up on http://$(uname -n):$PORT"

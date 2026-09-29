@@ -16,6 +16,8 @@ WorkingDirectory=@REPO@
 Environment=PATH=@PATH@
 Environment=PYTHONUNBUFFERED=1
 Environment=STEMCRAFT_DIST_DIR=@REPO@/frontend/dist
+# One variable (STEMCRAFT_PORT at install time) drives both the API and the health check.
+Environment=STEMCRAFT_PORT=@PORT@
 # D9-07: install.sh already ran `uv sync --locked`; a restart must not re-resolve.
 ExecStart=@UV@ run --no-sync stemcraft-api
 Restart=on-failure
