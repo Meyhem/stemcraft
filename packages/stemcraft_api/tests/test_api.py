@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import textwrap
+import threading
 
 import pytest
 from fastapi.testclient import TestClient
@@ -211,3 +212,44 @@ def test_job_stats_route_reports_counts_and_averages(client):
         "failed": 1,
         "durations": [{"kind": "probe", "device": "cuda", "count": 1, "avg_seconds": 2.5}],
     }
+
+
+def _in_thread(fn):
+    """Run fn in a fresh thread; return (result, exception)."""
+    box = {}
+
+    def run():
+        try:
+            box["result"] = fn()
+        except BaseException as exc:  # noqa: BLE001 - reported to the test
+            box["error"] = exc
+
+    t = threading.Thread(target=run)
+    t.start()
+    t.join(5)
+    assert not t.is_alive()
+    return box.get("result"), box.get("error")
+
+
+def test_get_conn_teardown_may_run_on_another_thread(client):
+    # FastAPI runs a sync generator dependency's setup and teardown via the
+    # threadpool, which may pick different threads. close() must not raise.
+    from stemcraft_api.deps import get_conn
+
+    gen = get_conn()
+    next(gen)
+    _, error = _in_thread(lambda: next(gen, None))
+    assert error is None
+
+
+def test_get_conn_connection_usable_from_another_thread(client):
+    from stemcraft_api.deps import get_conn
+
+    gen = get_conn()
+    conn = next(gen)
+    try:
+        result, error = _in_thread(lambda: conn.execute("SELECT 1").fetchone()[0])
+        assert error is None
+        assert result == 1
+    finally:
+        gen.close()

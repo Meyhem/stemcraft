@@ -91,9 +91,11 @@ def _row_to_job(row: sqlite3.Row) -> Job:
     )
 
 
-def connect(path: Path) -> sqlite3.Connection:
+def connect(path: Path, *, check_same_thread: bool = True) -> sqlite3.Connection:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, isolation_level=None, timeout=5.0)
+    conn = sqlite3.connect(
+        path, isolation_level=None, timeout=5.0, check_same_thread=check_same_thread
+    )
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")

@@ -107,3 +107,22 @@ def test_data_version_changes_when_a_different_connection_writes(tmp_path):
     enqueue(writer, kind="probe")
     after = data_version(reader)
     assert after != before
+
+
+def test_connect_defaults_to_same_thread_checking(tmp_path):
+    import threading
+
+    conn = connect(tmp_path / "jobs.sqlite")
+    errors = []
+
+    def use():
+        try:
+            conn.execute("SELECT 1")
+        except sqlite3.ProgrammingError as exc:
+            errors.append(exc)
+
+    t = threading.Thread(target=use)
+    t.start()
+    t.join()
+    conn.close()
+    assert len(errors) == 1
