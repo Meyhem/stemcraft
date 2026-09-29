@@ -12,6 +12,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import job_steps
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
   id               INTEGER PRIMARY KEY,
@@ -27,7 +29,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   started_at       REAL,
   finished_at      REAL,
   error            TEXT,
-  result           TEXT
+  result           TEXT,
+  steps            TEXT
 );
 CREATE INDEX IF NOT EXISTS jobs_state_id ON jobs (state, id);
 CREATE INDEX IF NOT EXISTS jobs_song ON jobs (song_id);
@@ -45,7 +48,12 @@ CREATE TABLE IF NOT EXISTS worker_status (
 # against a pre-existing database, so without this there would be no way to
 # detect an old schema and every later query would just assume today's
 # columns exist.
-JOBS_SCHEMA_VERSION = 1
+JOBS_SCHEMA_VERSION = 2
+
+# v2 (D-17): `steps`, the job kind's declared steps and their live states.
+_MIGRATIONS = {
+    2: "ALTER TABLE jobs ADD COLUMN steps TEXT",
+}
 
 
 class JobsSchemaError(Exception):
@@ -70,6 +78,7 @@ class Job:
     finished_at: float | None
     error: str | None
     result: dict | None
+    steps: list[dict]
 
 
 def _row_to_job(row: sqlite3.Row) -> Job:
@@ -88,6 +97,7 @@ def _row_to_job(row: sqlite3.Row) -> Job:
         finished_at=row["finished_at"],
         error=row["error"],
         result=json.loads(row["result"]) if row["result"] else None,
+        steps=json.loads(row["steps"]) if row["steps"] else [],
     )
 
 
@@ -108,12 +118,14 @@ def connect(path: Path, *, check_same_thread: bool = True) -> sqlite3.Connection
             f"{path}: user_version {version} is newer than this build understands "
             f"({JOBS_SCHEMA_VERSION}); refusing to guess"
         )
-    # A fresh database (never stamped) and one already at the current
-    # version both take the same CREATE TABLE IF NOT EXISTS path -- it is a
-    # no-op on the latter. Only version 1 exists yet; when a v2 lands, a
-    # migration chain for 0 < version < JOBS_SCHEMA_VERSION goes here.
+    # A fresh database (never stamped) takes CREATE TABLE IF NOT EXISTS with
+    # today's columns. An older stamped one is walked forward one migration at
+    # a time first; CREATE TABLE IF NOT EXISTS is then a no-op on it.
+    if 0 < version < JOBS_SCHEMA_VERSION:
+        for target in range(version + 1, JOBS_SCHEMA_VERSION + 1):
+            conn.execute(_MIGRATIONS[target])
     conn.executescript(SCHEMA)
-    if version == 0:
+    if version != JOBS_SCHEMA_VERSION:
         conn.execute(f"PRAGMA user_version = {JOBS_SCHEMA_VERSION}")
     return conn
 
@@ -134,10 +146,13 @@ def enqueue(
     song_id: str | None = None,
     payload: dict | None = None,
 ) -> int:
+    # D-17: seeded before the INSERT, so an undeclared kind raises and no row
+    # is written. This is the only place outside the worker that writes steps.
+    steps = job_steps.seed(kind)
     cur = conn.execute(
-        "INSERT INTO jobs (song_id, kind, payload, state, progress, created_at) "
-        "VALUES (?, ?, ?, 'queued', 0, ?)",
-        (song_id, kind, json.dumps(payload or {}), time.time()),
+        "INSERT INTO jobs (song_id, kind, payload, state, progress, created_at, steps) "
+        "VALUES (?, ?, ?, 'queued', 0, ?, ?)",
+        (song_id, kind, json.dumps(payload or {}), time.time(), json.dumps(steps)),
     )
     return int(cur.lastrowid)
 
@@ -151,13 +166,20 @@ def list_jobs(
     conn: sqlite3.Connection,
     *,
     states: tuple[str, ...] | None = None,
+    song_id: str | None = None,
     limit: int | None = 200,
 ) -> list[Job]:
     sql = "SELECT * FROM jobs"
+    where: list[str] = []
     params: list[object] = []
     if states:
-        sql += f" WHERE state IN ({','.join('?' * len(states))})"
+        where.append(f"state IN ({','.join('?' * len(states))})")
         params.extend(states)
+    if song_id is not None:
+        where.append("song_id = ?")
+        params.append(song_id)
+    if where:
+        sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY id DESC"
     if limit is not None:
         sql += " LIMIT ?"
@@ -252,6 +274,27 @@ def set_progress(conn: sqlite3.Connection, job_id: int, progress: float) -> None
     )
 
 
+def _steps_of(conn: sqlite3.Connection, job_id: int) -> list[dict]:
+    row = conn.execute("SELECT steps FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    return json.loads(row["steps"]) if row and row["steps"] else []
+
+
+def set_steps(conn: sqlite3.Connection, job_id: int, steps: list[dict]) -> None:
+    """The worker's one write path for steps (D-17). `progress` is derived from
+    them in the same statement so the two can never disagree."""
+    progress = job_steps.overall(steps)
+    if progress is None:
+        conn.execute(
+            "UPDATE jobs SET steps = ? WHERE id = ? AND state = 'running'",
+            (json.dumps(steps), job_id),
+        )
+    else:
+        conn.execute(
+            "UPDATE jobs SET steps = ?, progress = ? WHERE id = ? AND state = 'running'",
+            (json.dumps(steps), progress, job_id),
+        )
+
+
 def finish(conn: sqlite3.Connection, job_id: int, result: dict | None = None) -> None:
     conn.execute(
         "UPDATE jobs SET state = 'done', progress = 1.0, finished_at = ?, lease_until = NULL, "
@@ -261,11 +304,13 @@ def finish(conn: sqlite3.Connection, job_id: int, result: dict | None = None) ->
 
 
 def fail(conn: sqlite3.Connection, job_id: int, error: str) -> None:
-    # N-08: the real message and traceback, kept verbatim for the Job Queue view.
+    # N-08: the real message and traceback, kept verbatim for the Job Queue view,
+    # and the step it happened in marked failed so the UI can draw it there.
+    steps = job_steps.fail_running(_steps_of(conn, job_id))
     conn.execute(
-        "UPDATE jobs SET state = 'failed', finished_at = ?, lease_until = NULL, error = ? "
-        "WHERE id = ? AND state = 'running'",
-        (time.time(), error, job_id),
+        "UPDATE jobs SET state = 'failed', finished_at = ?, lease_until = NULL, error = ?, "
+        "steps = ? WHERE id = ? AND state = 'running'",
+        (time.time(), error, json.dumps(steps), job_id),
     )
 
 
@@ -302,10 +347,11 @@ def is_cancel_requested(conn: sqlite3.Connection, job_id: int) -> bool:
 
 
 def cancelled(conn: sqlite3.Connection, job_id: int) -> None:
+    steps = job_steps.cancel_running(_steps_of(conn, job_id))
     conn.execute(
-        "UPDATE jobs SET state = 'cancelled', finished_at = ?, lease_until = NULL "
+        "UPDATE jobs SET state = 'cancelled', finished_at = ?, lease_until = NULL, steps = ? "
         "WHERE id = ? AND state = 'running'",
-        (time.time(), job_id),
+        (time.time(), json.dumps(steps), job_id),
     )
 
 
@@ -348,13 +394,19 @@ def get_worker_status(conn: sqlite3.Connection) -> WorkerStatus | None:
 
 
 def reclaim_expired(conn: sqlite3.Connection, *, now: float | None = None) -> list[int]:
-    """Requeue jobs whose worker died holding the lease. Progress resets to 0
-    because the job re-runs from the start."""
+    """Requeue jobs whose worker died holding the lease. Progress and steps
+    reset because the job re-runs from the start (idempotent by re-derivation)."""
     at = time.time() if now is None else now
     rows = conn.execute(
         "UPDATE jobs SET state = 'queued', progress = 0, lease_until = NULL, started_at = NULL, "
         "device = NULL WHERE state = 'running' AND lease_until IS NOT NULL AND lease_until < ? "
-        "RETURNING id",
+        "RETURNING id, steps",
         (at,),
     ).fetchall()
+    for row in rows:
+        if row["steps"]:
+            conn.execute(
+                "UPDATE jobs SET steps = ? WHERE id = ?",
+                (json.dumps(job_steps.reset(json.loads(row["steps"]))), row["id"]),
+            )
     return [r["id"] for r in rows]

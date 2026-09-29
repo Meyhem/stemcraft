@@ -27,6 +27,7 @@ def test_schema_has_every_documented_column(tmp_path):
     assert cols == {
         "id", "song_id", "kind", "payload", "state", "cancel_requested", "progress",
         "device", "lease_until", "created_at", "started_at", "finished_at", "error", "result",
+        "steps",
     }
 
 
@@ -57,7 +58,7 @@ def test_list_is_newest_first_and_filterable(tmp_path):
 
 def test_a_fresh_database_is_stamped_with_the_current_schema_version(tmp_path):
     conn = connect(tmp_path / "jobs.sqlite")
-    assert conn.execute("PRAGMA user_version").fetchone()[0] == JOBS_SCHEMA_VERSION == 1
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == JOBS_SCHEMA_VERSION == 2
 
 
 def test_a_newer_schema_version_is_refused_rather_than_guessed_at(tmp_path):
