@@ -1,7 +1,7 @@
 .screen {
   display: flex;
   flex-direction: column;
-  gap: var(--ds-4);
+  gap: var(--ds-5);
   max-width: 640px;
 }
 
@@ -18,6 +18,7 @@
 }
 
 .group {
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: var(--ds-2);
@@ -69,15 +70,6 @@
   flex: 1;
 }
 
-.field input {
-  min-height: var(--ds-hit-setup);
-  padding: 0 var(--ds-2);
-  background: var(--ds-ground);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-r-input);
-  color: var(--ds-text);
-}
-
 .format {
   min-height: var(--ds-hit-setup);
   display: flex;
@@ -124,13 +116,38 @@
   border-bottom: 1px solid var(--ds-border);
 }
 
-.link {
+
+/* A real file download, not a route, so it is an <a> rather than a TextLink -- but it
+   reads as the same kind of thing and takes the same treatment. */
+.download {
   color: var(--ds-accent);
+  text-decoration: none;
 }
 
-.error {
+.download:hover,
+.download:focus-visible {
+  text-decoration: underline;
+}
+
+.group legend {
+  padding: 0 var(--ds-2);
+  font-size: var(--ds-t-sm);
+  font-weight: 600;
+  color: var(--ds-text-2);
+}
+
+/* Native checkboxes and radios stay native (the tests and assistive tech address them
+   as such); they take the accent and the 22px box the design system draws. */
+.check input,
+.radio input {
+  width: 22px;
+  height: 22px;
   margin: 0;
-  white-space: pre-wrap;
-  font: 400 var(--ds-t-xs) / 1.4 var(--ds-mono);
-  color: var(--ds-error);
+  accent-color: var(--ds-accent);
+}
+
+/* U-04: sizes and gains are numerals. */
+.gain,
+.meta {
+  font-variant-numeric: tabular-nums;
 }

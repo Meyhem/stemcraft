@@ -7,13 +7,14 @@
 // and whether to apply the practice tempo/pitch at all; the API snapshots the
 // live values out of song.json when it enqueues (D7-02).
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { exportUrl } from '../api/client';
 import { queryKeys, useExports, useJobs, useQueueExport, useSong } from '../api/queries';
 import { STEM_ORDER, type StemName } from '../engine/types';
 import { proposeExportName } from './exportName';
+import { Banner, Button, ButtonLink, ProgressBar, TextField, TextLink } from '../ui';
 import styles from './Export.module.css';
 
 function formatBytes(bytes: number): string {
@@ -86,11 +87,7 @@ export function Export() {
   // fabricated diagnosis. Say what actually happened, the way SongView.tsx
   // does for the same query.
   if (songQuery.isError) {
-    return (
-      <p role="alert" className={styles.error}>
-        {String(songQuery.error)}
-      </p>
-    );
+    return <Banner tone="error" title="The song could not be loaded" trace={String(songQuery.error)} />;
   }
 
   // The picker is prefilled from song.mix, so it must not render (unchecked,
@@ -109,12 +106,14 @@ export function Export() {
             {song ? `${song.title}${song.artist ? ` — ${song.artist}` : ''}` : songId}
           </p>
         </div>
-        <Link className={styles.link} to={`/songs/${songId}`}>
+        <ButtonLink variant="ghost" to={`/songs/${songId}`}>
           Back to the song
-        </Link>
+        </ButtonLink>
       </header>
 
-      {songQuery.data?.unreadable && <p className={styles.error}>{songQuery.data.unreadable}</p>}
+      {songQuery.data?.unreadable && (
+        <Banner tone="error" title="This song could not be read" trace={songQuery.data.unreadable} />
+      )}
 
       <fieldset className={styles.group}>
         <legend>Stems to include</legend>
@@ -174,14 +173,13 @@ export function Export() {
       </fieldset>
 
       <div className={styles.row}>
-        <div className={styles.field}>
-          <label htmlFor="export-name">File name</label>
-          <input
-            id="export-name"
-            value={name}
-            onChange={(event) => setTypedName(event.target.value)}
-          />
-        </div>
+        <TextField
+          id="export-name"
+          label="File name"
+          fieldClassName={styles.field}
+          value={name}
+          onChange={(event) => setTypedName(event.target.value)}
+        />
         <div className={styles.field}>
           <span>Format</span>
           <span className={styles.format}>MP3 320</span>
@@ -193,9 +191,9 @@ export function Export() {
 
       {reason && <p className={styles.note}>{reason}</p>}
 
-      <button
+      <Button
         className={styles.submit}
-        type="button"
+        variant="primary"
         disabled={Boolean(reason) || queueExport.isPending}
         onClick={() =>
           queueExport.mutate(
@@ -219,38 +217,34 @@ export function Export() {
         }
       >
         {queueExport.isPending ? 'Queueing…' : 'Queue export'}
-      </button>
+      </Button>
 
       {/* N-08: the API's own message, verbatim. */}
-      {queueExport.isError && <p className={styles.error}>{String(queueExport.error)}</p>}
+      {queueExport.isError && (
+        <Banner tone="error" title="The export could not be queued" trace={String(queueExport.error)} />
+      )}
 
       {job && job.state !== 'done' && (
-        <p className={styles.progressRow}>
+        <div className={styles.progressRow}>
           <span>{job.state}</span>
-          <progress
-            className={styles.progress}
-            role="progressbar"
-            aria-valuenow={Math.round(job.progress * 100)}
-            max={100}
-            value={Math.round(job.progress * 100)}
-          />
-          <Link className={styles.link} to="/jobs">
-            Job {job.id}
-          </Link>
-        </p>
+          <ProgressBar className={styles.progress} value={job.progress} label="Export progress" />
+          <TextLink to="/jobs">Job {job.id}</TextLink>
+        </div>
       )}
-      {job?.state === 'failed' && <p className={styles.error}>{job.error}</p>}
+      {job?.state === 'failed' && <Banner tone="error" title="The export failed" trace={job.error} />}
 
       <h2>Exports</h2>
       {/* N-08: the failed listing itself, not a silently empty list. */}
-      {exportsQuery.isError && <p className={styles.error}>{String(exportsQuery.error)}</p>}
+      {exportsQuery.isError && (
+        <Banner tone="error" title="The exports could not be listed" trace={String(exportsQuery.error)} />
+      )}
       {exportsQuery.data?.length === 0 && <p className={styles.note}>Nothing exported yet.</p>}
       <ul className={styles.exports}>
         {(exportsQuery.data ?? []).map((item) => (
           <li className={styles.exportRow} key={item.name}>
             {/* D7-10: a link, never an automatic download. */}
             <a
-              className={styles.link}
+              className={styles.download}
               href={exportUrl(songId ?? '', item.name)}
               download={`${item.name}.mp3`}
             >
