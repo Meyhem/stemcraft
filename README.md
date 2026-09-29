@@ -25,7 +25,10 @@ instrument and play along.
   arpeggios, guitar voicings and bass arpeggio shapes, chords in a key, a circle of
   fifths, 15 progressions in any key and scales that fit a chord. Pick an analysed song
   and one of its key candidates to load its key and chords: they show as chips in the
-  chord tools, and Progressions charts the song with numerals, borrowed chords labelled
+  chord tools, and Progressions charts the song with numerals, borrowed chords labelled.
+  Two quizzes, a fretboard quiz (name, find, intervals, chord tones) and a theory quiz
+  (keys, chords, intervals), ask about your weak spots more often and show them on a
+  heatmap; the history is kept in `data/theory.json`
 - Album splitter: cut a full album rip into tagged MP3s. Silence detection proposes cuts;
   on a full-length waveform you play, zoom with the wheel or by dragging across a range,
   drag, add and delete cuts, or type exact start and end times to the millisecond, then
@@ -44,11 +47,12 @@ instrument and play along.
 ![Play along](docs/screenshots/play-along.png)
 ![Theory](docs/screenshots/theory.png)
 ![Theory: scale positions](docs/screenshots/theory-shapes.png)
+![Theory: fretboard quiz](docs/screenshots/theory-quiz.png)
 ![Album splitter](docs/screenshots/album-splitter.png)
 ![Job queue](docs/screenshots/job-queue.png)
 
-All eight are captures of the running app, made with
-`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> play-along=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" "theory-shapes=/theory/scale-positions?root=A&scale=minor-pentatonic" album-splitter=/splitter/<id> job-queue=/jobs`
+All nine are captures of the running app, made with
+`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> play-along=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" "theory-shapes=/theory/scale-positions?root=A&scale=minor-pentatonic" theory-quiz=/theory/fretboard-quiz album-splitter=/splitter/<id> job-queue=/jobs`
 (API and dev server running; it loads the pages, and for Play along it presses Space to play a few bars and pause again). The design system these follow —
 tokens, components and screen mockups — is in [design/ui](design/ui) (build it with
 `python3 design/ui/build.py`), with its rules in [design/ui-spec.md](design/ui-spec.md).
@@ -89,6 +93,8 @@ npm --prefix frontend run dev
 ```
 
 Open <http://localhost:5173>.
+
+`data/theory.json` holds the Theory tab's instrument and quiz history; the API is its only writer.
 
 ### Single-origin build
 

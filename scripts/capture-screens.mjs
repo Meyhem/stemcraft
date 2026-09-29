@@ -8,7 +8,7 @@
 //
 // Needs the API (8000) and the Vite dev server (5173) running, and google-chrome on PATH.
 //
-//   node scripts/capture-screens.mjs library=/ song-view=/songs/<id> play-along=/songs/<id>/play album-splitter=/splitter/<id> job-queue=/jobs "theory=/theory/scale-finder?root=A&scale=minor-pentatonic"
+//   node scripts/capture-screens.mjs library=/ song-view=/songs/<id> play-along=/songs/<id>/play album-splitter=/splitter/<id> job-queue=/jobs "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" theory-quiz=/theory/fretboard-quiz
 //
 // Each argument is name=path; the PNG is written to docs/screenshots/<name>.png. Pages are
 // loaded and looked at; the play-along capture also presses Space to play and pause, to get
@@ -31,13 +31,15 @@ const READY = {
   'play-along': '[data-testid="neck-canvas"]',
   theory: '[data-cell]', // the neck's dots (SVG); the tab is a lazy chunk, so 'body' is too early
   'theory-shapes': '[data-cell]',
+  'theory-quiz': '[data-marker="question"]', // a question is on the neck: the document is read and the round has started
   'album-splitter': '[data-testid="album-canvas"]',
   'job-queue': '[data-testid="job-stats"]',
 };
 
 // Screens taller than the default viewport: the play-along neck sits below the pickers;
-// the Theory rail's instrument footer (tuning, left-handed) sits below the fold at 900.
-const HEIGHTS = { 'play-along': 1330, theory: 960, 'theory-shapes': 960 };
+// the Theory rail's instrument footer (tuning, left-handed) sits below the fold at 900; the
+// quiz's question, neck, note buttons and weak-spot heatmap need a tall page to be seen together.
+const HEIGHTS = { 'play-along': 1330, theory: 960, 'theory-shapes': 960, 'theory-quiz': 1100 };
 
 // Screens that only show their point once playing: press Space, let a few bars go by,
 // press Space again so the frame is still. (The neck is empty before the first bar.)
