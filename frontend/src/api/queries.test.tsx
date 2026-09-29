@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { songMedia } from './client';
+import { DEFAULT_PLAY_ALONG, songMedia } from './client';
 import type { Song, SongEntry } from './client';
 import { useUpdateSong } from './queries';
 
@@ -14,7 +14,7 @@ function wrapper({ children }: { children: ReactNode }) {
 
 const song = (tempo: number, id = 'abc123'): Song =>
   ({
-    schema_version: 2,
+    schema_version: 3,
     id,
     title: 'T',
     artist: '',
@@ -27,6 +27,7 @@ const song = (tempo: number, id = 'abc123'): Song =>
     active_loop: null,
     metronome: false,
     count_in_bars: 0,
+    play_along: DEFAULT_PLAY_ALONG,
   }) as Song;
 
 const songEntry = (s: Song): SongEntry =>
