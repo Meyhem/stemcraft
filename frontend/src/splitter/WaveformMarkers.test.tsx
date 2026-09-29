@@ -361,11 +361,13 @@ describe('WaveformMarkers painting', () => {
     style: unknown;
   }
   const rects: Rect[] = [];
+  const labels: string[] = [];
   let realGetContext: typeof HTMLCanvasElement.prototype.getContext;
   let clientWidth: PropertyDescriptor | undefined;
 
   beforeEach(() => {
     rects.length = 0;
+    labels.length = 0;
     realGetContext = HTMLCanvasElement.prototype.getContext;
     const ctx = {
       fillStyle: '' as unknown,
@@ -373,8 +375,11 @@ describe('WaveformMarkers painting', () => {
       textBaseline: '',
       setTransform: () => {},
       // Each paint starts with a clear, so `rects` is always the latest frame.
-      clearRect: () => void (rects.length = 0),
-      fillText: () => {},
+      clearRect: () => {
+        rects.length = 0;
+        labels.length = 0;
+      },
+      fillText: (text: string) => void labels.push(text),
       fillRect(x: number, y: number, w: number, h: number) {
         rects.push({ x, y, w, h, style: this.fillStyle });
       },
@@ -405,6 +410,25 @@ describe('WaveformMarkers painting', () => {
     expect(played.size).toBe(1);
     expect(rest.size).toBe(1);
     expect([...played][0]).not.toBe([...rest][0]);
+  });
+
+  it('repaints the visible slice when the view is scrolled by the scrollbar', async () => {
+    const nextFrame = () => act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    // The scrollbar changes scrollLeft and fires only a scroll event -- no wheel, no zoom,
+    // no React render. The cuts are DOM children of the scrolled content and move with it
+    // for free; the canvas is sticky and must repaint, or it keeps showing the old slice
+    // under cuts that have moved, and every cut appears at the wrong moment.
+    render(<WaveformMarkers {...props} />);
+    for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    const scroller = screen.getByTestId('album-scroller');
+    scroller.scrollLeft = 0;
+    fireEvent.scroll(scroller);
+    await nextFrame();
+    expect(labels[0]).toBe('0:00');
+    scroller.scrollLeft = 400; // 4 s in at 100 px/s
+    fireEvent.scroll(scroller);
+    await nextFrame();
+    expect(labels[0]).toBe('0:04');
   });
 
   it('never fills black: an unresolvable token falls back to a legible colour', () => {

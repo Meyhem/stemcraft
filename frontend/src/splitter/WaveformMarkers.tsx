@@ -238,6 +238,30 @@ export function WaveformMarkers({
 
   // ---- viewport, zoom, pan ---------------------------------------------
 
+  // Every pan -- the scrollbar, Shift+wheel, a trackpad swipe, follow-playhead paging --
+  // ends in a scroll event, and nothing else re-renders on a pan: the cuts are DOM
+  // children of the scrolled content and move by themselves, but the sticky canvas only
+  // shows the slice it last painted. So the canvas repaints on scroll, at most once a
+  // frame; without this the waveform and ruler freeze under cuts that keep moving.
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    let handle = 0;
+    const onScroll = () => {
+      if (handle) return;
+      handle = requestAnimationFrame(() => {
+        handle = 0;
+        draw();
+      });
+    };
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      scroller.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(handle);
+    };
+  }, [draw]);
+
+
   useLayoutEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
