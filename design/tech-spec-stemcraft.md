@@ -354,7 +354,7 @@ audit requirement exists.
   tempo/pitch variants (removes the live tempo slider, which is the core practice
   interaction).
   *Reversibility:* **one-way** in the engine's structure. Note it stays compatible
-  with the backlog's per-stem pitch shift *only* because that is scoped as a
+  with a per-stem pitch shift *only* if that is scoped as a
   server-rendered stem edit; making it a live control would require undoing D-05.
   *Cost:* N-06's ~50–100 ms actuation lag, since the stretcher's buffer already holds
   the previous mix.
@@ -566,8 +566,6 @@ audit requirement exists.
 - **Mel-Band Roformer for vocals.** *Seam:* model selection is job payload, so a
   second separation model is a payload field plus a UI control.
 - **Concurrent-session safety.** *Seam:* ETag / `If-Match` on the Song resource.
-- **Per-stem EQ and per-stem pitch shift** (backlog). *Seam:* both must stay
-  server-rendered stem edits to remain compatible with D-05.
 
 ## 13. Risks
 

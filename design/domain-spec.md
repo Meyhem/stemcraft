@@ -268,13 +268,7 @@ When it lands, transcription is a second note source for the Play along screen n
 
 ## Backlog
 
-- Per-stem pitch or octave shift as a stem edit (non-destructive, rendered with Rubber Band)
 - Guitar tabs
-- Practice timer and log per Song
-- Setlists and tags
-- Per-stem EQ, e.g. boost the low end while learning a bassline
-- Batch import of a whole folder
-- Song export/import as a zip, for backup or moving machines
 
 ## Open questions
 
