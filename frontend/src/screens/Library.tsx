@@ -1,9 +1,10 @@
-// Domain spec, "Song library": one card per Song, sorted by last played;
+// Domain spec, "Song library": one table row per Song, sorted by last played;
 // delete removes the Song folder after a confirmation.
 import { Link, useLocation } from 'react-router-dom';
 
 import type { SongEntry } from '../api/client';
 import { useDeleteSong, useSongs } from '../api/queries';
+import { formatJobTime, formatJobTimeFull } from './jobTime';
 import { importLinkState } from './import/importLink';
 import { Banner, Button, ButtonLink, Chip, EmptyState, type ChipTone } from '../ui';
 import styles from './Library.module.css';
@@ -20,6 +21,17 @@ const STATE_TONE: Record<string, ChipTone> = {
 
 function sortKey(entry: SongEntry): string {
   return entry.song?.last_played_at ?? entry.song?.created_at ?? '';
+}
+
+// ISO timestamp from song.json; a song that was never played has none.
+function when(iso: string | null) {
+  const ms = iso ? Date.parse(iso) : NaN;
+  if (Number.isNaN(ms)) return <span className="dim3">—</span>;
+  return (
+    <time dateTime={new Date(ms).toISOString()} title={formatJobTimeFull(ms / 1000)}>
+      {formatJobTime(ms / 1000)}
+    </time>
+  );
 }
 
 export function Library() {
@@ -58,35 +70,59 @@ export function Library() {
         </EmptyState>
       )}
 
-      <ul className={styles.grid}>
-        {entries.map((entry) => (
-          <li key={entry.dir} className={styles.card}>
-            {entry.song ? (
-              <>
-                {/* The Song view is one click from the card. It renders its
-                    own explanation for a song that has no stems yet, so the
-                    link is not gated on state. */}
-                <Link className={styles.title} to={`/songs/${entry.song.id}`}>
-                  {entry.song.title}
-                </Link>
-                <span className={styles.artist}>{entry.song.artist}</span>
-                <Chip tone={STATE_TONE[entry.state ?? ''] ?? 'neutral'} dot>
-                  {entry.state}
-                </Chip>
-              </>
-            ) : (
-              <>
-                <span className={styles.title}>{entry.dir}</span>
-                {/* §9: one bad file never breaks the library -- shown, not hidden. */}
-                <Banner tone="error" title="This song could not be read" trace={entry.unreadable} />
-              </>
-            )}
-            <Button className={styles.delete} variant="danger" onClick={() => handleDelete(entry)}>
-              Delete
-            </Button>
-          </li>
-        ))}
-      </ul>
+      {entries.length > 0 && (
+        <table className={styles.table} aria-label="Songs">
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">Artist</th>
+              <th scope="col">State</th>
+              <th scope="col" className={styles.narrowHide}>Added</th>
+              <th scope="col" className={styles.narrowHide}>Last played</th>
+              <th scope="col"><span className={styles.srOnly}>Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry) => (
+              <tr key={entry.dir}>
+                {entry.song ? (
+                  <>
+                    {/* The Song view is one click from the row. It renders its own
+                        explanation for a song that has no stems yet, so the link is not
+                        gated on state. */}
+                    <td>
+                      <Link className={styles.title} to={`/songs/${entry.song.id}`}>
+                        {entry.song.title}
+                      </Link>
+                    </td>
+                    <td className={styles.artist}>{entry.song.artist}</td>
+                    <td>
+                      <Chip tone={STATE_TONE[entry.state ?? ''] ?? 'neutral'} dot>
+                        {entry.state}
+                      </Chip>
+                    </td>
+                    <td className={`${styles.num} ${styles.narrowHide}`}>{when(entry.song.created_at)}</td>
+                    <td className={`${styles.num} ${styles.narrowHide}`}>{when(entry.song.last_played_at)}</td>
+                  </>
+                ) : (
+                  <>
+                    <td className={styles.title}>{entry.dir}</td>
+                    {/* §9: one bad file never breaks the library -- shown, not hidden. */}
+                    <td colSpan={4}>
+                      <Banner tone="error" title="This song could not be read" trace={entry.unreadable} />
+                    </td>
+                  </>
+                )}
+                <td className={styles.action}>
+                  <Button variant="danger" onClick={() => handleDelete(entry)}>
+                    Delete
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }

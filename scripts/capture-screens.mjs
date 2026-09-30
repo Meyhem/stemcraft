@@ -26,7 +26,7 @@ const [WIDTH, HEIGHT] = [1440, 900];
 
 // What "rendered" means per screen: an element that exists only once the data is in.
 const READY = {
-  library: 'main li, [class*="card"]',
+  library: '[aria-label="Songs"] tbody tr',
   'song-view': '[data-testid="bass-canvas"]',
   'play-along': '[data-testid="neck-canvas"]',
   theory: '[data-cell]', // the neck's dots (SVG); the tab is a lazy chunk, so 'body' is too early

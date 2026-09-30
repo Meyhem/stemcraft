@@ -11,32 +11,39 @@
   gap: var(--ds-4);
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--ds-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--ds-2);
-  padding: var(--ds-4);
+/* Compact: one line per song, so a large library fits on the page. */
+.table {
+  width: 100%;
+  border-collapse: collapse;
   background: var(--ds-surface);
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-r-panel);
+  overflow: hidden;
 }
 
-/* The card's primary navigation, so a setup-tier target (U-03), not a bare text line. */
+.table th {
+  padding: var(--ds-2) var(--ds-3);
+  text-align: left;
+  font: 600 var(--ds-t-xs, var(--ds-t-sm)) / 1 var(--ds-font);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.table td {
+  padding: var(--ds-1) var(--ds-3);
+  border-bottom: 1px solid var(--ds-border);
+  vertical-align: middle;
+}
+
+.table tbody > tr:last-child > td { border-bottom: 0; }
+
+/* The row's primary navigation, so a setup-tier target (U-03), not a bare text line. */
 .title {
   display: inline-flex;
   align-items: center;
   min-height: var(--ds-hit-setup);
-  align-self: flex-start;
   font-size: var(--ds-t-md);
   color: var(--ds-text);
   text-decoration: none;
@@ -47,14 +54,25 @@
   text-decoration: underline;
 }
 
-.artist {
+.artist { color: var(--ds-text-2); }
+
+.num {
+  white-space: nowrap;
+  font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--ds-text-2);
 }
 
-.delete {
-  align-self: flex-start;
+.action { text-align: right; white-space: nowrap; }
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
-.delete {
-  margin-top: auto;
+@media (max-width: 760px) {
+  .narrowHide { display: none; }
 }
