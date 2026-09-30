@@ -39,22 +39,10 @@
 
 <div class="sec">
   <h2>Sliders</h2>
-  <p class="note">Tempo and pitch are <b>performance tier</b> — fat track, big knob — because they are adjusted between
-  repetitions with a bass in hand. Per-stem gain is setup tier. Every value is mirrored as a mono readout, because a
-  knob position is unreadable at 1.5 m and a number is not.</p>
+  <p class="note">Sliders are for continuous values set with both hands free: per-stem gain, setup tier. Tempo and
+  pitch used to be sliders and are now <b>steppers</b> &mdash; a stepped value is quicker to hit than a knob is to land.
+  Every slider value is mirrored as a mono readout, because a knob position is unreadable at 1.5 m and a number is not.</p>
   <div class="grid2">
-    <div class="slider slider-perform">
-      <div class="shead"><span class="slabel">Tempo</span><span class="sval num">82%</span></div>
-      <div class="track"><i class="fill" style="width:64%"></i><i class="knob" style="left:64%"></i></div>
-      <div class="t-xs dim3 num">50% ————————— 100%</div>
-    </div>
-    <div class="slider slider-perform">
-      <div class="shead"><span class="slabel">Pitch</span><span class="sval num">&minus;2 st</span></div>
-      <div class="track"><i class="center-tick"></i><i class="fill" style="left:33%;width:17%;right:auto"></i><i class="knob" style="left:33%"></i></div>
-      <div class="t-xs dim3 num">&minus;6 ——————|—————— +6</div>
-    </div>
-  </div>
-  <div class="grid2" style="margin-top:var(--ds-4)">
     <div class="slider">
       <div class="shead"><span class="slabel">bass gain</span><span class="sval num">+3.0 dB</span></div>
       <div class="track"><i class="center-tick"></i><i class="fill" style="width:62%;background:var(--ds-bass)"></i><i class="knob" style="left:62%"></i></div>
@@ -64,13 +52,14 @@
       <div class="track"><i class="center-tick"></i><i class="fill" style="width:50%;background:var(--ds-drums)"></i><i class="knob" style="left:50%"></i></div>
     </div>
   </div>
-  <p class="note">A gain fill takes the <b>stem</b> hue — it sits inside a named stem context. The tempo fill takes the
-  <b>accent</b> — it belongs to the whole mix.</p>
+  <p class="note">A gain fill takes the <b>stem</b> hue — it sits inside a named stem context.</p>
 </div>
 
 <div class="sec">
   <h2>Stepper</h2>
   <div class="row wrap" style="gap:var(--ds-6);align-items:flex-end">
+    <div class="col" style="gap:var(--ds-1)"><span class="cap">tempo &middot; 10% steps</span>
+      <div class="stepper stepper-perform"><button aria-label="Tempo down">&minus;</button><output>90%</output><button aria-label="Tempo up">+</button></div></div>
     <div class="col" style="gap:var(--ds-1)"><span class="cap">pitch &middot; performance</span>
       <div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output>&minus;2 st</output><button aria-label="Pitch up">+</button></div></div>
     <div class="col" style="gap:var(--ds-1)"><span class="cap">at default</span>
@@ -78,7 +67,7 @@
     <div class="col" style="gap:var(--ds-1)"><span class="cap">loop bar &middot; setup, at its limit</span>
       <div class="stepper"><button aria-label="Start bar earlier" disabled>&minus;</button><output>1</output><button aria-label="Start bar later">+</button></div></div>
   </div>
-  <p class="note">For small whole-number ranges where a slider is overkill: pitch (&plusmn;12&nbsp;st) and loop bars.
+  <p class="note">For small stepped ranges where a slider is overkill: tempo (50&ndash;150% in 10% steps), pitch (&plusmn;12&nbsp;st) and loop bars.
   The value is always shown in mono and goes muted at its default; a button at the end of the range is disabled, never clamped silently.</p>
 </div>
 

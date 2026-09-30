@@ -217,13 +217,10 @@ body{
 .cuttag.is-selected{outline:2px solid var(--ds-accent);outline-offset:2px}
 
 /* ---------- transport ---------- */
-/* Two rows. Row 1 is what you press (play, the readout, loop, practice); row 2 is
-   what you turn (tempo and pitch, side by side, each a full-height 56px target).
+/* One row: play, the bar/chord readout, tempo and pitch steppers, loop, practice.
    Everything else -- loop bars, saved loops, metronome, count-in -- lives in a popover. */
 .tpanel{background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel)}
-.trow{display:flex;align-items:center;gap:var(--ds-5);padding:var(--ds-3) var(--ds-4)}
-.trow + .trow{border-top:1px solid var(--ds-border)}
-.trow.dials{gap:var(--ds-7);padding-block:0}
+.trow{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ds-3) var(--ds-5);padding:var(--ds-3) var(--ds-4)}
 .readout{display:flex;flex-direction:column;gap:2px}
 .readout .big{font:600 var(--ds-t-xl)/1 var(--ds-mono);font-variant-numeric:tabular-nums}
 .readout .chord{font:600 var(--ds-t-lg)/1 var(--ds-font);white-space:nowrap}
@@ -235,18 +232,12 @@ body{
 .splitbtn{display:inline-flex}
 .splitbtn > .btn:first-child{border-radius:var(--ds-r-btn) 0 0 var(--ds-r-btn)}
 .splitbtn > .btn + .btn{border-radius:0 var(--ds-r-btn) var(--ds-r-btn) 0;border-left-width:0;padding:0 var(--ds-3);min-width:44px}
-/* A dial: caps label, a slider that takes the rest of the width, a mono value.
-   The track is decoration; the row carries the 56px hit area (U-03). */
-.dial{flex:1;display:flex;align-items:center;gap:var(--ds-4);min-height:var(--ds-hit-perform)}
-.dial .track{flex:1}
-.dial .sval{min-width:6ch;text-align:right;font:600 var(--ds-t-md)/1 var(--ds-mono);font-variant-numeric:tabular-nums}
-.dial .sval.dim3{font-weight:400}
 .anchor{position:relative}
 .popover{position:absolute;right:0;top:calc(100% + var(--ds-2));z-index:5;min-width:320px;display:flex;flex-direction:column;gap:var(--ds-4);padding:var(--ds-4);background:var(--ds-overlay);border:1px solid var(--ds-border-strong);border-radius:var(--ds-r-panel);box-shadow:var(--ds-shadow-overlay)}
 .popover .prow{display:flex;align-items:center;justify-content:space-between;gap:var(--ds-4)}
 .popover hr{height:1px;border:0;margin:0;background:var(--ds-border-strong)}
 /* Stepper: − value +. For small whole-number ranges where a slider is overkill
-   (pitch ±12 st, loop bars). Setup tier by default, .stepper-perform on the transport.
+   (tempo in 10% steps, pitch ±12 st, loop bars). Setup tier by default, .stepper-perform on the transport.
    The value renders muted at its default, like the sliders. */
 .stepper{display:inline-flex;align-items:stretch;border:1px solid var(--ds-border-strong);border-radius:var(--ds-r-btn);background:var(--ds-raised);overflow:hidden}
 .stepper > button{width:var(--ds-hit-setup);min-height:var(--ds-hit-setup);border:0;background:transparent;color:var(--ds-text);font:600 var(--ds-t-lg)/1 var(--ds-font);cursor:pointer}
@@ -256,7 +247,6 @@ body{
 .stepper > output.dim3{font-weight:400}
 .stepper-perform > button{width:var(--ds-hit-perform);min-height:var(--ds-hit-perform)}
 .stepper-perform > output{min-width:7ch}
-.dial-fixed{flex:none}
 
 /* ---------- table ---------- */
 .tbl{width:100%;border-collapse:collapse;font-size:var(--ds-t-sm)}

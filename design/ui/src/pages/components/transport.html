@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Transport bar" subtitle="Two rows: press on top, turn below; loop and practice in popovers" viewport="1100x1500" -->
+<!-- @dsCard group="Components" name="Transport bar" subtitle="One row: readout, tempo and pitch steppers, loop and practice popovers" viewport="1300x1400" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Transport — Stemcraft</title><style>/* @inject */
 .room{padding-bottom:340px}
 </style></head><body><div class="doc">
@@ -6,10 +6,10 @@
 <div class="sec">
   <h1>Transport bar</h1>
   <p class="note">The only strip you look at while playing, so it holds <b>only what a hand with an instrument
-  in it reaches for</b>. Row 1 is what you press: play, the bar and chord readout, loop, practice. Row 2 is
-  what you adjust: tempo as a wide slider, so 88% versus 90% needs no precision, and pitch as a
-  <b>stepper</b> &mdash; it is only ever a whole number of semitones, so &minus; and + beat dragging a knob. Both are
-  <b>56&nbsp;px</b> targets. Everything set once per session &mdash; loop bars, saved loops, metronome,
+  in it reaches for</b>. One row: play, the bar and chord readout,
+  tempo and pitch, loop, practice. Tempo and pitch are <b>steppers</b>, not sliders &mdash; tempo moves in 10% steps
+  (&#8593;/&#8595; still move 5%), pitch in semitones &mdash; so each is a pair of 56&nbsp;px buttons and a readable number
+  rather than a knob you have to land. Everything set once per session &mdash; loop bars, saved loops, metronome,
   count-in &mdash; sits one click away in a popover, never on the bar itself.</p>
 </div>
 
@@ -21,6 +21,8 @@
       <div class="readout"><span class="cap">bar</span><span class="big">17</span></div>
       <div class="readout"><span class="cap">chord</span><span class="chord">Gm <span class="dim3">&rarr; Dm</span></span></div>
       <div class="grow"></div>
+      <div class="readout"><span class="cap">tempo</span><div class="stepper stepper-perform"><button aria-label="Tempo down">&minus;</button><output>120%</output><button aria-label="Tempo up">+</button></div></div>
+      <div class="readout"><span class="cap">pitch</span><div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output>&minus;2 st</output><button aria-label="Pitch up">+</button></div></div>
       <div class="splitbtn anchor">
         <button class="btn btn-perform" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>Loop <span class="num">17&ndash;18</span></button>
         <button class="btn btn-perform" aria-pressed="true" aria-label="Edit loop" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button>
@@ -43,19 +45,13 @@
       </div>
       <div class="anchor"><button class="btn btn-perform" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>Practice</button></div>
     </div>
-    <div class="trow dials">
-      <!-- 50..150 %: 100 % sits at the centre tick, the fill grows away from it -->
-      <div class="dial"><span class="cap">tempo</span><div class="track"><i class="fill" style="left:50%;width:20%;border-radius:0"></i><i class="center-tick"></i><i class="knob" style="left:70%"></i></div><span class="sval num">120%</span></div>
-      <!-- -12..+12 st in whole steps: a stepper, not a slider -->
-      <div class="dial dial-fixed"><span class="cap">pitch</span><div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output class="">&minus;2 st</output><button aria-label="Pitch up">+</button></div></div>
-    </div>
   </div>
 </div>
 
 <div class="sec room">
   <h2>Stopped, original tempo and pitch, practice open</h2>
   <p class="note">A loop that is set but not armed keeps its range on the button, unlit, so <b class="num">L</b> is a
-  one-key decision. At 100% and 0&nbsp;st the values go muted (the pitch stepper too) &mdash; an untouched control should not
+  one-key decision. At 100% and 0&nbsp;st the values go muted (both steppers) &mdash; an untouched control should not
   compete for attention with one you actually moved.</p>
   <div class="tpanel">
     <div class="trow">
@@ -63,6 +59,8 @@
       <div class="readout"><span class="cap">bar</span><span class="big">1</span></div>
       <div class="readout"><span class="cap">chord</span><span class="chord">Gm <span class="dim3">&rarr; F</span></span></div>
       <div class="grow"></div>
+      <div class="readout"><span class="cap">tempo</span><div class="stepper stepper-perform"><button aria-label="Tempo down">&minus;</button><output class="dim3">100%</output><button aria-label="Tempo up">+</button></div></div>
+      <div class="readout"><span class="cap">pitch</span><div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output class="dim3">0 st</output><button aria-label="Pitch up">+</button></div></div>
       <div class="splitbtn anchor">
         <button class="btn btn-perform" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>Loop <span class="num dim">17&ndash;18</span></button>
         <button class="btn btn-perform" aria-pressed="false" aria-label="Edit loop" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button>
@@ -76,10 +74,6 @@
         </div>
       </div>
     </div>
-    <div class="trow dials">
-      <div class="dial"><span class="cap">tempo</span><div class="track"><i class="center-tick"></i><i class="knob" style="left:50%"></i></div><span class="sval num dim3">100%</span></div>
-      <div class="dial dial-fixed"><span class="cap">pitch</span><div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output class="dim3">0 st</output><button aria-label="Pitch up">+</button></div></div>
-    </div>
   </div>
 </div>
 
@@ -91,15 +85,13 @@
       <div class="readout"><span class="cap">bar</span><span class="big dim3">--</span></div>
       <div class="readout"><span class="cap">chord</span><span class="chord dim3">--</span></div>
       <div class="grow"></div>
+      <div class="readout"><span class="cap">tempo</span><div class="stepper stepper-perform"><button aria-label="Tempo down">&minus;</button><output class="dim3">100%</output><button aria-label="Tempo up">+</button></div></div>
+      <div class="readout"><span class="cap">pitch</span><div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output class="dim3">0 st</output><button aria-label="Pitch up">+</button></div></div>
       <div class="splitbtn" title="Looping needs bars, and bars need analysis to have run">
         <button class="btn btn-perform" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>Loop</button>
         <button class="btn btn-perform" disabled aria-label="Edit loop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button>
       </div>
       <button class="btn btn-perform"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>Practice</button>
-    </div>
-    <div class="trow dials">
-      <div class="dial"><span class="cap">tempo</span><div class="track"><i class="center-tick"></i><i class="knob" style="left:50%"></i></div><span class="sval num dim3">100%</span></div>
-      <div class="dial dial-fixed"><span class="cap">pitch</span><div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output class="dim3">0 st</output><button aria-label="Pitch up">+</button></div></div>
     </div>
   </div>
   <p class="note">Bars come from analysis. Without a grid the loop is withheld and says why on hover, rather than
@@ -111,7 +103,7 @@
   <p class="note">Every performance control has a key, because reaching for a mouse mid-song is the thing this
   layout is trying to avoid. <b class="num">Space</b> play/pause · <b class="num">L</b> arm loop · <b class="num">A</b>/<b class="num">B</b> set the loop
   start / end to the current bar · <b class="num">M</b> metronome · <b class="num">1&ndash;4</b> mute stem by lane position ·
-  <b class="num">&#8593;/&#8595;</b> tempo &plusmn;5% · <b class="num">&#8592;/&#8594;</b> jump one bar. <b class="num">Esc</b> closes an open popover.</p>
+  <b class="num">&#8593;/&#8595;</b> tempo &plusmn;5% (the buttons step 10%) · <b class="num">&#8592;/&#8594;</b> jump one bar. <b class="num">Esc</b> closes an open popover.</p>
 </div>
 
 </div></body></html>
