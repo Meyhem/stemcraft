@@ -67,6 +67,34 @@ Requirements: Linux, Python 3.12 with [uv](https://docs.astral.sh/uv/), Node.js 
 (sm_120) needs the cu128 PyTorch wheels. Both processes refuse to start if a dependency
 is missing.
 
+### Quick start: `scripts/dev.sh`
+
+```bash
+scripts/dev.sh up
+```
+
+This checks that `uv`, `node`, `npm`, `ffmpeg`, `yt-dlp` and `lsof` are on `PATH` (it names any
+that are missing), runs `uv sync` and `npm --prefix frontend install` when needed, starts the
+worker, the API (port 8000) and Vite (port 5173) in the background, and prints
+<http://localhost:5173> when they are up. It stops with an error and the log tail if a process
+dies on startup. Logs are in `.logs/dev/` (`worker.log`, `api.log`, `frontend.log`):
+
+```bash
+tail -f .logs/dev/worker.log
+```
+
+Stop everything with:
+
+```bash
+scripts/dev.sh down
+```
+
+`up` first stops any stack it started earlier, then frees ports 8000 and 5173 by killing
+whatever is listening on them, so don't run it while something else you care about uses those
+ports.
+
+### Starting the processes by hand
+
 ```bash
 uv sync
 ```
@@ -75,11 +103,7 @@ uv sync
 npm --prefix frontend install
 ```
 
-To do all of that in one go, `scripts/dev.sh up` checks the tools on `PATH`, runs both installs,
-frees ports 8000 and 5173 (it kills whatever is listening there), and starts the worker, API and
-Vite in the background with logs in `.logs/dev/`. `scripts/dev.sh down` stops them.
-
-Or start the three processes by hand, each in its own terminal.
+Then start the three processes, each in its own terminal.
 
 Worker (all GPU work; it has no port):
 

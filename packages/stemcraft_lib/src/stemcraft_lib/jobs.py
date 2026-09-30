@@ -205,44 +205,6 @@ def list_jobs(
     return [_row_to_job(r) for r in conn.execute(sql, params)]
 
 
-@dataclass(frozen=True)
-class KindDuration:
-    kind: str
-    device: str | None
-    count: int
-    avg_seconds: float
-
-
-@dataclass(frozen=True)
-class JobStats:
-    passed: int
-    failed: int
-    durations: list[KindDuration]
-
-
-def job_stats(conn: sqlite3.Connection) -> JobStats:
-    """All-time pass/fail counts and average duration by kind and device (§10) -- the
-    reason jobs.sqlite keeps full history. Only done jobs are averaged: a failed job's
-    duration is time-to-crash, not how long the work takes. A NULL device stays its own
-    group rather than being folded into cpu (N-08)."""
-    passed, failed = conn.execute(
-        "SELECT COALESCE(SUM(state = 'done'), 0), COALESCE(SUM(state = 'failed'), 0) FROM jobs"
-    ).fetchone()
-    rows = conn.execute(
-        "SELECT kind, device, COUNT(*) AS n, AVG(finished_at - started_at) AS avg_s FROM jobs "
-        "WHERE state = 'done' AND started_at IS NOT NULL AND finished_at IS NOT NULL "
-        "GROUP BY kind, device ORDER BY kind, device"
-    )
-    return JobStats(
-        passed=int(passed),
-        failed=int(failed),
-        durations=[
-            KindDuration(kind=r["kind"], device=r["device"], count=r["n"], avg_seconds=r["avg_s"])
-            for r in rows
-        ],
-    )
-
-
 LEASE_SECONDS = 30.0
 
 

@@ -38,11 +38,6 @@ def job_kinds() -> dict:
     return {"kinds": job_steps.all_declarations()}
 
 
-@router.get("/api/jobs/stats")
-def job_stats(conn: Conn) -> dict:
-    return asdict(jobs_db.job_stats(conn))
-
-
 @router.post("/api/jobs", status_code=201)
 def enqueue_job(body: EnqueueRequest, conn: Conn) -> dict:
     try:
