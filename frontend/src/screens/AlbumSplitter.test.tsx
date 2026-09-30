@@ -432,4 +432,40 @@ describe('AlbumSplitter', () => {
     );
     expect(await screen.findByText(/no album with id 01J0/)).toBeInTheDocument();
   });
+
+  const splitAlbum = {
+    ...readyAlbum,
+    state: 'split',
+    files: { ...readyAlbum.files, has_tracks: true, has_zip: true },
+  };
+  const trackFiles = [
+    { name: '01-one.mp3', file: 'tracks/01-one.mp3', bytes: 10 },
+    { name: '02-two.mp3', file: 'tracks/02-two.mp3', bytes: 10 },
+  ];
+  const uploads = (fetchMock: ReturnType<typeof renderWith>) =>
+    fetchMock.mock.calls.filter(([url]) => url === '/api/songs/upload');
+
+  it('adds one track to the library and marks it', async () => {
+    const fetchMock = renderWith(splitAlbum, { tracks: trackFiles });
+    fireEvent.click(await screen.findByRole('button', { name: 'Add 01-one.mp3 to library' }));
+    expect(await screen.findByRole('button', { name: '01-one.mp3 is in the library' })).toBeDisabled();
+    expect(uploads(fetchMock)).toHaveLength(1);
+    expect(((uploads(fetchMock)[0]![1]!.body as FormData).get('file') as File).name).toBe('01-one.mp3');
+    expect(screen.getByRole('link', { name: 'Open library' })).toHaveAttribute('href', '/');
+  });
+
+  it('adds every track not yet added, in order', async () => {
+    const fetchMock = renderWith(splitAlbum, { tracks: trackFiles });
+    fireEvent.click(await screen.findByRole('button', { name: 'Add all 2 tracks to library' }));
+    await waitFor(() => expect(uploads(fetchMock)).toHaveLength(2));
+    const names = uploads(fetchMock).map(([, init]) => ((init!.body as FormData).get('file') as File).name);
+    expect(names).toEqual(['01-one.mp3', '02-two.mp3']);
+    await waitFor(() => expect(screen.getByRole('button', { name: /All 2 tracks are in the library/ })).toBeDisabled());
+  });
+
+  it('does not offer the library before a split has produced tracks', async () => {
+    renderWith(readyAlbum);
+    await screen.findByRole('button', { name: /Split into/ });
+    expect(screen.queryByRole('button', { name: /to library/ })).toBeNull();
+  });
 });

@@ -36,6 +36,7 @@ import {
   useJobs,
   useProposals,
   useQueueSplit,
+  useSendTrackToLibrary,
   useUpdateAlbum,
   useUploadAlbum,
 } from '../api/queries';
@@ -245,6 +246,11 @@ function AlbumEditor({ albumId }: { albumId: string }) {
   const tracksQuery = useAlbumTracks(albumId);
   const jobsQuery = useJobs();
   const queueSplit = useQueueSplit();
+  const sendToLibrary = useSendTrackToLibrary(albumId);
+  // Which files this page has sent. Session-only on purpose: a Song does not
+  // record which album it came from (Q-04), so after a reload adding a track
+  // again makes a second Song, exactly as uploading the same file twice would.
+  const [inLibrary, setInLibrary] = useState<ReadonlySet<string>>(new Set());
   // `error` is not optional chrome (N-08): every control on this screen edits
   // the document silently, so an autosave that keeps failing -- a 422 from an
   // out-of-range boundary, a full disk -- would otherwise let the user type a
@@ -420,6 +426,20 @@ function AlbumEditor({ albumId }: { albumId: string }) {
     startPlayback();
   }
 
+  // One at a time and in track order: the queue is serial anyway, and a failure
+  // stops the run with the tracks before it already marked. The error itself is
+  // rendered from the mutation (N-08), so the catch only ends the loop.
+  async function addToLibrary(names: string[]) {
+    for (const name of names) {
+      try {
+        await sendToLibrary.mutateAsync(name);
+      } catch {
+        return;
+      }
+      setInLibrary((previous) => new Set(previous).add(name));
+    }
+  }
+
   // D8-05: POST /split reads album.json off disk and snapshots it into the
   // job payload. Every edit on this screen is autosaved through a 600 ms
   // debounce, so pressing Split within that window would queue the render
@@ -473,6 +493,8 @@ function AlbumEditor({ albumId }: { albumId: string }) {
     : album.total_samples <= 0
       ? 'This album has no measured length yet, so there are no tracks to render.'
       : null;
+  const trackFiles = tracksQuery.data ?? [];
+  const remaining = trackFiles.filter((track) => !inLibrary.has(track.name)).map((track) => track.name);
   const showWaveform = hasAudio && album.total_samples > 0 && envelope !== null;
 
   return (
@@ -623,16 +645,51 @@ function AlbumEditor({ albumId }: { albumId: string }) {
         </a>
       )}
 
-      {files?.has_tracks && (tracksQuery.data?.length ?? 0) > 0 && (
-        <ul className={styles.files}>
-          {(tracksQuery.data ?? []).map((track) => (
-            <li key={track.name}>
-              <a className={styles.download} href={albumTrackUrl(albumId, track.name)}>
-                {track.name}
-              </a>
-            </li>
-          ))}
-        </ul>
+      {files?.has_tracks && trackFiles.length > 0 && (
+        <>
+          <div className={styles.libraryRow}>
+            <Button
+              disabled={sendToLibrary.isPending || remaining.length === 0}
+              onClick={() => addToLibrary(remaining)}
+            >
+              {remaining.length === 0
+                ? `All ${trackFiles.length} tracks are in the library`
+                : remaining.length === trackFiles.length
+                  ? `Add all ${trackFiles.length} tracks to library`
+                  : `Add the other ${remaining.length} to library`}
+            </Button>
+            {inLibrary.size > 0 && <TextLink to="/">Open library</TextLink>}
+          </div>
+          {/* N-08: the API's own message, verbatim. */}
+          {sendToLibrary.isError && (
+            <Banner
+              tone="error"
+              title={`${sendToLibrary.variables} could not be added to the library`}
+              trace={String(sendToLibrary.error)}
+            />
+          )}
+          <ul className={styles.files}>
+            {trackFiles.map((track) => {
+              const added = inLibrary.has(track.name);
+              const sending = sendToLibrary.isPending && sendToLibrary.variables === track.name;
+              return (
+                <li key={track.name} className={styles.fileRow}>
+                  <a className={styles.download} href={albumTrackUrl(albumId, track.name)}>
+                    {track.name}
+                  </a>
+                  <Button
+                    variant="ghost"
+                    disabled={added || sendToLibrary.isPending}
+                    aria-label={added ? `${track.name} is in the library` : `Add ${track.name} to library`}
+                    onClick={() => addToLibrary([track.name])}
+                  >
+                    {added ? 'In library' : sending ? 'Adding…' : 'Add to library'}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </section>
   );

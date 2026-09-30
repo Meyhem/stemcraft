@@ -241,6 +241,7 @@ One long file becomes many tagged MP3s. All metadata is typed by the user — no
 4. Album fields entered once — artist and album — and filled down to every track
 5. A title per track; track numbers are automatic
 6. Export individual MP3s with ID3 tags, downloadable as a zip
+7. Any split track, or all of them, can be added to the library as Songs; title and artist come from the track's tags
 
 ### Job queue
 
@@ -273,7 +274,6 @@ When it lands, transcription is a second note source for the Play along screen n
 - Per-stem EQ, e.g. boost the low end while learning a bassline
 - Batch import of a whole folder
 - Song export/import as a zip, for backup or moving machines
-- Send album-splitter tracks straight into the library as Songs
 
 ## Open questions
 

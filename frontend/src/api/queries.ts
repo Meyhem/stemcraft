@@ -24,6 +24,7 @@ import {
   type Song,
   type SongEntry,
 } from './client';
+import { sendTrackToLibrary } from '../splitter/toLibrary';
 
 export const queryKeys = {
   health: ['health'] as const,
@@ -329,6 +330,18 @@ export function useAlbumTracks(albumId: string | undefined) {
     queryFn: () => api.get<{ tracks: AlbumTrackFile[] }>(`/api/albums/${albumId}/tracks`),
     enabled: Boolean(albumId),
     select: (data) => data.tracks,
+  });
+}
+
+/** One track per call, so each row can show its own progress and its own error. */
+export function useSendTrackToLibrary(albumId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (filename: string) => sendTrackToLibrary(albumId, filename),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: queryKeys.songs });
+      client.invalidateQueries({ queryKey: ['jobs'] });
+    },
   });
 }
 

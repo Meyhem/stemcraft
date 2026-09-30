@@ -33,7 +33,7 @@ instrument and play along.
 - Album splitter: cut a full album rip into tagged MP3s. Silence detection proposes cuts;
   on a full-length waveform you play, zoom with the wheel or by dragging across a range,
   drag, add and delete cuts, or type exact start and end times to the millisecond, then
-  download a zip
+  download a zip or add the tracks to the library as Songs
 - Export the current mix
 - Job queue screen: every job expands to its named steps, live, with a duration each and a
   failure's real traceback under the step that failed; all-time stats with passed and

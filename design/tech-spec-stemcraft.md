@@ -609,8 +609,10 @@ audit requirement exists.
   needed after all? Blocks nothing until the engine exists; revisit against R-01's
   click-track harness. Note Rubber Band's licensing before adopting it.
 - **Q-04** — Should album-splitter output land directly in the library as Songs
-  (backlog) rather than only as a zip? Changes whether the splitter shares the Song
-  write path or stays a standalone tool.
+  rather than only as a zip? *Closed (Phase 8, extended 2026-09-30):* the splitter
+  stays a standalone tool on the server and shares no write path with Songs. Tracks
+  reach the library from the browser, which posts a rendered MP3 to the ordinary
+  song upload route; the cost is one extra lossy generation (320 kbps).
 - **Q-05** — Is any headless primitive library (Radix, Ark) needed for dialogs, menus
   and selects? The transport, mixer and sliders are bespoke by U-03/U-05 regardless, so
   this reduces to a handful of overlays. Decide when the first modal is built; nothing
