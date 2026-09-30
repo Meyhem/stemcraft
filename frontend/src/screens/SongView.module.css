@@ -22,26 +22,8 @@
 
 .header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--ds-4);
-}
-
-.titles {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-width: 0;
-}
-
-.titles h1 {
-  margin: 0;
-  font: 600 var(--ds-t-xl) / var(--ds-lh-xl) var(--ds-font);
-}
-
-.artist {
-  margin: 0;
-  font-size: var(--ds-t-sm);
-  color: var(--ds-text-2);
 }
 
 .link {

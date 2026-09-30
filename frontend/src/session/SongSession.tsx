@@ -118,6 +118,8 @@ export interface SongSession {
   /** Sets the loop by bars: 0-based start, exclusive end. Ignored unless end > start >= 0. */
   onLoopBars(startBar: number, endBar: number): void;
   onPlayAlongChange(playAlong: PlayAlong): void;
+  /** Renames the song in song.json. Both are trimmed; a blank title is ignored. */
+  onRename(title: string, artist: string): void;
 }
 
 export function useSongSessionState(songId: string): SongSession {
@@ -548,6 +550,17 @@ export function useSongSessionState(songId: string): SongSession {
     [applyRecipe],
   );
 
+  // The title is recipe-adjacent metadata in the same document, so it takes the
+  // same funnel: state, then the debounced PUT, which also refreshes the library.
+  const handleRename = useCallback(
+    (title: string, artist: string) => {
+      const { song: currentSong } = latest.current;
+      if (!currentSong || title.trim() === '') return;
+      applyRecipe({ ...currentSong, title: title.trim(), artist: artist.trim() });
+    },
+    [applyRecipe],
+  );
+
   // ---- context value ---
 
   // A 404 from analysis is "not analyzed yet" (the normal state for a song that
@@ -600,6 +613,7 @@ export function useSongSessionState(songId: string): SongSession {
       onCountInChange: handleCountInChange,
       onLoopBars: handleLoopBars,
       onPlayAlongChange: handlePlayAlongChange,
+      onRename: handleRename,
     }),
     [
       songId,
@@ -645,6 +659,7 @@ export function useSongSessionState(songId: string): SongSession {
       handleCountInChange,
       handleLoopBars,
       handlePlayAlongChange,
+      handleRename,
     ],
   );
 }

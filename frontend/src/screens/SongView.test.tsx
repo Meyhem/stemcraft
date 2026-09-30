@@ -125,6 +125,24 @@ afterEach(() => {
 });
 
 describe('SongView', () => {
+  it('renames the song in place and saves it to song.json', async () => {
+    renderSongView();
+    await userEvent.click(await screen.findByRole('button', { name: 'Rename' }));
+    const title = screen.getByRole('textbox', { name: 'Title' });
+    await userEvent.clear(title);
+    await userEvent.type(title, 'New Name{Enter}');
+    expect(await screen.findByRole('heading', { name: 'New Name' })).toBeInTheDocument();
+    await waitFor(
+      () => {
+        const put = vi.mocked(fetch).mock.calls.find(([, init]) => init?.method === 'PUT');
+        const body = JSON.parse(String(put![1]!.body));
+        expect(body.title).toBe('New Name');
+        expect(body.artist).toBe('Someone');
+      },
+      { timeout: 3000 },
+    );
+  });
+
   it('shows the song title and four stem lanes once loaded', async () => {
     renderSongView();
     expect(await screen.findByRole('heading', { name: /Test Song/ })).toBeInTheDocument();

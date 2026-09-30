@@ -26,6 +26,7 @@ import { clamp, DRAG_THRESHOLD_PX, scrollLeftAfterZoom, wheelZoom, ZOOM_STEP } f
 import { useSongSession } from '../session/SongSession';
 import { ChordStrip } from '../songview/ChordStrip';
 import { RightRail } from '../songview/RightRail';
+import { TitleEditor } from '../songview/TitleEditor';
 import { StemLane } from '../songview/StemLane';
 import { Timeline } from '../songview/Timeline';
 import { Transport } from '../songview/Transport';
@@ -70,6 +71,7 @@ export function SongView() {
     onSaveActiveLoop: handleSaveActiveLoop,
     onDeleteLoop: handleDeleteLoop,
     onCountInChange: handleCountInChange,
+    onRename,
   } = useSongSession();
 
   // View state, not recipe: how the time axis is drawn never reaches song.json.
@@ -328,10 +330,11 @@ export function SongView() {
           <Link className={styles.link} to="/">
             &larr; Library
           </Link>
-          <div className={styles.titles}>
-            <h1>{song?.title ?? fetchedSong?.title ?? songId}</h1>
-            <p className={styles.artist}>{song?.artist ?? fetchedSong?.artist}</p>
-          </div>
+          <TitleEditor
+            title={song?.title ?? fetchedSong?.title ?? songId}
+            artist={song?.artist ?? fetchedSong?.artist ?? ''}
+            onRename={onRename}
+          />
           <Link className={styles.link} to={`/songs/${songId}/play`}>
             Play along
           </Link>

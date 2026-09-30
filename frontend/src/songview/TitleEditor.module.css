@@ -1,0 +1,45 @@
+/* Setup tier: renaming is done with both hands free. */
+.view,
+.edit {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-3);
+  min-width: 0;
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.titles h1 {
+  margin: 0;
+  font: 600 var(--ds-t-xl) / var(--ds-lh-xl) var(--ds-font);
+}
+
+.artist {
+  margin: 0;
+  font-size: var(--ds-t-sm);
+  color: var(--ds-text-2);
+}
+
+.edit {
+  flex-wrap: wrap;
+}
+
+.input {
+  min-height: var(--ds-hit-setup);
+  min-width: 220px;
+  padding-inline: var(--ds-3);
+  font: 400 var(--ds-t-md) / 1 var(--ds-font);
+  color: var(--ds-text);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-input);
+}
+
+.input:focus {
+  border-color: var(--ds-accent);
+  outline: none;
+}
