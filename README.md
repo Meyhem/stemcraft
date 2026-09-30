@@ -44,14 +44,14 @@ instrument and play along.
 
 ## Screens
 
-![Library](docs/screenshots/library.png)
-![Add song](docs/screenshots/import.png)
 ![Song screen — Stems](docs/screenshots/song-view.png)
 ![Song screen — Tabs](docs/screenshots/play-along.png)
+![Album splitter](docs/screenshots/album-splitter.png)
+![Library](docs/screenshots/library.png)
+![Add song](docs/screenshots/import.png)
 ![Theory](docs/screenshots/theory.png)
 ![Theory: scale positions](docs/screenshots/theory-shapes.png)
 ![Theory: fretboard quiz](docs/screenshots/theory-quiz.png)
-![Album splitter](docs/screenshots/album-splitter.png)
 ![Job queue](docs/screenshots/job-queue.png)
 
 All nine are captures of the running app, made with
