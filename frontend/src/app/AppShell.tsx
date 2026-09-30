@@ -10,8 +10,9 @@ import { PulseSlotContext } from './pulseSlot';
 const NAV = [
   { to: '/', label: 'Library' },
   { to: '/splitter', label: 'Album splitter' },
-  { to: '/jobs', label: 'Job queue' },
   { to: '/theory', label: 'Theory' },
+  // Operational, not a place you practise in: parked at the far end of the bar.
+  { to: '/jobs', label: 'Job queue', far: true },
 ];
 
 export function AppShell() {
@@ -35,7 +36,7 @@ export function AppShell() {
           <Link
             key={item.to}
             to={item.to}
-            className={active(item.to) ? styles.active : styles.link}
+            className={`${active(item.to) ? styles.active : styles.link}${item.far ? ` ${styles.far}` : ''}`}
             aria-current={active(item.to) ? 'page' : undefined}
           >
             {item.label}

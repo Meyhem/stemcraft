@@ -33,6 +33,10 @@
     color var(--ds-m-flip) var(--ds-ease);
 }
 
+.far {
+  margin-left: auto;
+}
+
 .link:hover {
   background: var(--ds-raised);
   color: var(--ds-text);
