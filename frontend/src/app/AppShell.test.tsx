@@ -1,16 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
+import { useContext, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, expect, test, vi } from 'vitest';
 
 import type { Health } from '../api/client';
 import { AppShell } from './AppShell';
+import { PulseSlotContext } from './pulseSlot';
 
 // The job stream opens a WebSocket, which jsdom does not provide and this test is not
 // about.
 vi.mock('../api/useJobStream', () => ({ useJobStream: () => {} }));
 
-function renderShell(health: Health) {
+function renderShell(health: Health, body: ReactNode = <p>page body</p>) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => new Response(JSON.stringify(health), { status: 200 })),
@@ -21,7 +24,7 @@ function renderShell(health: Health) {
       <MemoryRouter>
         <Routes>
           <Route element={<AppShell />}>
-            <Route index element={<p>page body</p>} />
+            <Route index element={body} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -76,4 +79,18 @@ test('a broken dependency suppresses the CPU notice rather than stacking on it',
   });
   await screen.findByRole('alert');
   expect(screen.queryByRole('status')).toBeNull();
+});
+
+test('a page can draw into a decorative slot on the navbar', async () => {
+  function IntoSlot() {
+    const slot = useContext(PulseSlotContext);
+    return slot ? createPortal(<span>pulse</span>, slot) : null;
+  }
+  renderShell(healthy, <IntoSlot />);
+
+  const drawn = await screen.findByText('pulse');
+  const slot = drawn.parentElement!;
+  expect(slot.parentElement).toBe(screen.getByRole('navigation'));
+  // Decoration only: it must not be announced or reachable.
+  expect(slot).toHaveAttribute('aria-hidden', 'true');
 });

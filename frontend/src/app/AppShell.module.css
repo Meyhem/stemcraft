@@ -7,6 +7,7 @@
 }
 
 .nav {
+  position: relative;
   display: flex;
   gap: var(--ds-3);
   align-items: center;
@@ -41,6 +42,23 @@
   background: var(--ds-raised);
   box-shadow: inset 0 -2px 0 var(--ds-accent);
   color: var(--ds-text);
+}
+
+/* Where a playing song draws its stem pulse (U-14). Laid over the nav's own
+   bottom border and empty otherwise, so every other page looks as it did. */
+.pulseSlot {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseSlot {
+    display: none;
+  }
 }
 
 .notice {

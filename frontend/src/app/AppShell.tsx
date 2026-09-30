@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, matchPath, Outlet, useLocation } from 'react-router-dom';
 
 import { useHealth } from '../api/queries';
@@ -5,6 +6,7 @@ import { useJobStream } from '../api/useJobStream';
 import { importLinkState } from '../screens/import/importLink';
 import { Banner } from '../ui';
 import styles from './AppShell.module.css';
+import { PulseSlotContext } from './pulseSlot';
 
 const NAV = [
   { to: '/', label: 'Library' },
@@ -25,6 +27,8 @@ export function AppShell() {
   const active = (to: string) =>
     to !== '/import' && matchPath({ path: to, end: to === '/' }, current) !== null;
   const broken = health.data?.deps.filter((d) => !d.ok) ?? [];
+  // State, not a ref: the consumer has to re-render once the element exists.
+  const [pulseSlot, setPulseSlot] = useState<HTMLElement | null>(null);
 
   return (
     <div className={styles.shell}>
@@ -40,6 +44,7 @@ export function AppShell() {
             {item.label}
           </Link>
         ))}
+        <div ref={setPulseSlot} className={styles.pulseSlot} aria-hidden="true" />
       </nav>
 
       {/* N-08: a missing dependency is visible, named, and quotes the real error. */}
@@ -62,7 +67,9 @@ export function AppShell() {
       )}
 
       <main className={styles.main}>
-        <Outlet />
+        <PulseSlotContext.Provider value={pulseSlot}>
+          <Outlet />
+        </PulseSlotContext.Provider>
       </main>
     </div>
   );
