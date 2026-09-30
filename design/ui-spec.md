@@ -280,8 +280,8 @@ assuming it can vary.
    picker, that tool's own pickers, one `Neck`, the note chips, and a help box. Scale finder
    highlights one position at a time; Chord finder adds voicing cards (5-fret zoomed necks)
    on guitar; Chords in a key has seven numeral cards with their function, progressions and
-   a circle of fifths. The Fretboard quiz shows the question large, first-try score / streak /
-   average time as mono stats (U-04), feedback in an error chip that explains the mistake,
+   a circle of fifths. The Fretboard quiz shows the question large, first-try score as a mono stat
+   (U-04; no streak or timer, on purpose: they make practice stressful), feedback in an error chip that explains the mistake,
    focus settings, and the weak-spot heatmap. `theory.json` failures are an error banner
    with the verbatim validation error and a confirmed **Reset to defaults** (U-09). A failed
    save is a warn banner with **Retry**, and unsaved answers are never dropped. References:

@@ -756,9 +756,9 @@ test('cellText reads a repeated note letter with its octave, and a key that is n
 
 const result = (item: string, correct: boolean, ms: number): Result => ({ quiz: 'fretboard', mode: 'name-note', item, correct, ms, at: 'x', text: item });
 
-test('round stats: score, streak and average', () => {
-  expect(roundStats([])).toEqual({ correct: 0, answered: 0, streak: 0, avgSeconds: 0 });
-  expect(roundStats([result('a', true, 1000), result('b', false, 2000), result('c', true, 3000), result('d', true, 4000)])).toEqual({ correct: 3, answered: 4, streak: 2, avgSeconds: 2.5 });
+test('round stats: score only', () => {
+  expect(roundStats([])).toEqual({ correct: 0, answered: 0 });
+  expect(roundStats([result('a', true, 1000), result('b', false, 2000), result('c', true, 3000), result('d', true, 4000)])).toEqual({ correct: 3, answered: 4 });
 });
 
 test('the weakest of a round: wrong first, then slowest, one entry per item', () => {

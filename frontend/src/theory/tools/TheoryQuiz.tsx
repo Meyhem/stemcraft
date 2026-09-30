@@ -231,12 +231,6 @@ export function TheoryQuiz() {
               <span className={styles.stat}>
                 <b>{stats.correct}</b>/{stats.answered} first try
               </span>
-              <span className={styles.stat}>
-                <b>{stats.streak}</b> streak
-              </span>
-              <span className={styles.stat}>
-                <b>{stats.avgSeconds.toFixed(1)}s</b> avg
-              </span>
             </div>
             <div className={styles.list} role="group" aria-label="Answers">
               {q.options.map((o, i) => (

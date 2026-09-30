@@ -1,4 +1,4 @@
-// End of a round (D-19): score, average time, the three weakest items and
+// End of a round (D-19): score, the three weakest items and
 // "Practise these", which starts a round of only those. Enter starts the next
 // round, unless Enter is what is pressing one of the summary's own buttons (that
 // button acts instead); a focused button elsewhere, such as a topic chip, does not
@@ -30,7 +30,6 @@ export function RoundSummary({ results, onRestart }: { results: readonly Result[
         <h2 className={styles.big}>
           {stats.correct} / {stats.answered} first try
         </h2>
-        <p className={styles.dimText}>Average {stats.avgSeconds.toFixed(1)} s per answer.</p>
         <p>
           {allRight ? 'Slowest this round' : 'Weakest this round'}: <b>{weak.map((r) => r.text).join(' · ')}</b>
         </p>

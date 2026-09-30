@@ -144,13 +144,10 @@ export function quizKey(e: KeyboardEvent, options: { shift?: boolean } = {}): st
   return e.key;
 }
 
-/** Score, streak and average time of a round so far. */
+/** Score of a round so far. No streak or timing is shown: they make practice stressful. */
 export function roundStats(results: readonly Result[]) {
   const correct = results.filter((r) => r.correct).length;
-  let streak = 0;
-  for (let i = results.length - 1; i >= 0 && results[i]!.correct; i--) streak++;
-  const avg = results.length ? results.reduce((s, r) => s + r.ms, 0) / results.length : 0;
-  return { correct, answered: results.length, streak, avgSeconds: avg / 1000 };
+  return { correct, answered: results.length };
 }
 
 /** The 3 weakest items of a round, one entry per item (its worst answer): wrong first, then slowest. */
