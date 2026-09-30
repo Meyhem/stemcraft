@@ -36,12 +36,7 @@
 .legend i{display:inline-block;width:18px;height:18px;border-radius:50%;vertical-align:-4px;margin-right:var(--ds-2)}
 
 /* ---- new in this design ---- */
-.loopmenu{position:relative}
-.tpanel{margin:var(--ds-4) var(--ds-4) 0;padding:var(--ds-4);background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);display:flex;flex-direction:column;gap:var(--ds-4)}
-.tpanel .row{gap:var(--ds-5)}
-.barstep{display:inline-flex;align-items:center;gap:var(--ds-1)}
-.barstep output{min-width:52px;text-align:center;font:600 var(--ds-t-xl)/1 var(--ds-mono)}
-.barstep .btn{min-width:var(--ds-hit-perform);padding:0}
+.stage > .tpanel{margin:var(--ds-4) var(--ds-4) 0}
 .viewbar{display:flex;align-items:flex-end;gap:var(--ds-5);margin:var(--ds-4);min-height:56px}
 .viewseg > button{min-height:48px;padding:0 var(--ds-6);font-size:var(--ds-t-md)}
 .tabs-body{margin:0 var(--ds-4) var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-4)}
@@ -74,31 +69,21 @@
 
     <!-- ONE transport, identical in both views, pinned while the content scrolls -->
     <div class="tpanel">
-      <div class="row wrap">
-        <button class="iconbtn iconbtn-perform" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>
-        <div class="readout"><span class="cap" style="align-self:center;margin-right:var(--ds-2)">bar</span><span class="big">17</span><span class="unit">beat 3</span></div>
-        <div class="col" style="gap:2px"><span class="cap">chord</span><span class="t-lg" style="font-weight:600">Gm <span class="dim">&rarr; Dm</span></span></div>
-        <!-- 50..150 %: 100 % sits at the centre tick, the fill grows away from it -->
-        <div class="slider slider-perform" style="width:220px"><div class="shead"><span class="slabel">Tempo</span><span class="sval num">120%</span></div><div class="track"><i class="fill" style="left:50%;width:20%;border-radius:0"></i><i class="center-tick"></i><i class="knob" style="left:70%"></i></div></div>
-        <div class="slider slider-perform" style="width:180px"><div class="shead"><span class="slabel">Pitch</span><span class="sval num">&minus;2 st</span></div><div class="track"><i class="center-tick"></i><i class="knob" style="left:42%"></i></div></div>
+      <div class="trow">
+        <button class="iconbtn iconbtn-perform iconbtn-play" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>
+        <div class="readout"><span class="cap">bar</span><span class="big">17</span></div>
+        <div class="readout"><span class="cap">chord</span><span class="chord">Gm <span class="dim3">&rarr; Dm</span></span></div>
+        <div class="grow"></div>
+        <div class="splitbtn">
+          <button class="btn btn-perform" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>Loop <span class="num">17&ndash;18</span></button>
+          <button class="btn btn-perform" aria-pressed="true" aria-label="Edit loop" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button>
+        </div>
+        <button class="btn btn-perform" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>Practice</button>
       </div>
-      <div class="row wrap" style="align-items:flex-end">
-        <button class="btn btn-perform" aria-pressed="true">Loop</button>
-        <div class="col" style="gap:var(--ds-1)">
-          <span class="cap">loop bars</span>
-          <div class="row" style="gap:var(--ds-3)">
-            <span class="barstep"><button class="btn btn-perform" aria-label="Start bar earlier">&minus;</button><output>17</output><button class="btn btn-perform" aria-label="Start bar later">+</button></span>
-            <span class="t-sm dim">to</span>
-            <span class="barstep"><button class="btn btn-perform" aria-label="End bar earlier">&minus;</button><output>18</output><button class="btn btn-perform" aria-label="End bar later">+</button></span>
-          </div>
-        </div>
-        <div class="col loopmenu" style="gap:var(--ds-1)">
-          <span class="cap">saved loops</span>
-          <button class="btn btn-perform" aria-haspopup="true" aria-expanded="false" style="min-width:180px;justify-content:space-between">Chorus <span class="num dim">17–18 &#9662;</span></button>
-        </div>
-        <button class="btn btn-perform" aria-pressed="true">Metronome</button>
-        <div class="col" style="gap:var(--ds-1)"><span class="cap">count-in</span>
-          <div class="seg"><button>0</button><button aria-selected="true">1 bar</button><button>2 bars</button></div></div>
+      <div class="trow dials">
+        <!-- 50..150 %: 100 % sits at the centre tick, the fill grows away from it -->
+        <div class="dial"><span class="cap">tempo</span><div class="track"><i class="fill" style="left:50%;width:20%;border-radius:0"></i><i class="center-tick"></i><i class="knob" style="left:70%"></i></div><span class="sval num">120%</span></div>
+        <div class="dial dial-fixed"><span class="cap">pitch</span><div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output class="">&minus;2 st</output><button aria-label="Pitch up">+</button></div></div>
       </div>
     </div>
 

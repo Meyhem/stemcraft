@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Inputs & controls" subtitle="Fields, drop zone, segmented, sliders, stem picker" viewport="1000x1270" -->
+<!-- @dsCard group="Components" name="Inputs & controls" subtitle="Fields, drop zone, segmented, sliders, stepper, stem picker" viewport="1000x1450" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Inputs — Stemcraft</title><style>/* @inject */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--ds-4)}
 .stempick{display:flex;gap:var(--ds-3);flex-wrap:wrap}
@@ -66,6 +66,20 @@
   </div>
   <p class="note">A gain fill takes the <b>stem</b> hue — it sits inside a named stem context. The tempo fill takes the
   <b>accent</b> — it belongs to the whole mix.</p>
+</div>
+
+<div class="sec">
+  <h2>Stepper</h2>
+  <div class="row wrap" style="gap:var(--ds-6);align-items:flex-end">
+    <div class="col" style="gap:var(--ds-1)"><span class="cap">pitch &middot; performance</span>
+      <div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output>&minus;2 st</output><button aria-label="Pitch up">+</button></div></div>
+    <div class="col" style="gap:var(--ds-1)"><span class="cap">at default</span>
+      <div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output class="dim3">0 st</output><button aria-label="Pitch up">+</button></div></div>
+    <div class="col" style="gap:var(--ds-1)"><span class="cap">loop bar &middot; setup, at its limit</span>
+      <div class="stepper"><button aria-label="Start bar earlier" disabled>&minus;</button><output>1</output><button aria-label="Start bar later">+</button></div></div>
+  </div>
+  <p class="note">For small whole-number ranges where a slider is overkill: pitch (&plusmn;12&nbsp;st) and loop bars.
+  The value is always shown in mono and goes muted at its default; a button at the end of the range is disabled, never clamped silently.</p>
 </div>
 
 <div class="sec">
