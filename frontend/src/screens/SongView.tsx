@@ -1,4 +1,5 @@
-// UI spec §6, screen 3 -- the screen where a song is edited. The engine, the
+// UI spec §6, screen 3 -- the screen where a song is edited (no right rail: count-in
+// and saved loops live in the transport). The engine, the
 // recipe and every transport/mixer/loop handler live in the song session
 // (session/SongSession.tsx, D-18), shared with Play along; this file owns
 // only how the time axis is drawn: zoom, follow, pan and drag-to-zoom.
@@ -25,11 +26,11 @@ import {
 import { clamp, DRAG_THRESHOLD_PX, scrollLeftAfterZoom, wheelZoom, ZOOM_STEP } from '../music/zoom';
 import { useSongSession } from '../session/SongSession';
 import { ChordStrip } from '../songview/ChordStrip';
-import { RightRail } from '../songview/RightRail';
 import { TitleEditor } from '../songview/TitleEditor';
 import { StemLane } from '../songview/StemLane';
 import { Timeline } from '../songview/Timeline';
 import { Transport } from '../songview/Transport';
+import { ZoomTools } from '../songview/ZoomTools';
 import styles from './SongView.module.css';
 
 export function SongView() {
@@ -40,7 +41,6 @@ export function SongView() {
     loadError,
     fetchedSong,
     hasStems,
-    analysis,
     analysisError,
     notAnalyzedYet,
     chords,
@@ -60,6 +60,7 @@ export function SongView() {
     onTempoChange: handleTempoChange,
     onPitchChange: handlePitchChange,
     onMetronomeToggle: handleMetronomeToggle,
+    onLoopBars: handleLoopBars,
     onSetLoopStart: handleSetLoopStart,
     onSetLoopEnd: handleSetLoopEnd,
     onLoopArmToggle: handleLoopArmToggle,
@@ -379,18 +380,30 @@ export function SongView() {
                 tempo={song.playback.tempo}
                 pitchSemitones={song.playback.pitch_semitones}
                 metronome={song.metronome}
+                countInBars={song.count_in_bars}
+                loop={song.active_loop}
                 loopArmed={loopArmed}
-                hasLoop={Boolean(grid && song.active_loop)}
+                savedLoops={song.loops}
                 onPlayPause={handlePlayPause}
                 onTempoChange={handleTempoChange}
                 onPitchChange={handlePitchChange}
                 onMetronomeToggle={handleMetronomeToggle}
+                onCountInChange={handleCountInChange}
                 onLoopArmToggle={handleLoopArmToggle}
+                onLoopBars={handleLoopBars}
                 onSetLoopStart={handleSetLoopStart}
                 onSetLoopEnd={handleSetLoopEnd}
+                onRecallLoop={handleRecallLoop}
+                onSaveActiveLoop={handleSaveActiveLoop}
+                onDeleteLoop={handleDeleteLoop}
                 onNudgeBars={handleNudgeBars}
                 onMuteLane={handleMuteLane}
                 chords={chords}
+              />
+            </div>
+
+            <div className={styles.viewBar}>
+              <ZoomTools
                 zoomLabel={zoomLabel}
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
@@ -473,18 +486,6 @@ export function SongView() {
           </>
         )}
       </div>
-
-      <RightRail
-        songId={songId ?? ''}
-        candidates={analysis?.key_candidates ?? []}
-        savedLoops={song?.loops ?? []}
-        activeLoop={song?.active_loop ?? null}
-        countInBars={song?.count_in_bars ?? 0}
-        onRecallLoop={handleRecallLoop}
-        onSaveActiveLoop={handleSaveActiveLoop}
-        onDeleteLoop={handleDeleteLoop}
-        onCountInChange={handleCountInChange}
-      />
     </section>
   );
 }

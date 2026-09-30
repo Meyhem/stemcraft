@@ -6,8 +6,8 @@
 .bar {
   display: flex;
   flex-wrap: wrap; /* wrap rather than overflow when the row runs out of room */
-  align-items: center;
-  gap: var(--ds-3);
+  align-items: flex-end;
+  gap: var(--ds-3) var(--ds-4);
   padding: var(--ds-2) var(--ds-3);
   background: var(--ds-surface);
   border: 1px solid var(--ds-border);
@@ -116,26 +116,4 @@
 .nextChord {
   font-weight: 400;
   color: var(--ds-text-3);
-}
-
-.view {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--ds-3);
-  margin-left: auto;
-}
-
-.zoom {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-2);
-}
-
-.zoomValue {
-  min-inline-size: 11ch;
-  text-align: center;
-  font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
-  font-variant-numeric: tabular-nums; /* U-04 */
-  color: var(--ds-text-2);
-  white-space: nowrap;
 }

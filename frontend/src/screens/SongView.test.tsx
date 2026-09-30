@@ -143,6 +143,15 @@ describe('SongView', () => {
     );
   });
 
+  it('has no right rail: count-in and saved loops are in the transport', async () => {
+    renderSongView();
+    await screen.findByRole('group', { name: 'vocals stem' });
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(screen.queryByText(/key candidates/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Count-in' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Saved loops' })).toBeInTheDocument();
+  });
+
   it('shows the song title and four stem lanes once loaded', async () => {
     renderSongView();
     expect(await screen.findByRole('heading', { name: /Test Song/ })).toBeInTheDocument();
@@ -175,8 +184,8 @@ describe('SongView', () => {
   it('disarms the loop when the user scrubs, visibly (U-06)', async () => {
     renderSongView();
     await screen.findByRole('heading', { name: /Test Song/ });
-    await userEvent.click(await screen.findByRole('button', { name: /set a/i }));
-    await userEvent.click(await screen.findByRole('button', { name: /set b/i }));
+    // No loop yet: the steppers start from bar 1, and stepping the end makes it 1-2.
+    await userEvent.click(await screen.findByRole('button', { name: 'End bar later' }));
     await userEvent.click(await screen.findByRole('button', { name: /arm loop/i }));
     expect(screen.getByRole('button', { name: /arm loop/i })).toHaveAttribute('aria-pressed', 'true');
 

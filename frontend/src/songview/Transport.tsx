@@ -1,18 +1,26 @@
-// UI spec §5 "Transport bar" and §7 (keyboard). Performance tier throughout:
-// 56 px targets, mono tabular numerals (U-04), and an untouched tempo or pitch
-// renders muted so the eye finds the one that is not at its default.
+// The one transport of the song screen, identical over the Stems and the Tabs content
+// (UI spec §5 "Transport bar", §7 keyboard). Performance tier throughout: 56 px
+// targets, mono tabular numerals (U-04), and an untouched tempo or pitch renders muted
+// so the eye finds the one that is not at its default. Loops are set by bar number;
+// the A and B keys set the ends to the bar under the playhead.
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import type { ChordSegment } from '../api/client';
+import type { ChordSegment, Loop } from '../api/client';
+import { clampTempo, TEMPO_MAX, TEMPO_MIN, type SampleIndex } from '../engine/types';
 import { chordIndexAt, displayChord, mergeChords } from '../music/chords';
 import { barAt, type Grid } from '../music/grid';
-import { clampTempo, TEMPO_MAX, TEMPO_MIN, type SampleIndex } from '../engine/types';
-import { Button } from '../ui';
+import { LoopBars } from '../playalong/LoopBars';
+import { Button, Segmented } from '../ui';
+import { SavedLoops } from './SavedLoops';
 import { usePlayhead } from './usePlayhead';
 import styles from './Transport.module.css';
 
 const TEMPO_STEP = 0.05; // UI spec §7: up/down arrows move 5%
-const NO_BARS = 'Bars need analysis to have run';
+const NO_BARS = 'Looping needs bars, and bars need analysis to have run';
+const COUNT_IN = [0, 1, 2];
+// The count-in is played out of the bars *before* the start point, so there has to be
+// room for it. Said on the control rather than left to be discovered mid-practice.
+const COUNT_IN_NOTE = 'Played from the bars before your start point, so starting at the top of a song plays none';
 
 export interface TransportProps {
   playing: boolean;
@@ -26,26 +34,28 @@ export interface TransportProps {
   tempo: number; // 0.5..1.5
   pitchSemitones: number; // -12..12
   metronome: boolean;
+  countInBars: number;
+  /** The active loop, 0-based bars, end exclusive. */
+  loop: Loop | null;
   loopArmed: boolean;
-  hasLoop: boolean;
+  savedLoops: Loop[];
   onPlayPause(): void;
   onTempoChange(tempo: number): void;
   onPitchChange(semitones: number): void;
   onMetronomeToggle(): void;
+  onCountInChange(bars: number): void;
   onLoopArmToggle(): void;
+  onLoopBars(startBar: number, endBar: number): void;
+  /** The A and B keys: loop start / end at the bar under the playhead. */
   onSetLoopStart(): void;
   onSetLoopEnd(): void;
+  onRecallLoop(loop: Loop): void;
+  onSaveActiveLoop(name: string): void;
+  onDeleteLoop(name: string): void;
   onNudgeBars(delta: number): void;
   onMuteLane(index: number): void;
   /** The analysis's per-bar chord segments, for the current/next readout. */
   chords: ChordSegment[];
-  /** What the zoom shows: "Whole song", or how much of it is in view. */
-  zoomLabel: string;
-  onZoomIn(): void;
-  onZoomOut(): void;
-  onZoomFit(): void;
-  follow: boolean;
-  onFollowToggle(): void;
 }
 
 export function Transport({
@@ -56,34 +66,35 @@ export function Transport({
   tempo,
   pitchSemitones,
   metronome,
+  countInBars,
+  loop,
   loopArmed,
-  hasLoop,
+  savedLoops,
   onPlayPause,
   onTempoChange,
   onPitchChange,
   onMetronomeToggle,
+  onCountInChange,
   onLoopArmToggle,
+  onLoopBars,
   onSetLoopStart,
   onSetLoopEnd,
+  onRecallLoop,
+  onSaveActiveLoop,
+  onDeleteLoop,
   onNudgeBars,
   onMuteLane,
   chords,
-  zoomLabel,
-  onZoomIn,
-  onZoomOut,
-  onZoomFit,
-  follow,
-  onFollowToggle,
 }: TransportProps) {
   const barRef = useRef<HTMLSpanElement | null>(null);
   const chordRef = useRef<HTMLSpanElement | null>(null);
   const nextChordRef = useRef<HTMLSpanElement | null>(null);
   const segments = useMemo(() => mergeChords(chords), [chords]);
 
-  // Derived, never a prop: `grid === null` *is* "analysis hasn't run", and a
-  // second prop saying the same thing is a second source of truth a caller can
-  // make disagree with the grid this component already draws from.
+  // Derived, never props: `grid === null` *is* "analysis hasn't run", and a loop
+  // without a grid has no bars to resolve to samples.
   const barsAvailable = grid !== null;
+  const hasLoop = barsAvailable && loop !== null;
 
   const paint = useCallback(
     (position: SampleIndex) => {
@@ -107,7 +118,7 @@ export function Transport({
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      // Never steal a key from a text field: the right rail renames loops.
+      // Never steal a key from a text field: the title and loop names are typed here.
       const target = event.target as HTMLElement | null;
       if (target && (target.isContentEditable || /^(TEXTAREA|SELECT)$/.test(target.tagName))) {
         return;
@@ -132,8 +143,8 @@ export function Transport({
         L: () => hasLoop && onLoopArmToggle(),
         a: () => barsAvailable && onSetLoopStart(),
         A: () => barsAvailable && onSetLoopStart(),
-        b: () => barsAvailable && hasLoop && onSetLoopEnd(),
-        B: () => barsAvailable && hasLoop && onSetLoopEnd(),
+        b: () => hasLoop && onSetLoopEnd(),
+        B: () => hasLoop && onSetLoopEnd(),
         m: onMetronomeToggle,
         M: onMetronomeToggle,
         ArrowUp: () => onTempoChange(clampTempo(Number((tempo + TEMPO_STEP).toFixed(2)))),
@@ -170,12 +181,7 @@ export function Transport({
 
   return (
     <div className={styles.bar}>
-      <Button
-        tier="perform"
-        className={styles.play}
-        aria-label={playing ? 'Pause' : 'Play'}
-        onClick={onPlayPause}
-      >
+      <Button tier="perform" className={styles.play} aria-label={playing ? 'Pause' : 'Play'} onClick={onPlayPause}>
         {playing ? '⏸' : '▶'}
       </Button>
 
@@ -224,10 +230,30 @@ export function Transport({
           value={pitchSemitones}
           onChange={(e) => onPitchChange(Number(e.target.value))}
         />
-        <output data-default={pitchSemitones === 0 ? 'true' : 'false'}>
-          {pitchSemitones} st
-        </output>
+        <output data-default={pitchSemitones === 0 ? 'true' : 'false'}>{pitchSemitones} st</output>
       </label>
+
+      {/* Bars come from analysis; without a grid there is nothing to loop over, so the
+          control is withheld and says why rather than no-opping. */}
+      <Button
+        tier="perform"
+        className={styles.action}
+        aria-label="Arm loop"
+        aria-pressed={loopArmed}
+        disabled={!hasLoop}
+        title={!barsAvailable ? NO_BARS : !loop ? 'Set the loop bars first' : undefined}
+        onClick={onLoopArmToggle}
+      >
+        Loop
+      </Button>
+      {grid && <LoopBars loop={loop} barCount={grid.barCount} onLoopBars={onLoopBars} />}
+      <SavedLoops
+        savedLoops={savedLoops}
+        activeLoop={loop}
+        onRecallLoop={onRecallLoop}
+        onSaveActiveLoop={onSaveActiveLoop}
+        onDeleteLoop={onDeleteLoop}
+      />
 
       <Button
         tier="perform"
@@ -238,63 +264,16 @@ export function Transport({
       >
         Metronome
       </Button>
-      <Button
-        tier="perform"
-        className={styles.action}
-        aria-label="Arm loop"
-        aria-pressed={loopArmed}
-        disabled={!hasLoop}
-        onClick={onLoopArmToggle}
-      >
-        Loop
-      </Button>
-      {/* Bars come from analysis; without a grid there is nothing to snap to,
-          so the control is withheld and says why rather than no-opping. And a
-          B with no A behind it is not an end of anything, so it waits for one
-          rather than accepting a click that cannot mean what it looks like. */}
-      <Button
-        tier="perform"
-        className={styles.action}
-        disabled={!barsAvailable}
-        title={barsAvailable ? undefined : NO_BARS}
-        onClick={onSetLoopStart}
-      >
-        Set A
-      </Button>
-      <Button
-        tier="perform"
-        className={styles.action}
-        disabled={!barsAvailable || !hasLoop}
-        title={!barsAvailable ? NO_BARS : !hasLoop ? 'Set A first' : undefined}
-        onClick={onSetLoopEnd}
-      >
-        Set B
-      </Button>
-
-      {/* View controls: hands-free setup, so the setup tier (40px). */}
-      <div className={styles.view}>
-        <div className={styles.readout}>
-          <span className={styles.caption} aria-hidden="true">
-            Zoom
-          </span>
-          {/* Same controls as the Album splitter; the wheel and drag-to-zoom on the
-              time axis reach the same zoom. */}
-          <div role="group" aria-label="Zoom" className={styles.zoom}>
-            <Button aria-label="Zoom out" onClick={onZoomOut}>
-              −
-            </Button>
-            <output className={styles.zoomValue} data-testid="song-zoom">
-              {zoomLabel}
-            </output>
-            <Button aria-label="Zoom in" onClick={onZoomIn}>
-              +
-            </Button>
-            <Button onClick={onZoomFit}>Fit</Button>
-          </div>
-        </div>
-        <Button aria-pressed={follow} onClick={onFollowToggle}>
-          Follow playhead
-        </Button>
+      <div className={styles.readout} title={COUNT_IN_NOTE}>
+        <span className={styles.caption} aria-hidden="true">
+          Count-in
+        </span>
+        <Segmented
+          label="Count-in"
+          value={String(countInBars)}
+          options={COUNT_IN.map((bars) => ({ value: String(bars), label: `${bars} ${bars === 1 ? 'bar' : 'bars'}` }))}
+          onChange={(value) => onCountInChange(Number(value))}
+        />
       </div>
     </div>
   );

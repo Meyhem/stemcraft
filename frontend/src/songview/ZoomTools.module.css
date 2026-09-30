@@ -1,0 +1,34 @@
+.tools {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-3);
+}
+
+.readout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+  flex: none;
+}
+
+.caption {
+  font: 600 var(--ds-t-xs) / 1 var(--ds-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-2);
+}
+
+.zoomValue {
+  min-inline-size: 11ch;
+  text-align: center;
+  font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text-2);
+  white-space: nowrap;
+}

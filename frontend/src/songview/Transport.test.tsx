@@ -25,29 +25,32 @@ function renderTransport(over: Partial<Parameters<typeof Transport>[0]> = {}) {
     tempo: 1,
     pitchSemitones: 0,
     metronome: false,
+    countInBars: 0,
+    loop: null as { name: string; start_bar: number; end_bar: number } | null,
     loopArmed: false,
-    hasLoop: false,
+    savedLoops: [],
     onPlayPause: vi.fn(),
     onTempoChange: vi.fn(),
     onPitchChange: vi.fn(),
     onMetronomeToggle: vi.fn(),
+    onCountInChange: vi.fn(),
     onLoopArmToggle: vi.fn(),
+    onLoopBars: vi.fn(),
     onSetLoopStart: vi.fn(),
     onSetLoopEnd: vi.fn(),
+    onRecallLoop: vi.fn(),
+    onSaveActiveLoop: vi.fn(),
+    onDeleteLoop: vi.fn(),
     onNudgeBars: vi.fn(),
     onMuteLane: vi.fn(),
     chords: [],
-    zoomLabel: '16 bars in view',
-    onZoomIn: vi.fn(),
-    onZoomOut: vi.fn(),
-    onZoomFit: vi.fn(),
-    follow: true,
-    onFollowToggle: vi.fn(),
     ...over,
   };
   render(<Transport {...props} />);
   return props;
 }
+
+const LOOP = { name: '', start_bar: 4, end_bar: 6 };
 
 describe('Transport', () => {
   it('shows tempo as a percentage and pitch in semitones, both mono', () => {
@@ -78,7 +81,7 @@ describe('Transport', () => {
   });
 
   it('maps every performance key from UI spec §7', async () => {
-    const props = renderTransport({ hasLoop: true });
+    const props = renderTransport({ loop: LOOP });
     await userEvent.keyboard(' ');
     expect(props.onPlayPause).toHaveBeenCalledOnce();
     await userEvent.keyboard('l');
@@ -143,7 +146,7 @@ describe('Transport', () => {
   });
 
   it('does not hijack a modifier chord (Ctrl/Cmd+A) meant for the OS/browser', () => {
-    const props = renderTransport({ hasLoop: true });
+    const props = renderTransport({ loop: LOOP });
     const event = new KeyboardEvent('keydown', {
       key: 'a',
       ctrlKey: true,
@@ -156,50 +159,57 @@ describe('Transport', () => {
   });
 
   it('does not arm the loop from the keyboard when there is no loop to arm', async () => {
-    const props = renderTransport({ hasLoop: false });
+    const props = renderTransport({ loop: null });
     await userEvent.keyboard('l');
     expect(props.onLoopArmToggle).not.toHaveBeenCalled();
   });
 
-  it('withholds Set A/Set B when there is no grid to snap them to', async () => {
+  it('loops by bar numbers: there are no Set A / Set B buttons', async () => {
+    const props = renderTransport({ loop: LOOP });
+    expect(screen.queryByRole('button', { name: /set a/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /set b/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Loop start bar')).toHaveTextContent('5');
+    expect(screen.getByLabelText('Loop end bar')).toHaveTextContent('6');
+    await userEvent.click(screen.getByRole('button', { name: 'End bar later' }));
+    expect(props.onLoopBars).toHaveBeenCalledWith(4, 7);
+  });
+
+  it('never steps a loop end past the last bar', () => {
+    // grid8 has 8 bars.
+    renderTransport({ loop: { name: '', start_bar: 6, end_bar: 8 } });
+    expect(screen.getByRole('button', { name: 'End bar later' })).toBeDisabled();
+  });
+
+  it('without a grid there are no bars: no steppers, no A/B keys, and the Loop button says why', async () => {
     const props = renderTransport({ grid: null });
-    const setA = screen.getByRole('button', { name: /set a/i });
-    expect(setA).toBeDisabled();
-    expect(setA).toHaveAttribute('title', expect.stringMatching(/analysis/i));
-    expect(screen.getByRole('button', { name: /set b/i })).toBeDisabled();
+    expect(screen.queryByLabelText('Loop start bar')).not.toBeInTheDocument();
+    const arm = screen.getByRole('button', { name: 'Arm loop' });
+    expect(arm).toBeDisabled();
+    expect(arm).toHaveAttribute('title', expect.stringMatching(/analysis/i));
     await userEvent.keyboard('a');
     expect(props.onSetLoopStart).not.toHaveBeenCalled();
   });
 
-  it('withholds Set B until there is an A behind it', async () => {
-    const props = renderTransport({ hasLoop: false });
-    const setB = screen.getByRole('button', { name: /set b/i });
-    expect(setB).toBeDisabled();
-    expect(setB).toHaveAttribute('title', 'Set A first');
-    // Set A is what creates the loop, so it stays live.
-    expect(screen.getByRole('button', { name: /set a/i })).toBeEnabled();
+  it('the B key waits for a loop to end; the A key starts one', async () => {
+    const props = renderTransport({ loop: null });
     await userEvent.keyboard('b');
     expect(props.onSetLoopEnd).not.toHaveBeenCalled();
+    await userEvent.keyboard('a');
+    expect(props.onSetLoopStart).toHaveBeenCalledOnce();
   });
 
-  it('offers zoom out / in / Fit with a readout of what is in view', async () => {
-    const props = renderTransport({ zoomLabel: '12 bars in view' });
-    const zoom = screen.getByRole('group', { name: 'Zoom' });
-    expect(zoom).toHaveTextContent('12 bars in view');
-    await userEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-    expect(props.onZoomIn).toHaveBeenCalledOnce();
-    await userEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
-    expect(props.onZoomOut).toHaveBeenCalledOnce();
-    await userEvent.click(screen.getByRole('button', { name: 'Fit' }));
-    expect(props.onZoomFit).toHaveBeenCalledOnce();
+  it('sets the count-in', async () => {
+    const props = renderTransport({ countInBars: 1 });
+    expect(screen.getByRole('group', { name: 'Count-in' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '2 bars' }));
+    expect(props.onCountInChange).toHaveBeenCalledWith(2);
   });
 
-  it('toggles follow-playhead, reporting its state through aria-pressed', async () => {
-    const props = renderTransport({ follow: false });
-    const follow = screen.getByRole('button', { name: 'Follow playhead' });
-    expect(follow).toHaveAttribute('aria-pressed', 'false');
-    await userEvent.click(follow);
-    expect(props.onFollowToggle).toHaveBeenCalledOnce();
+  it('carries the saved loops menu', async () => {
+    const props = renderTransport({ loop: LOOP, savedLoops: [{ name: 'Chorus', start_bar: 16, end_bar: 24 }] });
+    await userEvent.click(screen.getByRole('button', { name: 'Saved loops' }));
+    await userEvent.click(screen.getByRole('button', { name: /Recall loop Chorus/ }));
+    expect(props.onRecallLoop).toHaveBeenCalledWith({ name: 'Chorus', start_bar: 16, end_bar: 24 });
   });
 
   it('reads out the current chord and the next change, merged and spelled for display', () => {

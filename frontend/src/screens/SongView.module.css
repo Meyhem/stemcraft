@@ -1,21 +1,28 @@
 /* UI spec §6, screen 3: the performing surface on the left -- one scrolling
    transport on top, then one scrolling time axis (bar ruler, chord row directly
-   beneath it, four full-height stem lanes) -- and a 320 px setup-tier rail on the right. Tokens only; the rail width is the one literal the layout owns. */
+   beneath it, four full-height stem lanes) -- Tokens only. */
 .page {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: var(--ds-5);
-  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   /* The lane height is the readability budget at 1.5 m, so the screen claims
      the viewport minus AppShell's nav and main padding and hands the slack to
      the lanes (mockup: .body2 { flex: 1; min-height: 0 }). */
   min-height: calc(100dvh - var(--ds-9));
 }
 
+/* Tools of the chosen view; the Stems/Tabs switch joins them at the left. */
+.viewBar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+}
+
 .main {
   display: flex;
   flex-direction: column;
   gap: var(--ds-4);
+  flex: 1;
   min-width: 0;
   min-height: 0;
 }
