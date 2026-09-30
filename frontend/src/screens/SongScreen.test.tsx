@@ -135,8 +135,7 @@ describe('SongScreen', () => {
     renderAt('/songs/abc123');
     expect(await screen.findByRole('button', { name: 'Follow playhead' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('link', { name: 'Tabs' }));
-    expect(await screen.findByRole('link', { name: /scale & fretboard/i })).toHaveAttribute('href', '/songs/abc123/scale');
-    expect(screen.queryByRole('button', { name: 'Follow playhead' })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Follow playhead' })).not.toBeInTheDocument());
   });
 
   it('has the full transport in the Tabs view: tempo, pitch, loop and practice', async () => {

@@ -73,15 +73,6 @@ export function Library() {
                 <Chip tone={STATE_TONE[entry.state ?? ''] ?? 'neutral'} dot>
                   {entry.state}
                 </Chip>
-                {entry.state === 'analyzed' && (
-                  <ButtonLink
-                    className={styles.scale}
-                    variant="ghost"
-                    to={`/songs/${entry.song.id}/scale`}
-                  >
-                    Scale &amp; fretboard
-                  </ButtonLink>
-                )}
               </>
             ) : (
               <>

@@ -35,7 +35,7 @@ vi.mock('../engine/EngineController', () => ({
 }));
 
 // A realistic song entry for the song-scoped routes (/songs/01ABC, .../scale,
-// .../export), the same way ScaleSheet.test.tsx and Library.test.tsx mock
+// .../export), the same way Library.test.tsx mock
 // /api/songs -- a generic "same JSON for every URL" mock left the song lookup
 // inside those screens resolving to nothing, which masked how they actually
 // render with real data.
@@ -104,7 +104,6 @@ test.each([
   ['/splitter', /album splitter/i],
   // The Song view's heading is the song's own title (UI spec §6, screen 3).
   ['/songs/01ABC', /tightrope/i],
-  ['/songs/01ABC/scale', /scale/i],
   // Exact match: the screen also has an "Exports" h2 for past files (Task 6),
   // which /export/i would ambiguously match too.
   ['/songs/01ABC/export', /^export$/i],

@@ -13,7 +13,7 @@ instrument and play along.
   that range, Shift+wheel or the scrollbar pans, and a click on the ruler seeks
 - Tempo (50–150 %, 10 % a press; the arrow keys step 5 %) and pitch (±12 semitones) change without re-separating; stems are never modified
 - Sample-accurate seamless loops on the beat grid, set by bar number in the Loop editor (or with the A/B keys at the playhead), saved by name, with optional count-in and metronome under Practice
-- Beat, key and chord analysis, plus a fretboard view
+- Beat, key and chord analysis
 - One song screen: a single one-row transport stays put while you switch between Stems (waveforms and the mixer) and Tabs (the play-along neck below); the music never stops. Rename a song's title and artist in place
 - Tabs view for bass: a live neck shows what to play in the current and the next
   bar, with a beat lane underneath showing when. The notes are generated from the chord

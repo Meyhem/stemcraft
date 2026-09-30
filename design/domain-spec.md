@@ -192,7 +192,7 @@ mute it.
 Runs after separation, on CPU, in a few seconds.
 
 - **Key and scale:** the top 2–3 candidates with confidence, computed on the bass and other stems rather than the full mix (Essentia). Shown as e.g. “G minor 72% · B♭ major 18%”.
-- **Scale view:** tapping a candidate opens a fretboard (4-string bass, 6-string guitar) with the scale notes highlighted, plus a scale-pattern tab. Pure lookup from key to notes — no model, no failure mode.
+- **Scale view:** superseded by the Theory section (Scale finder, Scale positions); the per-song scale page was removed.
 - **Beat grid:** beats, downbeats and BPM (beat\_this or madmom); loops and the metronome snap to it
 - **Chords:** a chord chart aligned to bars (autochord or BTC)
 

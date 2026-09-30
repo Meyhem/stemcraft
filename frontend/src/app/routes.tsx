@@ -7,7 +7,6 @@ import { Export } from '../screens/Export';
 import { JobQueue } from '../screens/JobQueue';
 import { Library } from '../screens/Library';
 import { PlayAlong } from '../screens/PlayAlong';
-import { ScaleSheet } from '../screens/ScaleSheet';
 import { SongScreen } from '../screens/SongScreen';
 import { SongView } from '../screens/SongView';
 import { ImportModal } from '../screens/import/ImportModal';
@@ -71,7 +70,6 @@ export function AppRoutes() {
               <Route path="play" element={<PlayAlong />} />
             </Route>
           </Route>
-          <Route path="songs/:songId/scale" element={<ScaleSheet />} />
           <Route path="songs/:songId/export" element={<Export />} />
           <Route path="*" element={<p>Not found</p>} />
         </Route>

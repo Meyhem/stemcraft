@@ -18,12 +18,11 @@ import { NowReadout } from '../playalong/NowReadout';
 import { PatternPanel } from '../playalong/PatternPanel';
 import styles from '../playalong/PlayAlong.module.css';
 import { useSongSession } from '../session/SongSession';
-import { ViewTools } from '../songview/ViewTools';
-import { Banner, EmptyState, Panel, TextLink } from '../ui';
+import { Banner, EmptyState, Panel } from '../ui';
 
 export function PlayAlong() {
   const session = useSongSession();
-  const { songId, analysis, notAnalyzedYet, grid, song, engine, playing, loopArmed, seekNonce, getPosition } = session;
+  const { analysis, notAnalyzedYet, grid, song, engine, playing, loopArmed, seekNonce, getPosition } = session;
 
   const loopStart = song?.active_loop?.start_bar ?? null;
   const loopEnd = song?.active_loop?.end_bar ?? null;
@@ -50,10 +49,6 @@ export function PlayAlong() {
 
   return (
     <>
-      <ViewTools>
-        <TextLink to={`/songs/${songId}/scale`}>Scale &amp; fretboard &rarr;</TextLink>
-      </ViewTools>
-
       {analysis && !grid && (
         <Banner tone="error" title="The beat grid is unusable">
           The analysis found fewer than two downbeats, so there are no bars to play along to.

@@ -51,7 +51,6 @@
   color: var(--ds-text-2);
 }
 
-.scale,
 .delete {
   align-self: flex-start;
 }
