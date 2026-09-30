@@ -276,6 +276,18 @@ describe('EngineController at the end of the stems', () => {
     expect(controller.getPositionSamples()).toBe(SAMPLE_RATE);
   });
 
+  it('a seek to the end is itself at-end: the next play starts from the top', async () => {
+    const { controller, context, cursorNode } = makeController(0);
+    controller.seek(sampleIndex(controller.durationSamples));
+    cursorNode.port.postMessage.mockClear();
+    context.currentTime = 10;
+    await controller.play();
+    expect(cursorNode.port.postMessage).toHaveBeenCalledWith({ type: 'seek', position: 0 });
+    expect(controller.getPositionSamples()).toBe(0);
+    context.currentTime = 11;
+    expect(controller.getPositionSamples()).toBe(SAMPLE_RATE);
+  });
+
   it('a seek after the end is respected by the next play', async () => {
     const { controller, endedBox } = makeController(0);
     await controller.play();

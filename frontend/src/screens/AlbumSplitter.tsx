@@ -452,7 +452,9 @@ function AlbumEditor({ albumId }: { albumId: string }) {
   // rejected; `saveError` above shows why (N-08).
   async function handleSplit() {
     if (!(await flush())) return;
-    queueSplit.mutate(albumId);
+    // The re-split rewrites the tracks under the same filenames, so once it is
+    // queued the old "In library" marks would describe files that are gone.
+    queueSplit.mutate(albumId, { onSuccess: () => setInLibrary(new Set()) });
   }
 
   // ---- render -----------------------------------------------------------
@@ -495,6 +497,9 @@ function AlbumEditor({ albumId }: { albumId: string }) {
       : null;
   const trackFiles = tracksQuery.data ?? [];
   const remaining = trackFiles.filter((track) => !inLibrary.has(track.name)).map((track) => track.name);
+  // Mid-split the files on disk are being replaced; adding one now could send
+  // a track from the previous render.
+  const splitting = jobState === 'queued' || jobState === 'running';
   const showWaveform = hasAudio && album.total_samples > 0 && envelope !== null;
 
   return (
@@ -649,7 +654,7 @@ function AlbumEditor({ albumId }: { albumId: string }) {
         <>
           <div className={styles.libraryRow}>
             <Button
-              disabled={sendToLibrary.isPending || remaining.length === 0}
+              disabled={splitting || sendToLibrary.isPending || remaining.length === 0}
               onClick={() => addToLibrary(remaining)}
             >
               {remaining.length === 0
@@ -679,7 +684,7 @@ function AlbumEditor({ albumId }: { albumId: string }) {
                   </a>
                   <Button
                     variant="ghost"
-                    disabled={added || sendToLibrary.isPending}
+                    disabled={added || splitting || sendToLibrary.isPending}
                     aria-label={added ? `${track.name} is in the library` : `Add ${track.name} to library`}
                     onClick={() => addToLibrary([track.name])}
                   >

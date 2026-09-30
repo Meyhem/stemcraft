@@ -454,6 +454,25 @@ describe('AlbumSplitter', () => {
     expect(screen.getByRole('link', { name: 'Open library' })).toHaveAttribute('href', '/');
   });
 
+  it('clears the library marks when the album is split again', async () => {
+    renderWith(splitAlbum, { tracks: trackFiles });
+    fireEvent.click(await screen.findByRole('button', { name: 'Add 01-one.mp3 to library' }));
+    await screen.findByRole('button', { name: '01-one.mp3 is in the library' });
+    fireEvent.click(screen.getByRole('button', { name: /Split into/ }));
+    expect(await screen.findByRole('button', { name: 'Add 01-one.mp3 to library' })).toBeEnabled();
+  });
+
+  it.each(['queued', 'running'])('disables the library buttons while a split is %s', async (state) => {
+    renderWith(splitAlbum, {
+      tracks: trackFiles,
+      jobs: [
+        { id: 9, kind: 'split_album', song_id: null, payload: { album_id: ALBUM_ID }, state, progress: 0, error: null, result: null },
+      ],
+    });
+    expect(await screen.findByRole('button', { name: 'Add 01-one.mp3 to library' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add all 2 tracks to library' })).toBeDisabled();
+  });
+
   it('adds every track not yet added, in order', async () => {
     const fetchMock = renderWith(splitAlbum, { tracks: trackFiles });
     fireEvent.click(await screen.findByRole('button', { name: 'Add all 2 tracks to library' }));

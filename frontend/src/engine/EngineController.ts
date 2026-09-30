@@ -25,7 +25,7 @@ export class EngineController {
   // without touching gains or resolving twice.
   private countInGeneration = 0;
   private pendingCountIn: { generation: number; restore: () => void } | null = null;
-  // Set when the worklet reports the stems ended, cleared by any seek. The
+  // Set when the worklet reports the stems ended, cleared by any seek that lands before the end. The
   // worklet reports `ended` once per arrival, so a play() that left the cursor
   // parked there would run forever without a second report: the clock would
   // extrapolate past the end and every position report would snap it back.
@@ -207,7 +207,7 @@ export class EngineController {
 
   seek(position: SampleIndex): void {
     this.cancelCountIn();
-    this.atEnd = false;
+    this.atEnd = position >= this.durationSamples;
     this.cursorNode.port.postMessage({ type: 'seek', position: toDeviceDomain(position, this.context.sampleRate) });
     this.clock.resync({ contextTime: this.context.currentTime, position, samplesPerSecond: this.clockRate });
   }
