@@ -152,14 +152,14 @@ function AlbumPicker() {
   }
 
   return (
-    <section className={styles.screen}>
+    <section className={`${styles.screen} ${styles.wide}`}>
       <h1>Album splitter</h1>
-      <p className={styles.note}>
+      <p className={`${styles.note} ${styles.readable}`}>
         One long file in — an album side, a live set, a tape transfer — and a set of tagged MP3s
         out. Upload it, move the boundaries where you want them, name the tracks, then render.
       </p>
 
-      <Panel className={styles.form}>
+      <Panel className={`${styles.form} ${styles.readable}`}>
         <form className={styles.inner} onSubmit={handleUpload}>
           <h2>Upload an album</h2>
           <DropZone
