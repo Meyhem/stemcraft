@@ -1,0 +1,13 @@
+/* The canvas keeps its last frame when playback stops; opacity is what fades it.
+   Not the playhead, so a transition is allowed here (U-05 covers only that). */
+.bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity var(--ds-m-panel) var(--ds-ease);
+}
+
+.playing {
+  opacity: 1;
+}

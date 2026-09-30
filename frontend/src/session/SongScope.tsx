@@ -4,6 +4,7 @@
 // playing), and leaving the song unmounts this and disposes it.
 import { Outlet, useParams } from 'react-router-dom';
 
+import { StemPulseBar } from '../pulse/StemPulseBar';
 import { SongSessionContext, useSongSessionState } from './SongSession';
 
 export function SongScope() {
@@ -11,6 +12,7 @@ export function SongScope() {
   const session = useSongSessionState(songId);
   return (
     <SongSessionContext.Provider value={session}>
+      <StemPulseBar />
       <Outlet />
     </SongSessionContext.Provider>
   );

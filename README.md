@@ -8,6 +8,7 @@ instrument and play along.
   analysis live, step by step
 - GPU stem separation into vocals, drums, bass and other
 - Live mixer: mute, solo and volume per stem
+- A thin glow along the navbar pulses with each stem you can hear while a song plays
 - Stems view time axis: the wheel zooms at the pointer, dragging across the lanes zooms to
   that range, Shift+wheel or the scrollbar pans, and a click on the ruler seeks
 - Tempo (50–150 %) and pitch change without re-separating; stems are never modified

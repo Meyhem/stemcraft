@@ -146,6 +146,19 @@ hit-target tiers rather than one.
   and the interval label already says which degree it is).
   *Reversibility:* two-way.
 
+- **U-14 — The navbar's bottom border may glow in stem hues while a song plays.**
+  A 3px decorative bar: two soft glows per audible stem, each swelling with that stem's
+  level; a muted, soloed-out or count-in-silenced stem contributes none.
+  *Because:* it is the four stems being named (U-01), in a form that answers "what am I
+  hearing" from across the room. It is `aria-hidden`, takes no input, and says nothing
+  the labelled lanes of the Song view do not, so hue may be its only carrier here, the
+  one place U-01's "never the sole carrier" is waived. Levels come from the load-time
+  envelopes at the engine clock (D-07); nothing is metered on the audio thread.
+  `prefers-reduced-motion` hides it.
+  *Rejected:* a per-stem level meter in the navbar (a second, smaller mixer); metering in
+  the worklet (render-thread messages for an ornament, against R-01).
+  *Reversibility:* two-way, trivially.
+
 ## 4. Tokens
 
 Defined in `design/ui/src/tokens.css`. Summary:
