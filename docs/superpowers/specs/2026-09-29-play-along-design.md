@@ -60,8 +60,9 @@ Top to bottom (see the mockup):
    divided into its beats, with a chip per note at its slot and a cursor sweeping the
    current bar. At each downbeat the lane flips: next becomes current.
 7. **Chord ribbon**: one cell per bar with number and chord. The current bar is
-   outlined and the active loop's bars are tinted. Click sets the loop start and
-   shift-click sets the end.
+   outlined and the active loop's bars are tinted. Click moves the playhead to the bar.
+   Ctrl/Cmd-click sets the loop start and shift-click sets the end (changed
+   2026-09-30; click used to set the start).
 8. **Banner**: "A practice pattern over the detected chords, not a transcription"
    (R-05 honesty).
 

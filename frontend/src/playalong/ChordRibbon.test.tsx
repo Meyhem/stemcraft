@@ -20,7 +20,9 @@ const song = {
   loops: [], active_loop: null, metronome: false, count_in_bars: 0, play_along: DEFAULT_PLAY_ALONG,
 } as Song;
 
-function renderRibbon(onLoopBars = vi.fn(), loop = { name: '', start_bar: 1, end_bar: 3 }) {
+function renderRibbon(loop = { name: '', start_bar: 1, end_bar: 3 }) {
+  const onLoopBars = vi.fn();
+  const onSeekBar = vi.fn();
   const result = patternSource.barsFor({ song, analysis, grid, loop: null });
   if (!result.ok) throw new Error(result.error);
   render(
@@ -33,9 +35,10 @@ function renderRibbon(onLoopBars = vi.fn(), loop = { name: '', start_bar: 1, end
       playing={false}
       seekNonce={0}
       onLoopBars={onLoopBars}
+      onSeekBar={onSeekBar}
     />,
   );
-  return onLoopBars;
+  return { onLoopBars, onSeekBar };
 }
 
 describe('ChordRibbon', () => {
@@ -48,9 +51,16 @@ describe('ChordRibbon', () => {
     expect(cells[3]).toHaveAttribute('data-in-loop', 'false');
   });
 
-  it('click sets the loop start, shift-click the end', () => {
-    const onLoopBars = renderRibbon();
+  it('click moves the playhead to the bar and leaves the loop alone', () => {
+    const { onLoopBars, onSeekBar } = renderRibbon();
     fireEvent.click(screen.getByRole('button', { name: /Bar 4/ }));
+    expect(onSeekBar).toHaveBeenCalledWith(3);
+    expect(onLoopBars).not.toHaveBeenCalled();
+  });
+
+  it('ctrl-click sets the loop start, shift-click the end, and neither seeks', () => {
+    const { onLoopBars, onSeekBar } = renderRibbon();
+    fireEvent.click(screen.getByRole('button', { name: /Bar 4/ }), { ctrlKey: true });
     // A start past the current end pushes the end along: at least one bar.
     expect(onLoopBars).toHaveBeenLastCalledWith(3, 4);
     fireEvent.click(screen.getByRole('button', { name: /Bar 4/ }), { shiftKey: true });
@@ -59,5 +69,6 @@ describe('ChordRibbon', () => {
     onLoopBars.mockClear();
     fireEvent.click(screen.getByRole('button', { name: /Bar 1/ }), { shiftKey: true });
     expect(onLoopBars).not.toHaveBeenCalled();
+    expect(onSeekBar).not.toHaveBeenCalled();
   });
 });

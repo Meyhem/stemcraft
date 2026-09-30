@@ -99,6 +99,8 @@ export interface SongSession {
   onPlayPause(): Promise<void>;
   onScrub(position: SampleIndex): void;
   onNudgeBars(delta: number): void;
+  /** Moves the cursor to the start of a 0-based bar. An armed loop survives only if the bar is inside it. */
+  onSeekBar(bar: number): void;
   onTempoChange(tempo: number): void;
   onPitchChange(pitchSemitones: number): void;
   onMetronomeToggle(): void;
@@ -353,6 +355,26 @@ export function useSongSessionState(songId: string): SongSession {
     [handleScrub],
   );
 
+  // Play along's ribbon seeks by bar. Inside an armed loop the cursor stays in
+  // the region the wrap logic expects, so the loop can stay armed -- restarting
+  // a looped phrase from one of its bars should not end the loop. Anywhere else
+  // it is a cursor move like any other and goes through handleScrub (U-06).
+  const handleSeekBar = useCallback(
+    (bar: number) => {
+      const { engine: current, grid: currentGrid, song: currentSong, loopArmed: armed } = latest.current;
+      if (!current || !currentGrid || bar < 0) return;
+      const position = barStart(currentGrid, bar);
+      const loop = currentSong?.active_loop;
+      if (armed && loop && bar >= loop.start_bar && bar < loop.end_bar) {
+        current.seek(position);
+        setSeekNonce((n) => n + 1);
+        return;
+      }
+      handleScrub(position);
+    },
+    [handleScrub],
+  );
+
   const handleTempoChange = useCallback(
     (tempo: number) => {
       const { song: currentSong } = latest.current;
@@ -561,6 +583,7 @@ export function useSongSessionState(songId: string): SongSession {
       onPlayPause: handlePlayPause,
       onScrub: handleScrub,
       onNudgeBars: handleNudgeBars,
+      onSeekBar: handleSeekBar,
       onTempoChange: handleTempoChange,
       onPitchChange: handlePitchChange,
       onMetronomeToggle: handleMetronomeToggle,
@@ -605,6 +628,7 @@ export function useSongSessionState(songId: string): SongSession {
       handlePlayPause,
       handleScrub,
       handleNudgeBars,
+      handleSeekBar,
       handleTempoChange,
       handlePitchChange,
       handleMetronomeToggle,

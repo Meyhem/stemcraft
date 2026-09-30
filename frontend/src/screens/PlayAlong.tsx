@@ -175,6 +175,7 @@ export function PlayAlong() {
               playing={playing}
               seekNonce={seekNonce}
               onLoopBars={session.onLoopBars}
+              onSeekBar={session.onSeekBar}
             />
           </Panel>
 

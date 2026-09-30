@@ -220,7 +220,8 @@ A separate practice screen for playing *with* the song rather than editing it. I
 - **Slash chords** put the slash note in the bass (C/E plays E)
 - **Pitch shift** transposes the neck and chord names to what is heard
 - **Fingering** is chosen automatically to stay in one hand position across bars, deterministically
-- **Looping by bar numbers:** start and end bar steppers, or click and shift-click the chord ribbon. It is the same loop as Song view's.
+- **Chord ribbon:** click a bar to move the playhead there
+- **Looping by bar numbers:** start and end bar steppers, or Ctrl-click (start) and shift-click (end) the chord ribbon. It is the same loop as Song view's.
 - **Honest about the chords:** a bar with no chord or an unclassified chord shows an empty neck saying so. When a pattern can't apply (e.g. a diatonic triad on a borrowed chord), the substitute is drawn and labelled; nothing is silently guessed.
 - Guitar, other tunings and a tab or Guitar Pro export are later work
 
@@ -273,7 +274,6 @@ When it lands, transcription is a second note source for the Play along screen n
 - Batch import of a whole folder
 - Song export/import as a zip, for backup or moving machines
 - Send album-splitter tracks straight into the library as Songs
-- Play along: make the bottom bar/chord list clickable, so clicking a bar moves the playhead there
 
 ## Open questions
 

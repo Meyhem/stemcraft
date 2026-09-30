@@ -17,8 +17,8 @@ instrument and play along.
   bar, with a beat lane underneath showing when. The notes are generated from the chord
   chart by a pattern you pick (root, root–5th, root–5th–octave, octave, chord or diatonic triad, 7th; whole
   to eighth notes; optional chromatic, scale or fifth approach into the next bar), in the
-  detected key or another candidate, and follow the pitch shift. Loop by bar numbers or
-  from the chord ribbon; playback carries on when you switch back to the Song view
+  detected key or another candidate, and follow the pitch shift. Click a bar in the chord ribbon
+  to jump there; loop by bar numbers or by Ctrl- and Shift-clicking the ribbon; playback carries on when you switch back to the Song view
 - Theory tab for 4- and 5-string bass and 6-string guitar in any tuning, left-handed too:
   scale, chord and note finders, name a chord from notes you tap, scale positions
   (pentatonic boxes, 3-notes-per-string, CAGED, position boxes), triads and inversions,

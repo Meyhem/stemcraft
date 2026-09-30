@@ -1,6 +1,6 @@
 // frontend/src/screens/PlayAlong.test.tsx
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -174,5 +174,29 @@ describe('PlayAlong', () => {
     await waitFor(() => expect(engine.play).toHaveBeenCalledTimes(1));
     expect(engine.pause).not.toHaveBeenCalled();
     expect(metronome).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('moves the playhead to a bar clicked in the chord ribbon', async () => {
+    renderAt('/songs/abc123/play');
+    await userEvent.click(await screen.findByRole('button', { name: /^Bar 3,/ }));
+    expect(engine.seek).toHaveBeenCalledWith(192_000);
+  });
+
+  it('keeps an armed loop for a click inside it and releases it for a click outside', async () => {
+    renderAt('/songs/abc123/play');
+    // Bars 2-3 (0-based 1..3), armed.
+    fireEvent.click(await screen.findByRole('button', { name: /^Bar 2,/ }), { ctrlKey: true });
+    fireEvent.click(screen.getByRole('button', { name: /^Bar 3,/ }), { shiftKey: true });
+    const arm = screen.getByRole('button', { name: 'Arm loop' });
+    await userEvent.click(arm);
+    expect(arm).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: /^Bar 3,/ }));
+    expect(engine.seek).toHaveBeenLastCalledWith(192_000);
+    expect(arm).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: /^Bar 4,/ }));
+    expect(engine.seek).toHaveBeenLastCalledWith(288_000);
+    expect(arm).toHaveAttribute('aria-pressed', 'false');
   });
 });
