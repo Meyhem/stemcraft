@@ -30,6 +30,10 @@ export class EngineController {
   // parked there would run forever without a second report: the clock would
   // extrapolate past the end and every position report would snap it back.
   private atEnd = false;
+  // The gain last handed to the worklet per stem, STEM_ORDER-indexed. An
+  // AudioParam mid-ramp reports a value on its way somewhere; this is where it
+  // is going, which is what "is this stem audible" means to a reader.
+  private readonly stemGains: number[] = STEM_ORDER.map(() => 1);
 
   private constructor(
     private readonly context: AudioContext,
@@ -167,8 +171,14 @@ export class EngineController {
 
   setStemGain(stem: StemName, linearGain: number): void {
     const index = STEM_ORDER.indexOf(stem);
+    this.stemGains[index] = linearGain;
     const param = this.cursorNode.parameters.get(`gain${index}`)!;
     param.setTargetAtTime(linearGain, this.context.currentTime, 0.01); // short declick ramp
+  }
+
+  /** The gain last set for a stem: 0 when muted, soloed out, or silenced by a count-in. */
+  getStemGain(stem: StemName): number {
+    return this.stemGains[STEM_ORDER.indexOf(stem)]!;
   }
 
   setTempo(ratio: number): void {

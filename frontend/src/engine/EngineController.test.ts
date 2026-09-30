@@ -321,3 +321,25 @@ describe('EngineController at the end of the stems', () => {
     expect(controller.getPositionSamples()).toBe(10_000_000);
   });
 });
+
+describe('EngineController stem gains', () => {
+  it('reports the gain last set for a stem, and 1 before any is set', () => {
+    const { controller } = makeController();
+    expect(controller.getStemGain('bass')).toBe(1);
+    controller.setStemGain('bass', 0.25);
+    expect(controller.getStemGain('bass')).toBe(0.25);
+    expect(controller.getStemGain('drums')).toBe(1);
+  });
+
+  it('reports zero for every stem during a count-in, and the restored gains after it is cancelled', async () => {
+    const { controller } = makeController();
+    const restore = vi.fn(() => controller.setStemGain('vocals', 0.5));
+    void controller.countInAndPlay(sampleIndex(960), 1, BAR_STARTS, restore);
+    await waitForRaf();
+    expect(controller.getStemGain('vocals')).toBe(0);
+    expect(controller.getStemGain('other')).toBe(0);
+    controller.pause();
+    expect(restore).toHaveBeenCalledTimes(1);
+    expect(controller.getStemGain('vocals')).toBe(0.5);
+  });
+});
