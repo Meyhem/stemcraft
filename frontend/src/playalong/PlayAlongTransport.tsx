@@ -58,7 +58,7 @@ export function PlayAlongTransport(props: PlayAlongTransportProps) {
           type="range"
           aria-label="Tempo"
           min={50}
-          max={100}
+          max={150}
           step={1}
           value={Math.round(tempo * 100)}
           onChange={(e) => props.onTempoChange(Number(e.target.value) / 100)}

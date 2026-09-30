@@ -67,13 +67,19 @@ def test_out_of_range_tempo_or_pitch_is_rejected_not_clamped():
     # N-08: a recipe the engine could never have produced is a bug upstream,
     # and a clamp would hide it behind a file that sounds almost right.
     with pytest.raises(ValidationError):
-        _recipe(tempo=1.5)
+        _recipe(tempo=1.51)
     with pytest.raises(ValidationError):
         _recipe(tempo=0.0)
     with pytest.raises(ValidationError):
         _recipe(tempo=0.01)
     with pytest.raises(ValidationError):
         _recipe(pitch_semitones=25)
+
+
+def test_tempo_up_to_150_percent_is_accepted():
+    # N-04 (amended 2026-09-30): the practice range is 50-150 %.
+    assert _recipe(tempo=1.5).tempo == 1.5
+    assert not _recipe(tempo=1.5).is_identity
 
 
 def test_name_pattern_has_a_hard_anchor_not_a_soft_one():

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ChordSegment } from '../api/client';
 import { chordIndexAt, displayChord, mergeChords } from '../music/chords';
 import { barAt, type Grid } from '../music/grid';
-import type { SampleIndex } from '../engine/types';
+import { clampTempo, TEMPO_MAX, TEMPO_MIN, type SampleIndex } from '../engine/types';
 import { Button } from '../ui';
 import { usePlayhead } from './usePlayhead';
 import styles from './Transport.module.css';
@@ -23,7 +23,7 @@ export interface TransportProps {
    * repaints after a scrub or a bar nudge made while paused (usePlayhead).
    */
   seekNonce: number;
-  tempo: number; // 0.5..1.0
+  tempo: number; // 0.5..1.5
   pitchSemitones: number; // -12..12
   metronome: boolean;
   loopArmed: boolean;
@@ -136,8 +136,8 @@ export function Transport({
         B: () => barsAvailable && hasLoop && onSetLoopEnd(),
         m: onMetronomeToggle,
         M: onMetronomeToggle,
-        ArrowUp: () => onTempoChange(Math.min(1, Number((tempo + TEMPO_STEP).toFixed(2)))),
-        ArrowDown: () => onTempoChange(Math.max(0.5, Number((tempo - TEMPO_STEP).toFixed(2)))),
+        ArrowUp: () => onTempoChange(clampTempo(Number((tempo + TEMPO_STEP).toFixed(2)))),
+        ArrowDown: () => onTempoChange(clampTempo(Number((tempo - TEMPO_STEP).toFixed(2)))),
         ArrowRight: () => onNudgeBars(1),
         ArrowLeft: () => onNudgeBars(-1),
       };
@@ -198,12 +198,17 @@ export function Transport({
         <input
           type="range"
           aria-label="Tempo"
-          min={50}
-          max={100}
+          min={TEMPO_MIN * 100}
+          max={TEMPO_MAX * 100}
           step={1}
+          list="tempo-ticks"
           value={Math.round(tempo * 100)}
           onChange={(e) => onTempoChange(Number(e.target.value) / 100)}
         />
+        {/* The original tempo, so 100% can be found again by eye. */}
+        <datalist id="tempo-ticks">
+          <option value="100" />
+        </datalist>
         {/* Untouched values render muted (UI spec §5). */}
         <output data-default={tempo === 1 ? 'true' : 'false'}>{Math.round(tempo * 100)}%</output>
       </label>

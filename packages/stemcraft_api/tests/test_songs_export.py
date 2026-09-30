@@ -138,7 +138,7 @@ def test_exporting_an_unknown_song_is_404(client, tmp_path):
 def test_a_recipe_outside_the_allowed_range_is_422_not_a_500(client, tmp_path):
     # N-08: a song.json carrying a tempo the Song view could not have produced
     # surfaces as a refusal naming the field, never as a traceback or a clamp.
-    song, _ = _separated_song(tmp_path, tempo=1.4)
+    song, _ = _separated_song(tmp_path, tempo=1.6)
     resp = client.post(f"/api/songs/{song.id}/export", json={"stems": ["bass"]})
     assert resp.status_code == 422
     assert "tempo" in resp.text

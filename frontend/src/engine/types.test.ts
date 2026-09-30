@@ -1,6 +1,9 @@
 import { expect, test } from 'vitest';
 
 import {
+  TEMPO_MAX,
+  TEMPO_MIN,
+  clampTempo,
   SAMPLE_RATE,
   SampleIndex,
   Seconds,
@@ -48,4 +51,12 @@ test('toStemDomain round-trips through toDeviceDomain at a non-48kHz rate', () =
   expect(deviceValue).not.toBe(original as number); // sanity: ratio isn't a no-op
   const roundTripped = toStemDomain(deviceValue, 44_100);
   expect(roundTripped).toBe(original);
+});
+
+test('clampTempo keeps the N-04 range of 50 to 150 %', () => {
+  expect(TEMPO_MIN).toBe(0.5);
+  expect(TEMPO_MAX).toBe(1.5);
+  expect(clampTempo(0.2)).toBe(0.5);
+  expect(clampTempo(1.2)).toBe(1.2);
+  expect(clampTempo(1.7)).toBe(1.5);
 });

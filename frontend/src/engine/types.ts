@@ -48,3 +48,11 @@ export function toDeviceDomain(n: SampleIndex, deviceSampleRate: number): number
 export function toStemDomain(n: number, deviceSampleRate: number): SampleIndex {
   return sampleIndex(n * (SAMPLE_RATE / deviceSampleRate));
 }
+
+/** N-04: the practice tempo range, as a ratio of the original. Mirrors stemcraft_lib.song. */
+export const TEMPO_MIN = 0.5;
+export const TEMPO_MAX = 1.5;
+
+export function clampTempo(ratio: number): number {
+  return Math.min(TEMPO_MAX, Math.max(TEMPO_MIN, ratio));
+}

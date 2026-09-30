@@ -19,7 +19,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, field_validator
 
 from .ids import slugify
-from .song import STEM_NAMES
+from .song import STEM_NAMES, TEMPO_MAX, TEMPO_MIN
 
 EXPORTS_DIRNAME = "exports"
 
@@ -52,10 +52,10 @@ class ExportRecipe(BaseModel):
     song_id: str
     name: str
     stems: list[ExportStem] = Field(min_length=1)
-    # Domain spec: tempo 50-100%, pitch in semitones. Out of range is rejected,
-    # never clamped (N-08) -- a recipe the Song view could not have produced
+    # N-04: tempo 50-150%, pitch in semitones. Out of range is rejected,
+    # never clamped (N-08) -- a recipe the song screen could not have produced
     # means the caller is wrong, and a clamp would hide that behind audio.
-    tempo: float = Field(default=1.0, ge=0.5, le=1.0)
+    tempo: float = Field(default=1.0, ge=TEMPO_MIN, le=TEMPO_MAX)
     pitch_semitones: int = Field(default=0, ge=-12, le=12)
     # D7-06: ID3, snapshotted with everything else.
     title: str = ""

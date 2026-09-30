@@ -320,7 +320,7 @@ def queue_export(song_id: str, body: ExportRequest, conn: Conn) -> dict:
         )
     except ValidationError as exc:
         # N-08: a song.json the Song view could not have produced (a tempo above
-        # 1.0, a pitch past an octave) is named, not clamped and not a traceback.
+        # 1.5, a pitch past an octave) is named, not clamped and not a traceback.
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     job_id = jobs_db.enqueue(

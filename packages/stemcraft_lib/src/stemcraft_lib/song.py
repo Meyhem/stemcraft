@@ -22,6 +22,11 @@ SCHEMA_VERSION = 3
 # Fixed at HTDemucs v4 training time, not configured and not detected.
 STEM_NAMES: tuple[str, ...] = ("vocals", "drums", "bass", "other")
 
+# N-04: the practice tempo range, as a ratio of the original tempo. Defined once
+# here; the export recipe validates against it and the browser mirrors it.
+TEMPO_MIN = 0.5
+TEMPO_MAX = 1.5
+
 SongState = Literal["imported", "separated", "analyzed"]
 
 

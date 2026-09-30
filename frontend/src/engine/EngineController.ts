@@ -3,7 +3,7 @@ import processorUrl from '@soundtouchjs/audio-worklet/processor?url';
 import { ProcessorMetrics, SoundTouchNode } from '@soundtouchjs/audio-worklet';
 import { computeSoundTouchParams } from './soundtouch';
 import { EngineClock } from './clock';
-import { SAMPLE_RATE, SampleIndex, sampleIndex, toDeviceDomain, toStemDomain, STEM_ORDER, type StemName } from './types';
+import { SAMPLE_RATE, SampleIndex, clampTempo, sampleIndex, toDeviceDomain, toStemDomain, STEM_ORDER, type StemName } from './types';
 import { summariseStem } from './stemPeaks';
 import type { StemSummary } from './stemPeaks';
 
@@ -172,7 +172,7 @@ export class EngineController {
   }
 
   setTempo(ratio: number): void {
-    const clamped = Math.min(1.0, Math.max(0.5, ratio)); // N-04: 50-100%
+    const clamped = clampTempo(ratio); // N-04: 50-150%
     this.tempoState.ratio = clamped;
     this.cursorNode.parameters.get('readRate')!.setValueAtTime(clamped, this.context.currentTime);
     const stParams = computeSoundTouchParams(clamped, this.stNode.pitchSemitones.value);

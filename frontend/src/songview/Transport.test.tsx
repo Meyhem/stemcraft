@@ -56,11 +56,20 @@ describe('Transport', () => {
     expect(screen.getByText('-2 st')).toBeInTheDocument();
   });
 
-  it('clamps tempo to N-04’s 50-100% range', () => {
+  it('offers N-04’s 50-150% tempo range, with 100% marked', () => {
     renderTransport();
     const slider = screen.getByRole('slider', { name: /tempo/i }) as HTMLInputElement;
     expect(slider.min).toBe('50');
-    expect(slider.max).toBe('100');
+    expect(slider.max).toBe('150');
+    expect(document.querySelector('datalist#tempo-ticks option')).toHaveAttribute('value', '100');
+  });
+
+  it('steps tempo past 100% with the arrow keys, and stops at 150%', async () => {
+    const props = renderTransport({ tempo: 1.45 });
+    await userEvent.keyboard('{ArrowUp}');
+    expect(props.onTempoChange).toHaveBeenLastCalledWith(1.5);
+    await userEvent.keyboard('{ArrowUp}');
+    expect(props.onTempoChange).toHaveBeenLastCalledWith(1.5);
   });
 
   it('shows the bar number, 1-indexed', () => {
