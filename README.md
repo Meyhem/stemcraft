@@ -73,7 +73,11 @@ uv sync
 npm --prefix frontend install
 ```
 
-Then start three processes, each in its own terminal.
+To do all of that in one go, `scripts/dev.sh up` checks the tools on `PATH`, runs both installs,
+frees ports 8000 and 5173 (it kills whatever is listening there), and starts the worker, API and
+Vite in the background with logs in `.logs/dev/`. `scripts/dev.sh down` stops them.
+
+Or start the three processes by hand, each in its own terminal.
 
 Worker (all GPU work; it has no port):
 
