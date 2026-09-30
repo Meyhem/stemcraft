@@ -35,10 +35,13 @@ interface ChannelSource {
   getChannelData(channel: number): Float32Array;
 }
 
+/** Envelope resolution. Readers that index an envelope by time depend on it. */
+export const ENVELOPE_BUCKETS_PER_SECOND = 100;
+
 export function summariseStem(
   buffer: ChannelSource,
   name: StemName,
-  bucketsPerSecond = 100,
+  bucketsPerSecond = ENVELOPE_BUCKETS_PER_SECOND,
 ): StemSummary {
   const channels: Float32Array[] = [];
   for (let ch = 0; ch < buffer.numberOfChannels; ch++) channels.push(buffer.getChannelData(ch));
