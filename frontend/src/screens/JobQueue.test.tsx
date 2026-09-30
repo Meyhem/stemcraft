@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { JobQueue } from './JobQueue';
 
@@ -23,6 +23,10 @@ const job = {
   result: null,
   steps: [],
 };
+
+// Pin only Date so "today" is stable; timers stay real for react-query.
+beforeEach(() => vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 9, 5, 12, 0, 0) }));
+afterEach(() => vi.useRealTimers());
 
 let served: unknown[] = [];
 let lastClient: QueryClient;
@@ -60,9 +64,32 @@ test('renders kind, state, device and progress', async () => {
   expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42');
 });
 
-test('shows the all-time stats below the queue', async () => {
-  renderQueue([job]);
-  expect(await screen.findByTestId('job-stats')).toBeInTheDocument();
+test('does not fetch or show all-time stats', async () => {
+  const fetchMock = renderQueue([job]);
+  await screen.findByText('probe');
+  expect(screen.queryByTestId('job-stats')).not.toBeInTheDocument();
+  expect(fetchMock).not.toHaveBeenCalledWith('/api/jobs/stats', expect.anything());
+});
+
+test('shows when a started job began, before the row is opened', async () => {
+  renderQueue([{ ...job, state: 'done', started_at: new Date(2026, 8, 30, 14, 32, 5).getTime() / 1000 }]);
+  const stamp = await screen.findByText('Sep 30, 14:32');
+  expect(stamp.tagName).toBe('TIME');
+  expect(stamp).toHaveAttribute('title', expect.stringContaining('14:32:05'));
+});
+
+test('a queued job shows when it was queued', async () => {
+  renderQueue([
+    { ...job, state: 'queued', started_at: null, created_at: new Date(2026, 8, 30, 14, 30).getTime() / 1000 },
+  ]);
+  const stamp = await screen.findByText('Sep 30, 14:30');
+  expect(stamp.parentElement).toHaveTextContent(/^queued Sep 30, 14:30/);
+});
+
+test('a job with no timestamps shows none rather than an invented one', async () => {
+  renderQueue([{ ...job, state: 'queued', started_at: null, created_at: null }]);
+  await screen.findByText('probe');
+  expect(document.querySelector('time')).toBeNull();
 });
 
 test('shows the real error text for a failed job', async () => {

@@ -4,12 +4,28 @@ import { useId, useState } from 'react';
 
 import type { Job } from '../api/client';
 import { Banner, Button, Chip, ProgressBar, StepList, StepStrip, jobStateTone } from '../ui';
+import { formatJobTime, formatJobTimeFull } from './jobTime';
 import styles from './JobRow.module.css';
 
 function duration(job: Job): string {
   if (job.started_at === null) return '—';
   const end = job.finished_at ?? Date.now() / 1000;
   return `${(end - job.started_at).toFixed(1)} s`;
+}
+
+// When the job began: the worker picking it up, or for a job still waiting, when it was queued.
+function initiated(job: Job) {
+  const started = job.started_at !== null;
+  const at = started ? job.started_at : job.created_at;
+  if (at === null) return null;
+  return (
+    <>
+      {!started && 'queued '}
+      <time dateTime={new Date(at * 1000).toISOString()} title={formatJobTimeFull(at)}>
+        {formatJobTime(at)}
+      </time>
+    </>
+  );
 }
 
 function summary(job: Job): string | null {
@@ -34,6 +50,7 @@ export function JobRow({ job, defaultOpen, onCancel }: JobRowProps) {
   const open = toggled ?? defaultOpen ?? (job.state === 'running' || job.state === 'failed');
   const bodyId = useId();
   const line = summary(job);
+  const began = initiated(job);
 
   return (
     <li className={styles.row} data-state={job.state}>
@@ -61,6 +78,8 @@ export function JobRow({ job, defaultOpen, onCancel }: JobRowProps) {
           {job.state === 'running' && <ProgressBar value={job.progress} label={`${job.kind} progress`} />}
           <span className={styles.meta} data-failed={job.state === 'failed'}>
             {/* U-04: a ticking duration must not jitter. */}
+            {began}
+            {began && ' · '}
             {[line, duration(job)].filter(Boolean).join(' · ')}
             {!open && job.steps.length > 0 && <StepStrip steps={job.steps} />}
           </span>

@@ -7,7 +7,6 @@ import { useSearchParams } from 'react-router-dom';
 import { useCancelJob, useEnqueueProbe, useJobs, useSongJobs } from '../api/queries';
 import { Banner, Button, EmptyState, TextLink } from '../ui';
 import { JobRow } from './JobRow';
-import { JobStats } from './JobStats';
 import styles from './JobQueue.module.css';
 
 export function JobQueue() {
@@ -50,9 +49,6 @@ export function JobQueue() {
           ))}
         </ul>
       )}
-
-      {/* Mockup order: live queue first, all-time stats below. */}
-      <JobStats />
     </section>
   );
 }

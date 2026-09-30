@@ -1,8 +1,5 @@
 <!-- @dsCard group="Screens" name="Job queue" subtitle="Every job expands to its named, live steps" viewport="1440x1350" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Jobs — Stemcraft</title><style>/* @inject */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--ds-4)}
-.stat{padding:var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-1)}
-.stat .v{font:600 var(--ds-t-xl)/1 var(--ds-mono);font-variant-numeric:tabular-nums}
 .tbl td.num,.tbl th.num{font-family:var(--ds-mono);font-variant-numeric:tabular-nums}
 /* ---- shared StepList component ---- */
 .steps{display:flex;flex-direction:column;gap:var(--ds-3)}
@@ -66,7 +63,7 @@
         <div class="col" style="gap:var(--ds-2);min-width:0">
           <div class="row"><span class="t-md" style="font-weight:600">separate</span><span class="t-md dim">Tightrope · Walk the Moon</span><span class="chip">cuda</span></div>
           <div class="bar"><i style="width:57%"></i></div>
-          <span class="t-sm dim num">step 2 of 3 · 57% overall · started 0:14 ago</span>
+          <span class="t-sm dim num">14:32 · step 2 of 3 · 57% overall · 0:14</span>
         </div>
         <button class="btn">Cancel</button>
       </div>
@@ -82,7 +79,7 @@
       <div class="jobrow">
         <button class="disc" aria-expanded="false" aria-label="Show steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
         <span class="chipcell"><span class="chip"><i class="dot"></i>queued</span></span>
-        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">export</span><span class="t-md dim">Tightrope · no bass, 82%</span></div><span class="t-sm dim3">1 job ahead<span class="ministeps" aria-label="0 of 1 steps done"><i></i></span></span></div>
+        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">export</span><span class="t-md dim">Tightrope · no bass, 82%</span></div><span class="t-sm dim3">queued 14:33 · 1 job ahead<span class="ministeps" aria-label="0 of 1 steps done"><i></i></span></span></div>
         <button class="btn btn-ghost">Cancel</button>
       </div>
     </div>
@@ -91,7 +88,7 @@
       <div class="jobrow">
         <button class="disc" aria-expanded="true" aria-label="Hide steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
         <span class="chipcell"><span class="chip"><i class="dot"></i>queued</span></span>
-        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">split_album</span><span class="t-md dim">Rumours · Fleetwood Mac</span></div><span class="t-sm dim3">2 jobs ahead</span></div>
+        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">split_album</span><span class="t-md dim">Rumours · Fleetwood Mac</span></div><span class="t-sm dim3">queued 14:31 · 2 jobs ahead</span></div>
         <button class="btn btn-ghost">Cancel</button>
       </div>
       <div class="jobsteps"><div class="steps">
@@ -107,7 +104,7 @@
       <div class="jobrow">
         <button class="disc" aria-expanded="true" aria-label="Hide steps"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z"/></svg></button>
         <span class="chipcell"><span class="chip chip-error"><i class="dot"></i>failed</span></span>
-        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">analyze</span><span class="t-md dim">Come Together · The Beatles</span><span class="chip">cpu</span></div><span class="t-sm num" style="color:var(--ds-error)">failed at step 1 of 4 · Key</span></div>
+        <div class="col" style="gap:2px"><div class="row"><span class="t-md" style="font-weight:600">analyze</span><span class="t-md dim">Come Together · The Beatles</span><span class="chip">cpu</span></div><span class="t-sm num" style="color:var(--ds-error)">13:44 · failed at step 1 of 4 · Key</span></div>
         <span></span>
       </div>
       <div class="jobsteps"><div class="steps">
@@ -122,17 +119,6 @@ RuntimeError: input audio is shorter than the analysis frame (2048)
         <div class="step todo"><span class="mark">3</span><span class="lbl">Chords</span><span class="dur">—</span></div>
         <div class="step todo"><span class="mark">4</span><span class="lbl">Write analysis</span><span class="dur">—</span></div>
       </div></div>
-    </div>
-  </div>
-
-  <div class="col" style="gap:var(--ds-3)">
-    <span class="cap">stats — all time</span>
-    <div class="stats">
-      <div class="card stat"><span class="v" style="color:var(--ds-ok)">312</span><span class="t-sm dim">passed</span></div>
-      <div class="card stat"><span class="v" style="color:var(--ds-error)">9</span><span class="t-sm dim">failed</span></div>
-      <div class="card stat"><span class="v">21.4 s</span><span class="t-sm dim">avg separate · cuda</span></div>
-      <div class="card stat"><span class="v">3 m 12 s</span><span class="t-sm dim">avg separate · cpu</span></div>
-      <div class="card stat"><span class="v">2.8 s</span><span class="t-sm dim">avg analyze · cpu</span></div>
     </div>
   </div>
 
