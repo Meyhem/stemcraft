@@ -3,7 +3,7 @@
 // with an exclusive end; shown 1-based and inclusive, like the ruler, so
 // "5 to 8" is start_bar 4, end_bar 8.
 import type { Loop } from '../api/client';
-import { Button } from '../ui';
+import { Stepper } from '../ui';
 import styles from './PlayAlong.module.css';
 
 export interface LoopBarsProps {
@@ -13,37 +13,42 @@ export interface LoopBarsProps {
   onLoopBars(startBar: number, endBar: number): void;
 }
 
+const bar = (value: number) => String(value);
+
 export function LoopBars({ loop, barCount, onLoopBars }: LoopBarsProps) {
   // No loop yet: the steppers start from a one-bar loop on bar 1.
   const start = loop?.start_bar ?? 0;
   const end = loop?.end_bar ?? 1;
 
-  // Like Set A: a start moved onto or past the end pushes the end along.
-  const setStart = (next: number) => onLoopBars(next, Math.max(end, next + 1));
-
   return (
     <div className={styles.picker}>
       <span className={styles.caption}>Loop bars</span>
       <div className={styles.loopBars}>
-        <Button tier="perform" aria-label="Start bar earlier" disabled={start <= 0} onClick={() => setStart(start - 1)}>
-          −
-        </Button>
-        <output className={styles.barValue} aria-label="Loop start bar">
-          {start + 1}
-        </output>
-        <Button tier="perform" aria-label="Start bar later" disabled={start >= barCount - 1} onClick={() => setStart(start + 1)}>
-          +
-        </Button>
+        {/* Like Set A: a start moved onto or past the end pushes the end along rather
+            than inverting the loop. Shown 1-based, so v is start_bar + 1. */}
+        <Stepper
+          label="Loop start bar"
+          downLabel="Start bar earlier"
+          upLabel="Start bar later"
+          value={start + 1}
+          min={1}
+          max={barCount}
+          step={1}
+          format={bar}
+          onChange={(v) => onLoopBars(v - 1, Math.max(end, v))}
+        />
         <span className={styles.to}>to</span>
-        <Button tier="perform" aria-label="End bar earlier" disabled={end <= start + 1} onClick={() => onLoopBars(start, end - 1)}>
-          −
-        </Button>
-        <output className={styles.barValue} aria-label="Loop end bar">
-          {end}
-        </output>
-        <Button tier="perform" aria-label="End bar later" disabled={end >= barCount} onClick={() => onLoopBars(start, end + 1)}>
-          +
-        </Button>
+        <Stepper
+          label="Loop end bar"
+          downLabel="End bar earlier"
+          upLabel="End bar later"
+          value={end}
+          min={start + 1}
+          max={barCount}
+          step={1}
+          format={bar}
+          onChange={(v) => onLoopBars(start, v)}
+        />
       </div>
     </div>
   );

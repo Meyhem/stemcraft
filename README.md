@@ -11,10 +11,10 @@ instrument and play along.
 - A thin glow along the navbar pulses with each stem you can hear while a song plays
 - Stems view time axis: the wheel zooms at the pointer, dragging across the lanes zooms to
   that range, Shift+wheel or the scrollbar pans, and a click on the ruler seeks
-- Tempo (50–150 %) and pitch change without re-separating; stems are never modified
-- Sample-accurate seamless loops on the beat grid, set by bar number (or with the A/B keys at the playhead), saved by name, with optional count-in
+- Tempo (50–150 %, 10 % a press; the arrow keys step 5 %) and pitch (±12 semitones) change without re-separating; stems are never modified
+- Sample-accurate seamless loops on the beat grid, set by bar number in the Loop editor (or with the A/B keys at the playhead), saved by name, with optional count-in and metronome under Practice
 - Beat, key and chord analysis, plus a fretboard view
-- One song screen: a single transport stays put while you switch between Stems (waveforms and the mixer) and Tabs (the play-along neck below); the music never stops. Rename a song's title and artist in place
+- One song screen: a single one-row transport stays put while you switch between Stems (waveforms and the mixer) and Tabs (the play-along neck below); the music never stops. Rename a song's title and artist in place
 - Tabs view for bass: a live neck shows what to play in the current and the next
   bar, with a beat lane underneath showing when. The notes are generated from the chord
   chart by a pattern you pick (root, root–5th, root–5th–octave, octave, chord or diatonic triad, 7th; whole

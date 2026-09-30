@@ -1,95 +1,32 @@
-/* UI spec §5, "Transport bar": performance tier throughout -- 56 px targets,
-   the bar number in display/mono, and an untouched tempo/pitch value renders
-   muted so the eye finds the one that moved. No transition/animation anywhere
-   here: the bar readout is painted by usePlayhead's rAF loop, not React. */
+/* UI spec §5, "Transport bar": one row, performance tier -- 56 px targets, the bar
+   number in mono, an untouched tempo/pitch muted so the eye finds the one that moved.
+   Wraps rather than overflows on a narrow window. No transition/animation: the bar
+   and chord readouts are painted by usePlayhead's rAF loop, not React. */
 
 .bar {
   display: flex;
-  flex-wrap: wrap; /* wrap rather than overflow when the row runs out of room */
+  flex-wrap: wrap;
   align-items: flex-end;
-  gap: var(--ds-3) var(--ds-4);
-  padding: var(--ds-2) var(--ds-3);
+  gap: var(--ds-3) var(--ds-5);
+  padding: var(--ds-3) var(--ds-4);
   background: var(--ds-surface);
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-r-panel);
 }
 
-/* Every control here is a Button at the performance tier (56px, src/ui/Button). What is
-   left is what Button cannot express: the play button is square and icon-sized, and the
-   text buttons stay compact so the bar does not overflow. Two-class selectors so these
-   win over the primitive's rules whatever order the stylesheets load in. */
+/* Two-class selector so it wins over the Button primitive whatever order the
+   stylesheets load in. flex: none -- a fixed-width button must not shrink below its
+   56px target when the row runs out of room. */
 .bar > .play {
-  /* flex: none -- without it the bar, a flex row, shrinks this fixed-width button below
-     its 56px performance target as soon as the row runs out of room. */
   flex: none;
   width: var(--ds-hit-perform);
   padding: 0;
-  font-size: var(--ds-t-lg);
 }
 
-.bar > .action {
-  /* flex: none -- the explicit min-width below replaces the browser's content-based
-     minimum, so without this a full row squeezes the button under its own label. */
-  flex: none;
-  min-width: var(--ds-hit-perform);
-  padding-inline: var(--ds-3);
-  font-size: var(--ds-t-sm);
+.spacer {
+  flex: 1;
 }
 
-.barNumber {
-  min-width: 3ch;
-  text-align: center;
-  font: 700 var(--ds-t-display) / 1 var(--ds-mono);
-  font-variant-numeric: tabular-nums; /* U-04 */
-  color: var(--ds-text);
-}
-
-/* Implementation note (UI spec §5): the visual track is 8-14 px tall; the
-   interactive element carries its own padded hit area meeting the
-   performance tier so the whole control -- not just the thin track -- is a
-   56 px target. */
-/* Label and value share the first line, the slider sits under them: the transport
-   now pins to the top of the page, so its height is taken from the lanes, and a
-   stacked label / slider / value cost ~110px a slider. The slider's own padded 56px
-   hit area is unchanged. "Tempo" is a text node, so it auto-places into row 1,
-   column 1; the value and the input are placed explicitly around it. */
-.slider {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  column-gap: var(--ds-3);
-  row-gap: 0;
-  min-width: 140px;
-  font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-font);
-  color: var(--ds-text-2);
-}
-
-.slider input[type='range'] {
-  grid-row: 2;
-  grid-column: 1 / -1;
-  width: 100%;
-  margin: 0;
-  min-height: var(--ds-hit-perform);
-  padding-block: calc((var(--ds-hit-perform) - 14px) / 2);
-  accent-color: var(--ds-accent); /* tempo fill takes the accent, not a stem hue */
-}
-
-.slider output {
-  grid-row: 1;
-  grid-column: 2;
-  font: 400 var(--ds-t-md) / 1 var(--ds-mono);
-  font-variant-numeric: tabular-nums; /* U-04 */
-  color: var(--ds-text);
-  text-align: right;
-}
-
-/* An untouched tempo/pitch renders muted so the eye finds the one that is
-   not at its default (UI spec §5). */
-.slider output[data-default='true'] {
-  color: var(--ds-text-3);
-}
-
-/* Chord and zoom readouts: a caps caption over the value. */
 .readout {
   display: flex;
   flex-direction: column;
@@ -104,11 +41,18 @@
   color: var(--ds-text-3);
 }
 
-/* Painted by usePlayhead's rAF loop via refs -- no transition. min-width keeps
-   the row from reflowing every chord change. */
+/* Painted by usePlayhead's rAF loop via refs -- no transition. min-width keeps the row
+   from reflowing on every bar / chord change. */
+.barNumber {
+  min-width: 2ch;
+  font: 600 var(--ds-t-xl) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text);
+}
+
 .chord {
   min-width: 6ch;
-  font: 600 var(--ds-t-lg) / var(--ds-lh-lg) var(--ds-font);
+  font: 600 var(--ds-t-lg) / 1 var(--ds-font);
   color: var(--ds-text);
   white-space: nowrap;
 }
@@ -116,4 +60,43 @@
 .nextChord {
   font-weight: 400;
   color: var(--ds-text-3);
+}
+
+/* The loop split button: the body arms the loop (L), the chevron opens its editor. */
+.split {
+  display: inline-flex;
+}
+
+.split > button:first-child {
+  border-radius: var(--ds-r-btn) 0 0 var(--ds-r-btn);
+}
+
+.split > button + button {
+  border-radius: 0 var(--ds-r-btn) var(--ds-r-btn) 0;
+  border-left-width: 0;
+  padding-inline: var(--ds-3);
+}
+
+.loopBars {
+  font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+}
+
+/* Inside the popovers. */
+.prow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-4);
+}
+
+.label {
+  color: var(--ds-text-2);
+  font-size: var(--ds-t-sm);
+}
+
+.hint {
+  color: var(--ds-text-3);
+  font-size: var(--ds-t-xs);
+  line-height: var(--ds-lh-xs);
 }

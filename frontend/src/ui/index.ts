@@ -21,3 +21,7 @@ export type { StepListProps } from './StepList';
 export { StepStrip } from './StepStrip';
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
+export { Stepper } from './Stepper';
+export type { StepperProps, StepperTier } from './Stepper';
+export { Popover } from './Popover';
+export type { PopoverProps } from './Popover';

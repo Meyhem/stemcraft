@@ -1,9 +1,7 @@
 .root {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--ds-1);
-  flex: none;
+  gap: var(--ds-2);
 }
 
 .caption {
@@ -13,35 +11,10 @@
   color: var(--ds-text-3);
 }
 
-.root > .button {
-  min-width: 180px;
-  justify-content: space-between;
-  gap: var(--ds-3);
-  padding-inline: var(--ds-4);
-  font-size: var(--ds-t-sm);
-}
-
 .bars {
   font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
   font-variant-numeric: tabular-nums; /* U-04 */
   color: var(--ds-text-2);
-}
-
-/* Above the pinned transport's own layer and the time axis under it. */
-.pop {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 10;
-  margin-top: var(--ds-2);
-  width: 340px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-2);
-  padding: var(--ds-3);
-  background: var(--ds-overlay);
-  border: 1px solid var(--ds-border-strong);
-  border-radius: var(--ds-r-panel);
 }
 
 .note {

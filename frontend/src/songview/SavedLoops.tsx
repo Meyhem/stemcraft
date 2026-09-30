@@ -1,8 +1,8 @@
-// Saved loops, as a menu in the transport (they lived in the right rail until the
-// song screen was unified). The button is performance tier: recalling a loop happens
-// mid-practice. Naming and deleting are setup tier, inside the popover.
+// Saved loops, as a panel inside the transport's loop editor popover (they lived in the
+// right rail until the song screen was unified). Setup tier: recalling, naming and
+// deleting all happen in the popover, not on the bar.
 // Bars read 1-based and inclusive, like LoopBars: start_bar 4, end_bar 8 is "5–8".
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 
 import type { Loop } from '../api/client';
 import { Button } from '../ui';
@@ -19,25 +19,7 @@ export interface SavedLoopsProps {
 const bars = (loop: Loop) => `${loop.start_bar + 1}–${loop.end_bar}`;
 
 export function SavedLoops({ savedLoops, activeLoop, onRecallLoop, onSaveActiveLoop, onDeleteLoop }: SavedLoopsProps) {
-  const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
-  const root = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    const onPointer = (event: PointerEvent) => {
-      if (root.current && !root.current.contains(event.target as Node)) setOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('pointerdown', onPointer);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('pointerdown', onPointer);
-    };
-  }, [open]);
 
   const save = (event: FormEvent) => {
     event.preventDefault();
@@ -47,68 +29,47 @@ export function SavedLoops({ savedLoops, activeLoop, onRecallLoop, onSaveActiveL
   };
 
   return (
-    <div className={styles.root} ref={root}>
-      <span className={styles.caption} aria-hidden="true">
-        Saved loops
-      </span>
-      <Button
-        tier="perform"
-        className={styles.button}
-        aria-label="Saved loops"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => setOpen((was) => !was)}
-      >
-        <span>{activeLoop ? activeLoop.name || 'Unsaved' : 'None'}</span>
-        <span className={styles.bars}>{activeLoop ? bars(activeLoop) : ''} ▾</span>
-      </Button>
-
-      {open && (
-        <div role="dialog" aria-label="Saved loops" className={styles.pop}>
-          {savedLoops.length === 0 && <p className={styles.note}>No saved loops yet.</p>}
-          <ul className={styles.list}>
-            {savedLoops.map((loop) => (
-              <li key={loop.name} className={styles.row}>
-                <button
-                  type="button"
-                  className={styles.recall}
-                  aria-label={`Recall loop ${loop.name}, bars ${bars(loop)}`}
-                  aria-current={loop.name === activeLoop?.name ? 'true' : undefined}
-                  onClick={() => {
-                    onRecallLoop(loop);
-                    setOpen(false);
-                  }}
-                >
-                  <span>{loop.name}</span>
-                  <span className={styles.bars}>{bars(loop)}</span>
-                </button>
-                <Button
-                  variant="ghost"
-                  className={styles.delete}
-                  aria-label={`Delete loop ${loop.name}, bars ${bars(loop)}`}
-                  onClick={() => onDeleteLoop(loop.name)}
-                >
-                  &times;
-                </Button>
-              </li>
-            ))}
-          </ul>
-          <form className={styles.save} onSubmit={save}>
-            <input
-              type="text"
-              aria-label="Loop name"
-              className={styles.input}
-              value={name}
-              disabled={!activeLoop}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={activeLoop ? `Name bars ${bars(activeLoop)}` : 'Set loop bars first'}
-            />
-            <Button type="submit" disabled={!activeLoop || name.trim() === ''}>
-              Save loop
+    <div className={styles.root}>
+      <span className={styles.caption}>Saved loops</span>
+      {savedLoops.length === 0 && <p className={styles.note}>No saved loops yet.</p>}
+      <ul className={styles.list}>
+        {savedLoops.map((loop) => (
+          <li key={loop.name} className={styles.row}>
+            <button
+              type="button"
+              className={styles.recall}
+              aria-label={`Recall loop ${loop.name}, bars ${bars(loop)}`}
+              aria-current={loop.name === activeLoop?.name ? 'true' : undefined}
+              onClick={() => onRecallLoop(loop)}
+            >
+              <span>{loop.name}</span>
+              <span className={styles.bars}>{bars(loop)}</span>
+            </button>
+            <Button
+              variant="ghost"
+              className={styles.delete}
+              aria-label={`Delete loop ${loop.name}, bars ${bars(loop)}`}
+              onClick={() => onDeleteLoop(loop.name)}
+            >
+              &times;
             </Button>
-          </form>
-        </div>
-      )}
+          </li>
+        ))}
+      </ul>
+      <form className={styles.save} onSubmit={save}>
+        <input
+          type="text"
+          aria-label="Loop name"
+          className={styles.input}
+          value={name}
+          disabled={!activeLoop}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={activeLoop ? `Name bars ${bars(activeLoop)}` : 'Set loop bars first'}
+        />
+        <Button type="submit" disabled={!activeLoop || name.trim() === ''}>
+          Save loop
+        </Button>
+      </form>
     </div>
   );
 }

@@ -139,13 +139,13 @@ describe('SongScreen', () => {
     expect(screen.queryByRole('button', { name: 'Follow playhead' })).not.toBeInTheDocument();
   });
 
-  it('has the full transport in the Tabs view: pitch, loop bars, saved loops', async () => {
+  it('has the full transport in the Tabs view: tempo, pitch, loop and practice', async () => {
     renderAt('/songs/abc123/play');
-    expect(await screen.findByRole('slider', { name: 'Pitch' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Loop start bar')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Saved loops' })).toBeInTheDocument();
+    expect(await screen.findByLabelText('Pitch')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit loop' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Practice' })).toBeInTheDocument();
     // One of each: the Tabs view no longer brings a transport of its own.
-    expect(screen.getAllByRole('slider', { name: 'Tempo' })).toHaveLength(1);
+    expect(screen.getAllByLabelText('Tempo')).toHaveLength(1);
   });
 
   it('keeps the transport when the Tabs content has nothing to show', async () => {

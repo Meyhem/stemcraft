@@ -1,0 +1,51 @@
+/* UI spec §5 "Stepper". Setup tier 40 px, .perform 56 px (U-03). The value is mono
+   tabular (U-04) and muted at its default; no transition, nothing here is animated. */
+.stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  background: var(--ds-raised);
+  overflow: hidden;
+}
+
+.stepper > button {
+  width: var(--ds-hit-setup);
+  min-height: var(--ds-hit-setup);
+  border: 0;
+  background: transparent;
+  color: var(--ds-text);
+  font: 600 var(--ds-t-lg) / 1 var(--ds-font);
+  cursor: pointer;
+}
+
+.stepper > button:hover { background: var(--ds-overlay); }
+
+.stepper > button:disabled {
+  color: var(--ds-text-3);
+  pointer-events: none;
+}
+
+.stepper > output {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5ch;
+  padding: 0 var(--ds-2);
+  border-inline: 1px solid var(--ds-border);
+  font: 600 var(--ds-t-md) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-text);
+}
+
+.stepper > output[data-default='true'] {
+  font-weight: 400;
+  color: var(--ds-text-3);
+}
+
+.perform > button {
+  width: var(--ds-hit-perform);
+  min-height: var(--ds-hit-perform);
+}
+
+.perform > output { min-width: 7ch; }

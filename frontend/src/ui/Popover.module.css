@@ -1,0 +1,24 @@
+.anchor {
+  position: relative;
+  flex: none;
+}
+
+.panel {
+  position: absolute;
+  top: 100%;
+  z-index: 10;
+  min-width: 400px;
+  max-width: calc(100vw - var(--ds-6));
+  margin-top: var(--ds-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-4);
+  padding: var(--ds-4);
+  background: var(--ds-overlay);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-panel);
+  box-shadow: var(--ds-shadow-overlay);
+}
+
+.end { right: 0; }
+.start { left: 0; }

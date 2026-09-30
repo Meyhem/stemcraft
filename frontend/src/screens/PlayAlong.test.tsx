@@ -158,17 +158,19 @@ describe('PlayAlong', () => {
     expect(engine.pause).not.toHaveBeenCalled();
   });
 
-  it('plays on Space while the tempo slider has focus', async () => {
+  it('plays on Space while a tempo button has focus, without stepping the tempo', async () => {
     renderAt('/songs/abc123/play');
-    const slider = await screen.findByRole('slider', { name: 'Tempo' });
-    slider.focus();
+    const tempoUp = await screen.findByRole('button', { name: 'Tempo up' });
+    tempoUp.focus();
     await userEvent.keyboard(' ');
+    expect(engine.setTempo).not.toHaveBeenCalledWith(expect.closeTo(1.1, 5));
     await waitFor(() => expect(engine.play).toHaveBeenCalledTimes(1));
     expect(engine.pause).not.toHaveBeenCalled();
   });
 
   it('plays on Space while a button has focus, without firing that button', async () => {
     renderAt('/songs/abc123/play');
+    await userEvent.click(await screen.findByRole('button', { name: 'Practice' }));
     const metronome = await screen.findByRole('button', { name: 'Metronome' });
     await userEvent.click(metronome);
     await waitFor(() => expect(metronome).toHaveAttribute('aria-pressed', 'true'));

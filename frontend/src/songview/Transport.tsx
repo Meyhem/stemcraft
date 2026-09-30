@@ -1,16 +1,18 @@
 // The one transport of the song screen, identical over the Stems and the Tabs content
-// (UI spec §5 "Transport bar", §7 keyboard). Performance tier throughout: 56 px
-// targets, mono tabular numerals (U-04), and an untouched tempo or pitch renders muted
-// so the eye finds the one that is not at its default. Loops are set by bar number;
-// the A and B keys set the ends to the bar under the playhead.
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+// (UI spec §5 "Transport bar", §7 keyboard). One row: play, the bar and chord readout,
+// tempo and pitch steppers, a loop split button and Practice. Performance tier (56 px
+// targets, mono tabular numerals, U-04); an untouched tempo or pitch renders muted so
+// the eye finds the one that is not at its default. What is set once per session -- the
+// loop's bars, saved loops, metronome, count-in -- sits in two popovers, never on the bar.
+// The A and B keys still set the loop ends to the bar under the playhead.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ChordSegment, Loop } from '../api/client';
 import { clampTempo, TEMPO_MAX, TEMPO_MIN, type SampleIndex } from '../engine/types';
 import { chordIndexAt, displayChord, mergeChords } from '../music/chords';
 import { barAt, type Grid } from '../music/grid';
 import { LoopBars } from '../playalong/LoopBars';
-import { Button, Segmented } from '../ui';
+import { Button, Popover, Segmented, Stepper } from '../ui';
 import { SavedLoops } from './SavedLoops';
 import { usePlayhead } from './usePlayhead';
 import styles from './Transport.module.css';
@@ -21,6 +23,25 @@ const COUNT_IN = [0, 1, 2];
 // The count-in is played out of the bars *before* the start point, so there has to be
 // room for it. Said on the control rather than left to be discovered mid-practice.
 const COUNT_IN_NOTE = 'Played from the bars before your start point, so starting at the top of a song plays none';
+
+// Icons as paths, never emoji glyphs: a glyph renders in the OS emoji font and ignores
+// the design tokens.
+const PLAY = 'M8 5v14l11-7z';
+const PAUSE = 'M6 5h4v14H6zm8 0h4v14h-4z';
+const LOOP_ICON = 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z';
+const CHEVRON = 'M7 10l5 5 5-5z';
+const PRACTICE_ICON =
+  'M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z';
+
+function Icon({ path }: { path: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+      <path d={path} />
+    </svg>
+  );
+}
+
+type Editor = 'loop' | 'practice';
 
 export interface TransportProps {
   playing: boolean;
@@ -90,6 +111,10 @@ export function Transport({
   const chordRef = useRef<HTMLSpanElement | null>(null);
   const nextChordRef = useRef<HTMLSpanElement | null>(null);
   const segments = useMemo(() => mergeChords(chords), [chords]);
+  // One popover open at a time: opening one closes the other.
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const closeEditor = useCallback(() => setEditor(null), []);
+  const toggleEditor = (which: Editor) => setEditor((now) => (now === which ? null : which));
 
   // Derived, never props: `grid === null` *is* "analysis hasn't run", and a loop
   // without a grid has no bars to resolve to samples.
@@ -179,16 +204,26 @@ export function Transport({
     onMuteLane,
   ]);
 
+  const loopLabel = loop ? `${loop.start_bar + 1}–${loop.end_bar}` : '';
+
   return (
     <div className={styles.bar}>
-      <Button tier="perform" className={styles.play} aria-label={playing ? 'Pause' : 'Play'} onClick={onPlayPause}>
-        {playing ? '⏸' : '▶'}
+      <Button
+        tier="perform"
+        variant="primary"
+        className={styles.play}
+        aria-label={playing ? 'Pause' : 'Play'}
+        onClick={onPlayPause}
+      >
+        <Icon path={playing ? PAUSE : PLAY} />
       </Button>
 
-      <span className={styles.barNumber} data-testid="bar-readout" ref={barRef}>
-        --
-      </span>
-
+      <div className={styles.readout}>
+        <span className={styles.caption}>Bar</span>
+        <span className={styles.barNumber} data-testid="bar-readout" ref={barRef}>
+          --
+        </span>
+      </div>
       <div className={styles.readout}>
         <span className={styles.caption}>Chord</span>
         <span className={styles.chord}>
@@ -199,82 +234,119 @@ export function Transport({
         </span>
       </div>
 
-      <label className={styles.slider}>
-        Tempo
-        <input
-          type="range"
-          aria-label="Tempo"
+      <div className={styles.readout}>
+        <span className={styles.caption}>Tempo</span>
+        {/* 10 % a press; the arrow keys keep their 5 %. */}
+        <Stepper
+          tier="perform"
+          label="Tempo"
+          value={Math.round(tempo * 100)}
           min={TEMPO_MIN * 100}
           max={TEMPO_MAX * 100}
-          step={1}
-          list="tempo-ticks"
-          value={Math.round(tempo * 100)}
-          onChange={(e) => onTempoChange(Number(e.target.value) / 100)}
+          step={10}
+          format={(v) => `${v}%`}
+          atDefault={tempo === 1}
+          onChange={(v) => onTempoChange(clampTempo(v / 100))}
         />
-        {/* The original tempo, so 100% can be found again by eye. */}
-        <datalist id="tempo-ticks">
-          <option value="100" />
-        </datalist>
-        {/* Untouched values render muted (UI spec §5). */}
-        <output data-default={tempo === 1 ? 'true' : 'false'}>{Math.round(tempo * 100)}%</output>
-      </label>
-
-      <label className={styles.slider}>
-        Pitch
-        <input
-          type="range"
-          aria-label="Pitch"
+      </div>
+      <div className={styles.readout}>
+        <span className={styles.caption}>Pitch</span>
+        <Stepper
+          tier="perform"
+          label="Pitch"
+          value={pitchSemitones}
           min={-12}
           max={12}
           step={1}
-          value={pitchSemitones}
-          onChange={(e) => onPitchChange(Number(e.target.value))}
-        />
-        <output data-default={pitchSemitones === 0 ? 'true' : 'false'}>{pitchSemitones} st</output>
-      </label>
-
-      {/* Bars come from analysis; without a grid there is nothing to loop over, so the
-          control is withheld and says why rather than no-opping. */}
-      <Button
-        tier="perform"
-        className={styles.action}
-        aria-label="Arm loop"
-        aria-pressed={loopArmed}
-        disabled={!hasLoop}
-        title={!barsAvailable ? NO_BARS : !loop ? 'Set the loop bars first' : undefined}
-        onClick={onLoopArmToggle}
-      >
-        Loop
-      </Button>
-      {grid && <LoopBars loop={loop} barCount={grid.barCount} onLoopBars={onLoopBars} />}
-      <SavedLoops
-        savedLoops={savedLoops}
-        activeLoop={loop}
-        onRecallLoop={onRecallLoop}
-        onSaveActiveLoop={onSaveActiveLoop}
-        onDeleteLoop={onDeleteLoop}
-      />
-
-      <Button
-        tier="perform"
-        className={styles.action}
-        aria-label="Metronome"
-        aria-pressed={metronome}
-        onClick={onMetronomeToggle}
-      >
-        Metronome
-      </Button>
-      <div className={styles.readout} title={COUNT_IN_NOTE}>
-        <span className={styles.caption} aria-hidden="true">
-          Count-in
-        </span>
-        <Segmented
-          label="Count-in"
-          value={String(countInBars)}
-          options={COUNT_IN.map((bars) => ({ value: String(bars), label: `${bars} ${bars === 1 ? 'bar' : 'bars'}` }))}
-          onChange={(value) => onCountInChange(Number(value))}
+          format={(v) => `${v} st`}
+          atDefault={pitchSemitones === 0}
+          onChange={onPitchChange}
         />
       </div>
+
+      <span className={styles.spacer} />
+
+      {/* Bars come from analysis; without a grid there is nothing to loop over, so the
+          controls are withheld and say why rather than no-opping. */}
+      <Popover
+        open={editor === 'loop'}
+        onClose={closeEditor}
+        label="Loop"
+        trigger={
+          <div className={styles.split}>
+            <Button
+              tier="perform"
+              aria-label="Arm loop"
+              aria-pressed={loopArmed}
+              disabled={!hasLoop}
+              title={!barsAvailable ? NO_BARS : !loop ? 'Set the loop bars first' : undefined}
+              onClick={onLoopArmToggle}
+            >
+              <Icon path={LOOP_ICON} />
+              <span>Loop</span>
+              <span className={styles.loopBars}>{loopLabel}</span>
+            </Button>
+            <Button
+              tier="perform"
+              aria-label="Edit loop"
+              aria-haspopup="dialog"
+              aria-expanded={editor === 'loop'}
+              aria-pressed={loopArmed}
+              disabled={!barsAvailable}
+              title={!barsAvailable ? NO_BARS : undefined}
+              onClick={() => toggleEditor('loop')}
+            >
+              <Icon path={CHEVRON} />
+            </Button>
+          </div>
+        }
+      >
+        {grid && <LoopBars loop={loop} barCount={grid.barCount} onLoopBars={onLoopBars} />}
+        <span className={styles.hint}>A and B set an end to the bar under the playhead</span>
+        <SavedLoops
+          savedLoops={savedLoops}
+          activeLoop={loop}
+          onRecallLoop={onRecallLoop}
+          onSaveActiveLoop={onSaveActiveLoop}
+          onDeleteLoop={onDeleteLoop}
+        />
+      </Popover>
+
+      <Popover
+        open={editor === 'practice'}
+        onClose={closeEditor}
+        label="Practice"
+        trigger={
+          <Button
+            tier="perform"
+            aria-haspopup="dialog"
+            aria-expanded={editor === 'practice'}
+            onClick={() => toggleEditor('practice')}
+          >
+            <Icon path={PRACTICE_ICON} />
+            Practice
+          </Button>
+        }
+      >
+        <div className={styles.prow}>
+          <span className={styles.label}>Metronome</span>
+          <Button aria-label="Metronome" aria-pressed={metronome} onClick={onMetronomeToggle}>
+            {metronome ? 'On' : 'Off'}
+          </Button>
+        </div>
+        <div className={styles.prow}>
+          <span className={styles.label} aria-hidden="true">
+            Count-in
+          </span>
+          <Segmented
+            label="Count-in"
+            value={String(countInBars)}
+            options={COUNT_IN.map((bars) => ({ value: String(bars), label: `${bars} ${bars === 1 ? 'bar' : 'bars'}` }))}
+            onChange={(value) => onCountInChange(Number(value))}
+          />
+        </div>
+        <span className={styles.hint}>{COUNT_IN_NOTE}.</span>
+      </Popover>
     </div>
   );
 }

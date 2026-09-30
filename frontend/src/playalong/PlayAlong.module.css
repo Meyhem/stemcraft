@@ -38,29 +38,14 @@
 
 .loopBars {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--ds-2);
-}
-
-.barValue {
-  min-width: 48px;
-  text-align: center;
-  font: 600 var(--ds-t-lg) / 1 var(--ds-mono);
+  gap: var(--ds-3);
 }
 
 .to {
   color: var(--ds-text-2);
   font-size: var(--ds-t-sm);
-}
-
-/* Phone width (C-05): keep the 56 px perform targets, stack "to" on its own row. */
-@media (max-width: 520px) {
-  .loopBars {
-    display: grid;
-    grid-template-columns: repeat(3, auto);
-    justify-content: start;
-  }
-  .to { grid-column: 1 / -1; }
 }
 
 .ribbon {

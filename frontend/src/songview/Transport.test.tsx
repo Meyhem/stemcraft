@@ -51,20 +51,46 @@ function renderTransport(over: Partial<Parameters<typeof Transport>[0]> = {}) {
 }
 
 const LOOP = { name: '', start_bar: 4, end_bar: 6 };
+const openLoop = () => userEvent.click(screen.getByRole('button', { name: 'Edit loop' }));
+const openPractice = () => userEvent.click(screen.getByRole('button', { name: 'Practice' }));
 
 describe('Transport', () => {
   it('shows tempo as a percentage and pitch in semitones, both mono', () => {
     renderTransport({ tempo: 0.75, pitchSemitones: -2 });
-    expect(screen.getByText('75%')).toBeInTheDocument();
-    expect(screen.getByText('-2 st')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tempo')).toHaveTextContent('75%');
+    expect(screen.getByLabelText('Pitch')).toHaveTextContent('-2 st');
   });
 
-  it('offers N-04’s 50-150% tempo range, with 100% marked', () => {
-    renderTransport();
-    const slider = screen.getByRole('slider', { name: /tempo/i }) as HTMLInputElement;
-    expect(slider.min).toBe('50');
-    expect(slider.max).toBe('150');
-    expect(document.querySelector('datalist#tempo-ticks option')).toHaveAttribute('value', '100');
+  it('steps tempo 10% with the buttons', async () => {
+    const props = renderTransport({ tempo: 1 });
+    await userEvent.click(screen.getByRole('button', { name: 'Tempo up' }));
+    expect(props.onTempoChange).toHaveBeenLastCalledWith(1.1);
+    await userEvent.click(screen.getByRole('button', { name: 'Tempo down' }));
+    expect(props.onTempoChange).toHaveBeenLastCalledWith(0.9);
+  });
+
+  it('keeps the buttons inside N-04’s 50-150% range', () => {
+    renderTransport({ tempo: 1.5 });
+    expect(screen.getByRole('button', { name: 'Tempo up' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Tempo down' })).toBeEnabled();
+  });
+
+  it('steps pitch a semitone at a time within ±12', async () => {
+    const props = renderTransport({ pitchSemitones: 12 });
+    expect(screen.getByRole('button', { name: 'Pitch up' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Pitch down' }));
+    expect(props.onPitchChange).toHaveBeenLastCalledWith(11);
+  });
+
+  it('mutes the tempo and pitch values at their defaults, and only then', () => {
+    renderTransport({ tempo: 1, pitchSemitones: 0 });
+    expect(screen.getByLabelText('Tempo')).toHaveAttribute('data-default', 'true');
+    expect(screen.getByLabelText('Pitch')).toHaveAttribute('data-default', 'true');
+  });
+
+  it('lights a moved tempo', () => {
+    renderTransport({ tempo: 0.9 });
+    expect(screen.getByLabelText('Tempo')).toHaveAttribute('data-default', 'false');
   });
 
   it('steps tempo past 100% with the arrow keys, and stops at 150%', async () => {
@@ -116,23 +142,14 @@ describe('Transport', () => {
     expect(props.onSetLoopStart).not.toHaveBeenCalled();
   });
 
-  it('Space still plays and pauses after a slider has been used', async () => {
-    // Load-bearing: the key handler used to ignore every <input>, and a range slider is an
-    // <input> -- so after nudging tempo, pitch or a lane gain, focus stayed on the slider
-    // and Space silently did nothing. The user noticed. Space is not text entry on a
-    // slider, so it must reach play/pause.
+  it('Space still plays and pauses after a stepper button has been used', async () => {
+    // Load-bearing: a control keeps focus after it is used, and Space on a focused
+    // button would click it again. It must reach play/pause instead, without firing
+    // the button.
     const props = renderTransport();
-    const tempo = screen.getByRole('slider', { name: /tempo/i });
-    tempo.focus();
+    screen.getByRole('button', { name: 'Tempo up' }).focus();
     await userEvent.keyboard(' ');
     expect(props.onPlayPause).toHaveBeenCalledOnce();
-  });
-
-  it('a slider keeps its own arrow keys: they move the slider, not the song', async () => {
-    const props = renderTransport({ tempo: 0.8 });
-    screen.getByRole('slider', { name: /pitch/i }).focus();
-    await userEvent.keyboard('{ArrowRight}{ArrowUp}');
-    expect(props.onNudgeBars).not.toHaveBeenCalled();
     expect(props.onTempoChange).not.toHaveBeenCalled();
   });
 
@@ -166,6 +183,7 @@ describe('Transport', () => {
 
   it('loops by bar numbers: there are no Set A / Set B buttons', async () => {
     const props = renderTransport({ loop: LOOP });
+    await openLoop();
     expect(screen.queryByRole('button', { name: /set a/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /set b/i })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Loop start bar')).toHaveTextContent('5');
@@ -174,15 +192,17 @@ describe('Transport', () => {
     expect(props.onLoopBars).toHaveBeenCalledWith(4, 7);
   });
 
-  it('never steps a loop end past the last bar', () => {
+  it('never steps a loop end past the last bar', async () => {
     // grid8 has 8 bars.
     renderTransport({ loop: { name: '', start_bar: 6, end_bar: 8 } });
+    await openLoop();
     expect(screen.getByRole('button', { name: 'End bar later' })).toBeDisabled();
   });
 
   it('without a grid there are no bars: no steppers, no A/B keys, and the Loop button says why', async () => {
     const props = renderTransport({ grid: null });
     expect(screen.queryByLabelText('Loop start bar')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit loop' })).toBeDisabled();
     const arm = screen.getByRole('button', { name: 'Arm loop' });
     expect(arm).toBeDisabled();
     expect(arm).toHaveAttribute('title', expect.stringMatching(/analysis/i));
@@ -200,6 +220,7 @@ describe('Transport', () => {
 
   it('sets the count-in', async () => {
     const props = renderTransport({ countInBars: 1 });
+    await openPractice();
     expect(screen.getByRole('group', { name: 'Count-in' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: '2 bars' }));
     expect(props.onCountInChange).toHaveBeenCalledWith(2);
@@ -207,7 +228,7 @@ describe('Transport', () => {
 
   it('carries the saved loops menu', async () => {
     const props = renderTransport({ loop: LOOP, savedLoops: [{ name: 'Chorus', start_bar: 16, end_bar: 24 }] });
-    await userEvent.click(screen.getByRole('button', { name: 'Saved loops' }));
+    await openLoop();
     await userEvent.click(screen.getByRole('button', { name: /Recall loop Chorus/ }));
     expect(props.onRecallLoop).toHaveBeenCalledWith({ name: 'Chorus', start_bar: 16, end_bar: 24 });
   });
@@ -232,5 +253,37 @@ describe('Transport', () => {
     renderTransport({ chords: [] });
     expect(screen.getByTestId('chord-readout')).toHaveTextContent('--');
     expect(screen.getByTestId('chord-next')).toBeEmptyDOMElement();
+  });
+
+  it('names the loop bars on the Loop button, 1-based inclusive', () => {
+    renderTransport({ loop: LOOP });
+    expect(screen.getByRole('button', { name: 'Arm loop' })).toHaveTextContent('5–6');
+  });
+
+  it('arms from the button body and opens the editor from the chevron, separately', async () => {
+    const props = renderTransport({ loop: LOOP });
+    await userEvent.click(screen.getByRole('button', { name: 'Arm loop' }));
+    expect(props.onLoopArmToggle).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await openLoop();
+    expect(screen.getByRole('dialog', { name: 'Loop' })).toBeInTheDocument();
+  });
+
+  it('keeps the metronome behind Practice; the M key still works', async () => {
+    const props = renderTransport();
+    expect(screen.queryByRole('button', { name: 'Metronome' })).not.toBeInTheDocument();
+    await userEvent.keyboard('m');
+    expect(props.onMetronomeToggle).toHaveBeenCalledOnce();
+    await openPractice();
+    await userEvent.click(screen.getByRole('button', { name: 'Metronome' }));
+    expect(props.onMetronomeToggle).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens only one popover at a time', async () => {
+    renderTransport({ loop: LOOP });
+    await openLoop();
+    await openPractice();
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByRole('dialog', { name: 'Practice' })).toBeInTheDocument();
   });
 });
