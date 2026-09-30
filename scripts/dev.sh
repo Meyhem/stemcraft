@@ -16,7 +16,7 @@ die() { printf '[dev] ERROR: %s\n' "$*" >&2; exit 1; }
 
 check_deps() {
   local missing=()
-  for bin in uv node npm ffmpeg yt-dlp lsof; do
+  for bin in uv node npm ffmpeg yt-dlp lsof ss; do
     command -v "$bin" >/dev/null 2>&1 || missing+=("$bin")
   done
   if ((${#missing[@]})); then
@@ -47,11 +47,37 @@ stop_service() {
   rm -f "$pidfile"
 }
 
+# A process is ours if it runs from inside this checkout (API, Vite and their children do).
+is_ours() {
+  local cwd
+  cwd=$(readlink "/proc/$1/cwd" 2>/dev/null) || return 1
+  [[ $cwd == "$ROOT" || $cwd == "$ROOT"/* ]]
+}
+
+# Fail fast, before touching anything, if a foreign process holds one of our ports.
+check_ports() {
+  local port pid pids
+  for port in "$API_PORT" "$WEB_PORT"; do
+    pids=$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+    if [[ -z $pids ]]; then
+      # lsof can't see other users' (or containers') sockets; ss still shows the listener.
+      [[ -z $(ss -ltnH "sport = :$port" 2>/dev/null) ]] \
+        || die "port $port is in use by a process we can't inspect (another user or a container); not touching it"
+      continue
+    fi
+    for pid in $pids; do
+      is_ours "$pid" \
+        || die "port $port is held by someone else's process (pid $pid: $(ps -o args= -p "$pid" | cut -c1-100)); not touching it"
+    done
+  done
+}
+
+# Reap leftovers of our own stack (e.g. after a lost pidfile); check_ports vetted them.
 free_port() {
   local port=$1 pids
   pids=$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
   [[ -z $pids ]] && return 0
-  log "port $port busy (pid(s): $(echo $pids)); killing"
+  log "port $port held by our own stale process (pid(s): $(echo $pids)); restarting it"
   kill -TERM $pids 2>/dev/null || true
   sleep 1
   pids=$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
@@ -71,6 +97,7 @@ start_service() {
 up() {
   check_deps
   mkdir -p "$RUN_DIR"
+  check_ports
   down_quiet
   free_port "$API_PORT"
   free_port "$WEB_PORT"

@@ -73,7 +73,7 @@ is missing.
 scripts/dev.sh up
 ```
 
-This checks that `uv`, `node`, `npm`, `ffmpeg`, `yt-dlp` and `lsof` are on `PATH` (it names any
+This checks that `uv`, `node`, `npm`, `ffmpeg`, `yt-dlp`, `lsof` and `ss` are on `PATH` (it names any
 that are missing), runs `uv sync` and `npm --prefix frontend install` when needed, starts the
 worker, the API (port 8000) and Vite (port 5173) in the background, and prints
 <http://localhost:5173> when they are up. It stops with an error and the log tail if a process
@@ -89,9 +89,10 @@ Stop everything with:
 scripts/dev.sh down
 ```
 
-`up` first stops any stack it started earlier, then frees ports 8000 and 5173 by killing
-whatever is listening on them, so don't run it while something else you care about uses those
-ports.
+`up` restarts: it first stops any stack it started earlier, including stale processes of this
+checkout still holding ports 8000 or 5173. If either port is held by a process that is not
+ours (one not running from this checkout), `up` fails immediately with its pid and command and
+touches nothing.
 
 ### Starting the processes by hand
 
