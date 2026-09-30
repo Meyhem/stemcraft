@@ -18,7 +18,6 @@ def _answer(i: int) -> QuizAnswer:
         mode="name-note",
         item=f"s0f{i % 12}",
         correct=True,
-        ms=1000,
         at="2026-09-29T00:00:00Z",
     )
 
@@ -70,13 +69,12 @@ def test_invalid_field_is_loud_and_names_it(tmp_path):
             "quiz": "fretboard",
             "mode": "name-note",
             "item": "s0f1",
-            "correct": True,
-            "ms": "fast",
+            "correct": "maybe",
             "at": "x",
         }
     ]
     theory_path(tmp_path).write_text(json.dumps(raw))
-    with pytest.raises(TheoryUnreadable, match=r"quiz\.history\.0\.ms"):
+    with pytest.raises(TheoryUnreadable, match=r"quiz\.history\.0\.correct"):
         read_theory(tmp_path)
 
 
@@ -120,3 +118,22 @@ def test_theory_json_that_is_not_utf8_is_unreadable(tmp_path):
 def test_pitch_with_a_trailing_newline_is_refused():
     with pytest.raises(ValueError, match="not scientific pitch"):
         Theory.model_validate({"instrument": {"tuning": ["E1\n", "A1", "D2", "G2"]}})
+
+
+def test_legacy_answer_time_is_accepted_but_not_written_back(tmp_path):
+    raw = Theory().model_dump(mode="json")
+    raw["quiz"]["history"] = [
+        {
+            "quiz": "fretboard",
+            "mode": "name-note",
+            "item": "s0f1",
+            "correct": True,
+            "ms": 1200,
+            "at": "2026-09-29T00:00:00Z",
+        }
+    ]
+    theory_path(tmp_path).write_text(json.dumps(raw))
+    theory = read_theory(tmp_path)
+    assert theory.quiz.history[0].correct is True
+    write_theory(tmp_path, theory)
+    assert "ms" not in json.loads(theory_path(tmp_path).read_text())["quiz"]["history"][0]

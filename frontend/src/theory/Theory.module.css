@@ -403,20 +403,6 @@
 }
 
 /* ---- quizzes ---- */
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: var(--ds-t-xs);
-  color: var(--ds-text-3);
-}
-
-.stat b {
-  font: 700 var(--ds-t-xl) / 1 var(--ds-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--ds-text);
-}
-
 .option {
   min-height: var(--ds-hit-setup);
   padding: 0 var(--ds-4);

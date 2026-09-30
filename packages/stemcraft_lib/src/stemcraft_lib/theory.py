@@ -110,7 +110,9 @@ class QuizAnswer(_Strict):
     mode: str
     item: str
     correct: bool
-    ms: int = Field(ge=0)
+    # Answer time is no longer recorded (practice should not feel timed). Documents written
+    # before that still carry it, so it is accepted on read and never written back.
+    ms: int | None = Field(default=None, ge=0, exclude=True)
     at: str
 
 

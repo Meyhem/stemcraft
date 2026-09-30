@@ -19,11 +19,6 @@ export interface NeckDot extends Cell {
   dim?: boolean;
 }
 
-export interface HeatCell extends Cell {
-  /** 0 strong … 1 weak. */
-  weakness: number;
-}
-
 export interface TheoryNeckProps {
   instrument: Instrument;
   /** First fret column drawn. 1 (the default) also draws the open-string column. */
@@ -32,7 +27,6 @@ export interface TheoryNeckProps {
   frets: number;
   dots: readonly NeckDot[];
   window?: { lo: number; hi: number } | null;
-  heat?: readonly HeatCell[];
   onPick?: (cell: Cell) => void;
   size?: 'full' | 'card';
   /** Accessible name, e.g. "A minor pentatonic on bass". */
@@ -58,7 +52,6 @@ export function TheoryNeck({
   frets,
   dots,
   window,
-  heat,
   onPick,
   size = 'full',
   label,
@@ -105,19 +98,6 @@ export function TheoryNeck({
             rx={8}
           />
         )}
-        {heat?.map((h) => (
-          <rect
-            key={`heat-${h.string}-${h.fret}`}
-            data-heat={`s${h.string}f${h.fret}`}
-            className={h.weakness >= 0.5 ? styles.heatWeak : styles.heatStrong}
-            style={{ opacity: 0.12 + 0.38 * Math.abs(h.weakness - 0.5) * 2 }}
-            x={h.fret === 0 ? NUT - 40 : NUT + fw * (h.fret - start) + 2}
-            y={y(h.string) - SH / 2 + 2}
-            width={h.fret === 0 ? 36 : fw - 4}
-            height={SH - 4}
-            rx={4}
-          />
-        ))}
         {Array.from({ length: frets + 1 }, (_, i) => (
           <line
             key={`fret-${i}`}

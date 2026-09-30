@@ -70,23 +70,6 @@ test('left-handed mirrors the neck', () => {
   expect(container.querySelector('svg > g')).toHaveAttribute('transform', 'translate(1000 0) scale(-1 1)');
 });
 
-test('heat cells are drawn weak or strong', () => {
-  const { container } = render(
-    <TheoryNeck
-      instrument={DEFAULT_INSTRUMENT}
-      frets={12}
-      dots={[]}
-      label="heat"
-      heat={[
-        { string: 2, fret: 7, weakness: 0.9 },
-        { string: 3, fret: 3, weakness: 0.1 },
-      ]}
-    />,
-  );
-  expect(container.querySelector('[data-heat="s2f7"]')).toHaveClass('heatWeak');
-  expect(container.querySelector('[data-heat="s3f3"]')).toHaveClass('heatStrong');
-});
-
 test('click targets have one name per string, even when two strings share a note name', () => {
   // Low E and high E are both "E"; drop D and open G repeat D and G as well. A screen reader must hear which.
   for (const preset of PRESETS) {

@@ -9,9 +9,8 @@ import * as quiz from '../../music/quiz';
 import { Theory } from '../../screens/Theory';
 import { forgetUnsavedTheory, TheoryDocProvider, useTheoryDoc } from '../TheoryDoc';
 import { explainWrong } from '../../music/quizExplain';
-import { ROUND, seeds, useQuizRound, type Round } from '../useQuizRound';
+import { seeds } from '../useQuizHistory';
 import { renderFlaky, renderTool } from './testing';
-import { factText } from './TheoryQuiz';
 
 // The real question generator, with a hook so a test can make it fail or look at its arguments.
 vi.mock('../../music/quiz', async (original) => {
@@ -40,7 +39,8 @@ const tq = (topics: Topic[] = ['keys', 'chords', 'intervals']): Partial<TheoryDo
   quiz: { ...DEFAULT_THEORY.quiz, settings: { ...DEFAULT_THEORY.quiz.settings, theory: { topics } } },
 });
 
-const progress = () => screen.queryByText(/^round \d+ of 20$/)?.textContent ?? 'done';
+/** Which question is on screen. The same one never comes twice in a row, so a change means it moved on. */
+const progress = () => (screen.queryByRole('group', { name: 'Answers' }) ? `${question()}|${options().join('|')}` : 'no question');
 const group = () => within(screen.getByRole('group', { name: 'Answers' }));
 const buttons = () => group().getAllByRole('button');
 /** What a screen reader calls each option: the option's own text, not its number. */
@@ -116,25 +116,9 @@ function answerTheory(): number {
 test('theory quiz: a wrong pick is crossed out and the question stays', async () => {
   renderTool('/theory/theory-quiz', { theory: tq() });
   await screen.findByRole('group', { name: 'Answers' });
-  const wrong = answerTheory();
-  expect(screen.getByText(/^round \d+ of 20$/)).toHaveTextContent('round 2 of 20');
-  expect(screen.getByText(/first try/)).toHaveTextContent(`${wrong === 0 ? 1 : 0}/1 first try`);
-});
-
-test('theory quiz: topics are saved; a round of 20 is one PUT', async () => {
-  const { puts } = renderTool('/theory/theory-quiz', { theory: tq() });
-  await screen.findByRole('group', { name: 'Answers' });
-  fireEvent.click(screen.getByRole('button', { name: 'Keys' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Chords' }));
-  // The last topic can't be switched off.
-  fireEvent.click(screen.getByRole('button', { name: 'Intervals' }));
-  expect(screen.getByRole('button', { name: 'Intervals' })).toHaveAttribute('aria-pressed', 'true');
-  for (let i = 0; i < 20; i++) answerTheory();
-  expect(await screen.findByText(/ \/ 20 first try/)).toBeInTheDocument();
-  await waitFor(() => expect(puts.some((p) => p.quiz.history.length === 20)).toBe(true));
-  const saved = puts.find((p) => p.quiz.history.length === 20)!;
-  expect(saved.quiz.settings.theory.topics).toEqual(['intervals']);
-  expect(saved.quiz.history.every((a: QuizAnswer) => a.quiz === 'theory' && a.mode === 'intervals')).toBe(true);
+  const before = progress();
+  answerTheory();
+  expect(progress()).not.toBe(before);
 });
 
 // ---------------------------------------------------------------- the questions are right
@@ -158,42 +142,38 @@ test.each([
   ['keys', /^(What's the V chord|Relative minor|Key signature)/],
   ['chords', /^(Notes of|Which chord is)/],
   ['intervals', / up to .* is a…$/],
-] as const)('%s: two rounds of every right answer, worked out independently, are 20/20 and stored under their topic', async (topic, shape) => {
+] as const)('%s: 40 right answers, worked out independently, go on without an end and are stored under their topic', async (topic, shape) => {
   const { puts } = renderTool('/theory/theory-quiz', { theory: tq([topic]) });
   await screen.findByRole('group', { name: 'Answers' });
   const asked: string[] = [];
-  for (let round = 0; round < 2; round++) {
-    for (let i = 0; i < ROUND; i++) {
-      asked.push(question());
-      expect(question()).toMatch(shape);
-      expect(new Set(options()).size).toBe(4);
-      answerRight();
-    }
-    expect(await screen.findByText('20 / 20 first try')).toBeInTheDocument();
-    if (round === 0) press('Enter');
+  for (let i = 0; i < 40; i++) {
+    asked.push(question());
+    expect(question()).toMatch(shape);
+    expect(new Set(options()).size).toBe(4);
+    answerRight();
   }
   asked.forEach((q, i) => i > 0 && expect(q).not.toBe(asked[i - 1]));
   await waitFor(() => expect(puts.at(-1)?.quiz.history).toHaveLength(40));
   const history = puts.at(-1)!.quiz.history as QuizAnswer[];
-  expect(history.every((a) => a.quiz === 'theory' && a.mode === topic && a.correct)).toBe(true);
+  expect(history.every((a) => a.quiz === 'theory' && a.mode === topic && a.correct && !('ms' in a))).toBe(true);
   expect(new Set(history.map((a) => a.item.split(':')[0])).size).toBeGreaterThan(topic === 'keys' ? 1 : 0);
 });
 
-test('all three topics in one round: every question is answered right by the independent oracle', async () => {
+test('all three topics together: every question is answered right by the independent oracle, saved as they go, no summary', async () => {
   const { puts } = renderTool('/theory/theory-quiz', { theory: tq() });
   await screen.findByRole('group', { name: 'Answers' });
-  for (let i = 0; i < ROUND; i++) answerRight();
-  expect(await screen.findByText('20 / 20 first try')).toBeInTheDocument();
-  await waitFor(() => expect(puts).toHaveLength(1));
-  const history = puts[0]!.quiz.history as QuizAnswer[];
-  expect(history).toHaveLength(20);
-  expect(history.every((a) => a.quiz === 'theory' && ['keys', 'chords', 'intervals'].includes(a.mode) && a.correct && a.ms >= 0)).toBe(true);
-  expect(history.every((a) => !('text' in a))).toBe(true);
+  for (let i = 0; i < 25; i++) answerRight();
+  await waitFor(() => expect(puts.at(-1)?.quiz.history).toHaveLength(25)); // saves queue up behind each other, the last carries all
+  const history = puts.at(-1)!.quiz.history as QuizAnswer[];
+  expect(history.every((a) => a.quiz === 'theory' && ['keys', 'chords', 'intervals'].includes(a.mode) && a.correct)).toBe(true);
+  expect(history.every((a) => !('text' in a) && !('ms' in a))).toBe(true);
+  expect(screen.getByRole('group', { name: 'Answers' })).toBeInTheDocument(); // it simply goes on
+  expect(screen.queryByText(/first try|round \d|weak|streak|score|Practise these/i)).toBeNull();
 });
 
 // ---------------------------------------------------------------- first try only
 
-test('a wrong pick is crossed out, says so, and the question stays; the right one scores a miss, once', async () => {
+test('a wrong pick is crossed out, says so, and the question stays; the right one records a miss, once', async () => {
   const { puts } = renderTool('/theory/theory-quiz', { theory: tq(['keys']) });
   await screen.findByRole('group', { name: 'Answers' });
   const q = question();
@@ -204,32 +184,29 @@ test('a wrong pick is crossed out, says so, and the question stays; the right on
   expect(screen.getByRole('status')).toHaveTextContent(`${picked}`);
   expect(screen.getByRole('status')).toHaveTextContent('✕');
   expect(question()).toBe(q);
-  expect(progress()).toBe('round 1 of 20');
+  const still = progress();
   // The same wrong option again, by click or by key, is not a second miss and changes nothing.
   fireEvent.click(buttons()[w1]!);
   press(String(w1 + 1));
-  expect(progress()).toBe('round 1 of 20');
+  expect(progress()).toBe(still);
   fireEvent.click(buttons()[w2]!);
   expect(question()).toBe(q);
   answerRight();
-  expect(progress()).toBe('round 2 of 20');
-  expect(screen.getByText(/first try/)).toHaveTextContent('0/1 first try');
+  expect(progress()).not.toBe(still);
   expect(screen.getByRole('status')).toBeEmptyDOMElement(); // the next question starts clean
-  for (let i = 0; i < 19; i++) answerRight();
-  await waitFor(() => expect(puts).toHaveLength(1));
-  const history = puts[0]!.quiz.history as QuizAnswer[];
-  expect(history).toHaveLength(20);
+  answerRight();
+  await waitFor(() => expect(puts).toHaveLength(2));
+  const history = puts[1]!.quiz.history as QuizAnswer[];
+  expect(history).toHaveLength(2);
   expect(history[0]).toMatchObject({ quiz: 'theory', mode: 'keys', correct: false });
-  expect(history.slice(1).every((a) => a.correct)).toBe(true);
-  expect(await screen.findByText('19 / 20 first try')).toBeInTheDocument();
+  expect(history[1]!.correct).toBe(true);
 });
 
-test('the answers are named by their text, the question is a heading, progress and feedback are announced', async () => {
+test('the answers are named by their text, the question is a heading, feedback is announced', async () => {
   renderTool('/theory/theory-quiz', { theory: tq(['intervals']) });
   await screen.findByRole('group', { name: 'Answers' });
   expect(options().every((o) => /^[a-z]/.test(o))).toBe(true); // "major 3rd", not "1. major 3rd"
   expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/ up to .* is a…$/);
-  expect(screen.getByText('round 1 of 20')).toBeInTheDocument();
   expect(screen.getByRole('status')).toBeInTheDocument();
 });
 
@@ -242,18 +219,18 @@ test('keys 1–4 choose the options in order', async () => {
     const right = rightOption(question(), options());
     press(String(right + 1));
   }
-  expect(progress()).toBe('round 7 of 20');
-  expect(screen.getByText(/first try/)).toHaveTextContent('6/6 first try');
+  const before = progress();
   press('5');
   press('a');
   press('0');
-  expect(progress()).toBe('round 7 of 20');
+  expect(progress()).toBe(before);
 });
 
 test('keys are ignored with a modifier, when held down, and while typing in a field; Shift is fine for a digit (AZERTY)', async () => {
   renderTool('/theory/theory-quiz', { theory: tq() });
   await screen.findByRole('group', { name: 'Answers' });
   const key = String(rightOption(question(), options()) + 1);
+  const before = progress();
   fireEvent.keyDown(window, { key, ctrlKey: true });
   fireEvent.keyDown(window, { key, metaKey: true });
   fireEvent.keyDown(window, { key, altKey: true });
@@ -261,9 +238,9 @@ test('keys are ignored with a modifier, when held down, and while typing in a fi
   const field = document.body.appendChild(document.createElement('input'));
   fireEvent.keyDown(field, { key });
   fireEvent.keyDown(screen.getByLabelText('Instrument'), { key });
-  expect(screen.getByText(/first try/)).toHaveTextContent('0/0 first try');
+  expect(progress()).toBe(before);
   fireEvent.keyDown(window, { key, shiftKey: true }); // the digit row of an AZERTY keyboard types digits with Shift
-  expect(screen.getByText(/first try/)).toHaveTextContent('1/1 first try');
+  expect(progress()).not.toBe(before);
   field.remove();
 });
 
@@ -280,28 +257,7 @@ test('the keyboard listener is removed when the quiz goes away', async () => {
   expect(puts).toHaveLength(0);
 });
 
-// ---------------------------------------------------------------- rounds
-
-test('a round is exactly 20: the 20th answer draws no question, and late or double key events record nothing more', async () => {
-  const { puts } = renderTool('/theory/theory-quiz', { theory: tq() });
-  await screen.findByRole('group', { name: 'Answers' });
-  for (let i = 0; i < 19; i++) answerRight();
-  expect(progress()).toBe('round 20 of 20');
-  expect(puts).toHaveLength(0); // nothing is sent while the round is on
-  const calls = next.mock.calls.length;
-  const right = String(rightOption(question(), options()) + 1);
-  // Two events before React has drawn anything: the second must not record a 21st answer.
-  act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: right }));
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: right }));
-  });
-  expect(await screen.findByText('20 / 20 first try')).toBeInTheDocument();
-  expect(next.mock.calls.length).toBe(calls); // no question was drawn after the 20th answer
-  for (const key of ['1', '2', '3', '4']) press(key);
-  await waitFor(() => expect(puts).toHaveLength(1));
-  expect(puts[0]!.quiz.history).toHaveLength(20);
-  expect(screen.getByText('20 / 20 first try')).toBeInTheDocument();
-});
+// ---------------------------------------------------------------- answering
 
 test('two key events before a redraw cannot both answer one question: exactly one answer is recorded', async () => {
   vi.useFakeTimers({ toFake: ['Date'] }); // frozen clock: the same questions, in the same option order, on every visit
@@ -324,49 +280,10 @@ test('two key events before a redraw cannot both answer one question: exactly on
     window.dispatchEvent(new KeyboardEvent('keydown', { key: String(first + 1) }));
     window.dispatchEvent(new KeyboardEvent('keydown', { key: String(first + 1) }));
   });
-  expect(progress()).toBe('round 2 of 20');
-  expect(screen.getByText(/first try/)).toHaveTextContent('1/1 first try');
   expect(screen.getByRole('status')).toHaveTextContent('✕'); // the repeat was a wrong pick on question 2
 });
 
-test('Enter starts the next round from the summary, but not when it is pressing a button; the same question never comes twice in a row, even across rounds', async () => {
-  next.mockClear();
-  renderTool('/theory/theory-quiz', { theory: tq() });
-  await screen.findByRole('group', { name: 'Answers' });
-  const asked: string[] = [];
-  for (let i = 0; i < ROUND; i++) {
-    asked.push(question());
-    answerRight();
-  }
-  await screen.findByText('20 / 20 first try');
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Practise these' }), { key: 'Enter' });
-  expect(screen.getByText('20 / 20 first try')).toBeInTheDocument();
-  fireEvent.keyDown(window, { key: 'Enter', repeat: true });
-  fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
-  expect(screen.getByText('20 / 20 first try')).toBeInTheDocument();
-  press('Enter');
-  expect(progress()).toBe('round 1 of 20');
-  asked.push(question());
-  asked.forEach((q, i) => i > 0 && expect(q).not.toBe(asked[i - 1]));
-  // Not luck: every draw was told the item before it, including the first one of the new round.
-  const calls = next.mock.calls;
-  expect(calls.length).toBeGreaterThanOrEqual(21);
-  calls.forEach((c, i) => i > 0 && expect(c[3]).toBe(next.mock.results[i - 1]!.value.item));
-});
-
-test('Enter on the summary starts the next round even while a topic chip has the focus; it only yields to the summary\'s own buttons', async () => {
-  renderTool('/theory/theory-quiz', { theory: tq() });
-  await screen.findByRole('group', { name: 'Answers' });
-  for (let i = 0; i < ROUND; i++) answerRight();
-  await screen.findByText('20 / 20 first try');
-  const chip = screen.getByRole('button', { name: 'Keys' });
-  chip.focus();
-  fireEvent.keyDown(chip, { key: 'Enter' });
-  expect(progress()).toBe('round 1 of 20'); // the chip did not flip and the round started
-  expect(chip).toHaveAttribute('aria-pressed', 'true');
-});
-
-test('the weighting sees the answer just given, and a practise list limits the next round', async () => {
+test('the weighting sees the answer just given', async () => {
   renderTool('/theory/theory-quiz', { theory: tq() });
   await screen.findByRole('group', { name: 'Answers' });
   next.mockClear();
@@ -375,31 +292,21 @@ test('the weighting sees the answer just given, and a practise list limits the n
   const [, history] = next.mock.calls.at(-1)!;
   expect(history).toHaveLength(1);
   expect(history[0]).toMatchObject({ quiz: 'theory', correct: false });
-  for (let i = 0; i < 19; i++) answerRight();
-  await screen.findByText(/first try/);
-  fireEvent.click(screen.getByRole('button', { name: 'Practise these' }));
-  expect(screen.getByText(/practising the 3 weakest/)).toBeInTheDocument();
-  expect(next.mock.calls.at(-1)![4]).toHaveLength(3); // `only`: the three weakest items
 });
 
-test('Result text reads well in the summary: "V of E♭", chord names, intervals', () => {
-  expect(factText('v:Eb')).toBe('V of E♭');
-  expect(factText('rel:F')).toBe('relative minor of F');
-  expect(factText('sig:D')).toBe('key signature of D');
-  expect(factText('notes:Bm7')).toBe('notes of Bm7');
-  expect(factText('name:Bbm7')).toBe('B♭m7 from its notes');
-  expect(factText('ivl:C:6M')).toBe('C up to A');
-});
-
-test('the weakest of a round is listed in words', async () => {
-  renderTool('/theory/theory-quiz', { theory: tq(['keys']) });
+test('Start fresh asks first, then forgets what was practised', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  const base = tq();
+  const { puts } = renderTool('/theory/theory-quiz', {
+    theory: { ...base, quiz: { ...base.quiz!, history: [{ quiz: 'theory', mode: 'keys', item: 'v:C', correct: false, at: '2026-01-01T00:00:00Z' }] } },
+  });
   await screen.findByRole('group', { name: 'Answers' });
-  for (let i = 0; i < ROUND; i++) {
-    fireEvent.click(buttons()[wrongIndexes()[0]!]!);
-    answerRight();
-  }
-  const weakest = await screen.findByText(/Weakest this round/);
-  expect(weakest.textContent).toMatch(/(V of|relative minor of|key signature of) /);
+  fireEvent.click(screen.getByRole('button', { name: /start fresh/i }));
+  expect(confirm).toHaveBeenCalledTimes(1);
+  expect(puts).toHaveLength(0);
+  confirm.mockReturnValue(true);
+  fireEvent.click(screen.getByRole('button', { name: /start fresh/i }));
+  await waitFor(() => expect(puts.at(-1)?.quiz.history).toEqual([]));
 });
 
 // ---------------------------------------------------------------- topics
@@ -411,7 +318,6 @@ test('topics are saved in a fixed order, and a burst of switches is exactly one 
   fireEvent.click(screen.getByRole('button', { name: 'Chords' }));
   fireEvent.click(screen.getByRole('button', { name: 'Keys' }));
   fireEvent.click(screen.getByRole('button', { name: 'Chords' }));
-  expect(progress()).toBe('round 1 of 20');
   await act(async () => {
     await vi.advanceTimersByTimeAsync(2000);
   });
@@ -419,36 +325,23 @@ test('topics are saved in a fixed order, and a burst of switches is exactly one 
   expect(puts[0]!.quiz.settings.theory.topics).toEqual(['chords', 'intervals']);
 });
 
-test('switching a topic mid-round saves the answers so far together with the setting, none twice', async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
-  const { puts } = renderTool('/theory/theory-quiz', { theory: tq() });
-  await screen.findByRole('group', { name: 'Answers' });
-  answerRight();
-  answerRight();
-  fireEvent.click(screen.getByRole('button', { name: 'Chords' }));
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(2000);
-  });
-  expect(puts).toHaveLength(1);
-  expect(puts[0]!.quiz.history).toHaveLength(2);
-  expect(puts[0]!.quiz.settings.theory.topics).toEqual(['keys', 'intervals']);
-});
-
 test('the last topic cannot be switched off: it is disabled with the reason, and nothing restarts or is saved', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   const { puts } = renderTool('/theory/theory-quiz', { theory: tq(['chords']) });
   await screen.findByRole('group', { name: 'Answers' });
   answerRight();
+  await waitFor(() => expect(puts).toHaveLength(1)); // the answer itself is saved
   const last = screen.getByRole('button', { name: 'Chords' });
   expect(last).toBeDisabled();
   expect(last).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByText(/at least one topic/i)).toBeInTheDocument();
+  const before = progress();
   fireEvent.click(last);
-  expect(progress()).toBe('round 2 of 20');
+  expect(progress()).toBe(before);
   await act(async () => {
     await vi.advanceTimersByTimeAsync(2000);
   });
-  expect(puts).toHaveLength(0);
+  expect(puts).toHaveLength(1); // the click saved nothing more
   // With two on, neither is locked and the reason is gone.
   fireEvent.click(screen.getByRole('button', { name: 'Keys' }));
   expect(screen.getByRole('button', { name: 'Chords' })).toBeEnabled();
@@ -469,24 +362,7 @@ test('switching a topic on offers its questions, in the order the topics are lis
 
 // ---------------------------------------------------------------- when there is no question (N-08)
 
-test('a practise list that matches nothing is said in words with a way out; a normal round starts the round again', async () => {
-  renderTool('/theory/theory-quiz', { theory: tq() });
-  await screen.findByRole('group', { name: 'Answers' });
-  for (let i = 0; i < ROUND; i++) answerRight();
-  await screen.findByText('20 / 20 first try');
-  next.mockImplementationOnce(() => {
-    throw new quiz.NothingToPractise();
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Practise these' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent(/None of the items you chose to practise/);
-  expect(screen.queryByRole('group', { name: 'Answers' })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Start a normal round' }));
-  await screen.findByRole('group', { name: 'Answers' });
-  expect(progress()).toBe('round 1 of 20');
-  expect(screen.queryByRole('alert')).toBeNull();
-});
-
-test('an unexpected error while drawing the next question is shown as it is, logged, and can be retried without losing the round', async () => {
+test('an unexpected error while drawing the next question is shown as it is, logged, and can be retried', async () => {
   const error = vi.spyOn(console, 'error').mockImplementation(() => {});
   renderTool('/theory/theory-quiz', { theory: tq() });
   await screen.findByRole('group', { name: 'Answers' });
@@ -500,8 +376,6 @@ test('an unexpected error while drawing the next question is shown as it is, log
   press('1'); // nothing to answer: the key does nothing
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   await screen.findByRole('group', { name: 'Answers' });
-  expect(progress()).toBe('round 3 of 20'); // two answers were given and are still counted
-  expect(screen.getByText(/first try/)).toHaveTextContent('2/2 first try');
 });
 
 test('a focus error from the generator is shown the same way', async () => {
@@ -549,7 +423,6 @@ test('theory.json unreadable: the quiz says it cannot save instead of asking que
   expect(await screen.findByText(/The quiz needs theory.json/)).toBeInTheDocument();
   expect(screen.getAllByRole('alert')).toHaveLength(2); // the screen's banner and the quiz's own
   expect(screen.queryByRole('group', { name: 'Answers' })).toBeNull();
-  expect(screen.queryByText(/^round \d+ of 20$/)).toBeNull();
   press('1');
   expect(screen.queryByRole('group', { name: 'Topics' })).toBeNull(); // no chips that would look like they saved
   expect(puts).toHaveLength(0);
@@ -557,52 +430,7 @@ test('theory.json unreadable: the quiz says it cannot save instead of asking que
 
 // ---------------------------------------------------------------- weakest facts
 
-test('weakest facts come from the history and read as questions; reset asks first, then deletes everything in one PUT', async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
-  const at = '2026-09-29T00:00:00Z';
-  const history: QuizAnswer[] = [
-    { quiz: 'theory', mode: 'keys', item: 'v:Eb', correct: false, ms: 9000, at },
-    { quiz: 'theory', mode: 'keys', item: 'v:Eb', correct: false, ms: 9000, at },
-    { quiz: 'theory', mode: 'intervals', item: 'ivl:C:6M', correct: true, ms: 500, at },
-  ];
-  const { puts } = renderTool('/theory/theory-quiz', { theory: { ...tq(), quiz: { ...tq().quiz!, history } } });
-  await screen.findByRole('group', { name: 'Answers' });
-  const list = screen.getByRole('list');
-  expect(within(list).getAllByRole('listitem')[0]).toHaveTextContent("What's the V chord in E♭ major?");
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
-  fireEvent.click(screen.getByRole('button', { name: /Reset history/ }));
-  expect(puts).toHaveLength(0);
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
-  fireEvent.click(screen.getByRole('button', { name: /Reset history/ }));
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(2000);
-  });
-  expect(puts).toHaveLength(1);
-  expect(puts[0]!.quiz.history).toEqual([]);
-  expect(await screen.findByText(/No answers yet/)).toBeInTheDocument();
-});
-
-test('this round’s unsaved answers already colour the weakest facts', async () => {
-  renderTool('/theory/theory-quiz', { theory: tq(['keys']) });
-  await screen.findByRole('group', { name: 'Answers' });
-  expect(screen.getByText(/No answers yet/)).toBeInTheDocument();
-  const q = question();
-  fireEvent.click(buttons()[wrongIndexes()[0]!]!);
-  answerRight();
-  expect(within(screen.getByRole('list')).getAllByRole('listitem')[0]).toHaveTextContent(q);
-});
-
 // ---------------------------------------------------------------- leaving
-
-test('leaving mid-round for another tool saves what was answered, once', async () => {
-  const { puts, unmount } = renderTool('/theory/theory-quiz', { theory: tq() });
-  await screen.findByRole('group', { name: 'Answers' });
-  for (let i = 0; i < 3; i++) answerRight();
-  expect(puts).toHaveLength(0);
-  unmount();
-  await waitFor(() => expect(puts).toHaveLength(1));
-  expect(puts[0]!.quiz.history).toHaveLength(3);
-});
 
 // ---------------------------------------------------------------- what a wrong pick is (explained, never revealed)
 
@@ -720,215 +548,7 @@ test('the chip on the screen explains the mistake, keeps the ✕ out of the read
   expect(status.textContent).not.toMatch(/is not the answer/);
   // The right option is still the only one that advances.
   expect(status.textContent!.replace(picked, '')).not.toContain(` ${right},`);
+  const before = progress();
   answerRight();
-  expect(progress()).toBe('round 2 of 20');
-});
-
-// ---------------------------------------------------------------- the file becomes unreadable mid-round
-
-test('the file becomes unreadable mid-round: no question, no key answers anything, and when it reads again the round goes on and every answer is saved once', async () => {
-  const page = renderFlaky('/theory/theory-quiz', tq());
-  await screen.findByRole('group', { name: 'Answers' });
-  for (let i = 0; i < 3; i++) answerRight();
-  expect(progress()).toBe('round 4 of 20');
-
-  await page.unreadable();
-  await screen.findByText(/The quiz needs theory.json/);
-  expect(screen.queryByRole('group', { name: 'Answers' })).toBeNull();
-  expect(screen.queryByText(/^round \d+ of 20$/)).toBeNull();
-  for (let i = 0; i < 3; i++) for (const key of ['1', '2', '3', '4']) press(key); // blind key presses: nothing to answer
-  await page.readable();
-  await screen.findByRole('group', { name: 'Answers' });
-  // Not one blind answer was recorded, and the three before the failure are still counted.
-  expect(progress()).toBe('round 4 of 20');
-  expect(screen.getByText(/first try/)).toHaveTextContent('3/3 first try');
-  expect(screen.queryByRole('alert')).toBeNull();
-  expect(page.puts).toHaveLength(0);
-
-  for (let i = 0; i < 17; i++) answerRight();
-  expect(await screen.findByText('20 / 20 first try')).toBeInTheDocument();
-  await waitFor(() => expect(page.puts).toHaveLength(1));
-  expect(page.puts[0]!.quiz.history).toHaveLength(20);
-});
-
-test('the round is not lost when the tab is left while the file is unreadable: the answers are kept, logged, guarded, and saved after the next good read', async () => {
-  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-  const page = renderFlaky('/theory/theory-quiz', tq());
-  await screen.findByRole('group', { name: 'Answers' });
-  for (let i = 0; i < 3; i++) answerRight();
-  await page.unreadable();
-  await screen.findByText(/The quiz needs theory.json/);
-  page.unmount();
-  await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining('cannot be read')));
-  expect(page.puts).toHaveLength(0);
-  const closing = new Event('beforeunload', { cancelable: true });
-  window.dispatchEvent(closing);
-  expect(closing.defaultPrevented).toBe(true); // the answers live nowhere else
-
-  const back = renderFlaky('/theory/theory-quiz', tq());
-  await screen.findByRole('group', { name: 'Answers' });
-  await waitFor(() => expect(back.puts).toHaveLength(1));
-  expect(back.puts[0]!.quiz.history).toHaveLength(3);
-  expect(within(screen.getByRole('list')).getAllByRole('listitem').length).toBeGreaterThan(0); // and they show in the weak facts
-});
-
-let round!: Round;
-function Probe() {
-  round = useQuizRound();
-  return <p>{useTheoryDoc().doc ? 'ready' : 'no document'}</p>;
-}
-function hookPage() {
-  const puts: TheoryDoc[] = [];
-  let reading = true;
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (_url: string, init?: RequestInit) => {
-      if (init?.method === 'PUT') {
-        puts.push(JSON.parse(String(init.body)));
-        return new Response(String(init.body));
-      }
-      return reading ? new Response(JSON.stringify({ ...DEFAULT_THEORY, last_tool: 'theory-quiz' })) : new Response(JSON.stringify({ detail: 'theory.json: broken' }), { status: 500 });
-    }),
-  );
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 5000, refetchOnWindowFocus: false } } });
-  const view = render(
-    <QueryClientProvider client={client}>
-      <TheoryDocProvider>
-        <Probe />
-      </TheoryDocProvider>
-    </QueryClientProvider>,
-  );
-  const refetch = () => act(async () => void (await client.invalidateQueries({ queryKey: ['theory'] })));
-  return {
-    ...view,
-    puts,
-    unreadable: async () => {
-      reading = false;
-      await refetch();
-    },
-    readable: async () => {
-      reading = true;
-      await refetch();
-    },
-  };
-}
-const record = (i: number) =>
-  act(() => {
-    round.record({ quiz: 'theory', mode: 'keys', item: `q${i}`, correct: true, ms: 100 + i, text: `fact ${i}` });
-  });
-
-test('the 20th answer arriving while the file is unreadable is kept, not dropped, and goes out once after the next good read', async () => {
-  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-  const page = hookPage();
-  await screen.findByText('ready');
-  for (let i = 0; i < 3; i++) record(i);
-  await page.unreadable();
-  await screen.findByText('no document');
-  for (let i = 3; i < ROUND; i++) record(i);
-  expect(round.done).toBe(true);
-  expect(page.puts).toHaveLength(0); // nothing is written over an unreadable file
-  expect(error).toHaveBeenCalledWith(expect.stringContaining('cannot be read'));
-  await page.readable();
-  await screen.findByText('ready');
-  await waitFor(() => expect(page.puts).toHaveLength(1));
-  expect(page.puts[0]!.quiz.history).toHaveLength(20);
-  expect(round.history).toHaveLength(20); // once, not twice
-  expect(round.results).toHaveLength(20);
-});
-
-test('answers the hook could not hand over stay with it (and say so), instead of being let go of', async () => {
-  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ detail: 'theory.json: broken' }), { status: 500 })));
-  render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <TheoryDocProvider>
-        <Probe />
-      </TheoryDocProvider>
-    </QueryClientProvider>,
-  );
-  await screen.findByText('no document'); // the file was never read: there is no document to add answers to
-  record(1);
-  act(() => round.restart());
-  expect(error).toHaveBeenCalledWith(expect.stringContaining('could not be saved'));
-  expect(round.history).toHaveLength(1); // still held by the hook, not dropped
-  expect(round.results).toHaveLength(0);
-});
-
-// ---------------------------------------------------------------- a kept round, then a failing read, then more answers
-
-test('answers kept from an earlier visit are not replaced by a later keep: 5 kept, 2 more while the return GET fails, one PUT of all 7 after the next good read', async () => {
-  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date('2026-09-29T12:00:00Z'));
-  const puts: TheoryDoc[] = [];
-  let putOk = true;
-  let getHeld: ((ok: boolean) => void) | null = null;
-  let hold = false;
-  const stored: TheoryDoc = { ...DEFAULT_THEORY, ...tq() } as TheoryDoc;
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (url: string, init?: RequestInit) => {
-      if (url === '/api/theory' && init?.method === 'PUT') {
-        if (!putOk) return new Response('disk full', { status: 500 });
-        puts.push(JSON.parse(String(init.body)));
-        return new Response(String(init.body));
-      }
-      if (url === '/api/theory') {
-        const ok = hold ? await new Promise<boolean>((resolve) => (getHeld = resolve)) : true;
-        return ok ? new Response(JSON.stringify(stored)) : new Response(JSON.stringify({ detail: 'theory.json: broken' }), { status: 500 });
-      }
-      if (url === '/api/songs') return new Response(JSON.stringify({ songs: [] }));
-      throw new Error(`unexpected fetch: ${url}`);
-    }),
-  );
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const visit = () =>
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/theory/theory-quiz']}>
-          <Routes>
-            <Route path="theory/:tool" element={<Theory />} />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>,
-    );
-  const answerAt = () => {
-    vi.setSystemTime(Date.now() + 1000); // every answer has its own time
-    answerRight();
-  };
-
-  // 1. A round of 5 whose save fails: the tab is left holding them.
-  const first = visit();
-  await screen.findByRole('group', { name: 'Answers' });
-  for (let i = 0; i < 5; i++) answerAt();
-  putOk = false;
-  first.unmount();
-  await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining('unsaved changes, kept in memory')));
-  putOk = true;
-
-  // 2. Back on the tab: the cached document shows while the GET is pending; two more answers.
-  hold = true;
-  const second = visit();
-  await screen.findByRole('group', { name: 'Answers' });
-  answerAt();
-  answerAt();
-
-  // 3. The GET fails: the file is unreadable. 4. The tab is left.
-  await act(async () => getHeld!(false));
-  await screen.findByText(/The quiz needs theory.json/);
-  second.unmount();
-  await waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining('cannot be read')));
-  expect(puts).toHaveLength(0);
-
-  // 5. The next read works: one PUT, with all seven answers, each once.
-  hold = false;
-  visit();
-  await screen.findByRole('group', { name: 'Answers' });
-  await waitFor(() => expect(puts).toHaveLength(1));
-  const history = puts[0]!.quiz.history as QuizAnswer[];
-  expect(history).toHaveLength(7);
-  expect(new Set(history.map((a) => `${a.item}|${a.at}`)).size).toBe(7);
-  expect(history.map((a) => a.at)).toEqual([...history.map((a) => a.at)].sort());
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  expect(puts).toHaveLength(1);
+  expect(progress()).not.toBe(before);
 });

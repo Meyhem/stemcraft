@@ -1,8 +1,8 @@
 // Fretboard quiz (D-19): name the note, find the note, find the interval, spell
-// the chord. Weak spots come up more often (quiz.ts). A wrong answer is marked
-// and explained and the question stays until it is right; only the first try
-// is scored. Focus settings are saved to theory.json. A focus that leaves
-// nothing to ask, or a practise list that no longer matches, is said in words
+// the chord. It is relaxed practice: no score, rounds, streaks or clocks. A wrong
+// answer is marked and explained and the question stays until it is right; what
+// you found tricky quietly comes up a little more often (quiz.ts). Focus settings
+// are saved to theory.json. A focus that leaves nothing to ask is said in words
 // with a way out, never a blank screen or a different question (N-08).
 import { useEffect, useRef, useState } from 'react';
 
@@ -13,7 +13,6 @@ import {
   focusFrets,
   focusRows,
   fretboardQuestion,
-  NothingToPractise,
   pcAt,
   plainName,
   QuizFocusError,
@@ -23,12 +22,11 @@ import { chordInfo, pretty } from '../../music/spell';
 import { neckFrets } from '../../music/tuning';
 import { Button, Chip, Panel, Segmented } from '../../ui';
 import { HelpBox, NotePicker, ToolHeader } from '../controls';
-import { cellText, FretboardStats } from '../QuizStats';
-import { RoundSummary } from '../RoundSummary';
+import { StartFresh } from '../StartFresh';
 import styles from '../Theory.module.css';
 import { TheoryNeck, type NeckDot } from '../TheoryNeck';
 import { useTheoryDoc } from '../TheoryDoc';
-import { quizKey, ROUND, roundStats, useQuizRng, useQuizRound } from '../useQuizRound';
+import { quizKey, useQuizHistory, useQuizRng } from '../useQuizHistory';
 
 const MODES = [
   { value: 'name-note', label: 'Name the note' },
@@ -44,9 +42,9 @@ export const NOTE_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-',
 
 const HELP: Record<FretboardQuestion['mode'], string> = {
   'name-note':
-    'One dot is lit: name it with the note buttons, or with the keys 1–9, 0, - and = for C … B. C♯ and D♭ are one button. A wrong answer is marked and explained, and the question stays; only the first attempt is scored.',
+    'One dot is lit: name it with the note buttons, or with the keys 1–9, 0, - and = for C … B. C♯ and D♭ are one button. A wrong answer is marked and explained, and the question stays until you find it.',
   'find-note':
-    "Tap every place the note is, in the strings and frets you're practising. A wrong tap is marked ✕ and explained. The question only scores if you find every one without a wrong tap.",
+    "Tap every place the note is, in the strings and frets you're practising. A wrong tap is marked ✕ and explained.",
   'find-interval':
     'Tap the note that far above the lit one. Any octave counts: the interval is by note name, so every matching note in the strings and frets you are practising is right, not only the one above it.',
   'spell-chord': 'Tap every chord tone inside the outlined frets, on the strings you are practising. A tone outside the outline does not count.',
@@ -54,7 +52,6 @@ const HELP: Record<FretboardQuestion['mode'], string> = {
 
 interface Attempt {
   q: FretboardQuestion;
-  started: number;
   failed: boolean;
   found: Cell[];
   wrong: Cell[];
@@ -63,7 +60,7 @@ interface Attempt {
 
 /** Why there is no question: shown with a way out. */
 interface Problem {
-  kind: 'focus' | 'practise' | 'other';
+  kind: 'focus' | 'other';
   message: string;
 }
 
@@ -75,7 +72,7 @@ export function FretboardQuiz() {
   const { doc, update } = useTheoryDoc();
   const inst = doc?.instrument ?? DEFAULT_THEORY.instrument;
   const settings = doc?.quiz.settings.fretboard ?? DEFAULT_THEORY.quiz.settings.fretboard;
-  const round = useQuizRound();
+  const practice = useQuizHistory();
   const rng = useQuizRng();
   // The ref is what handlers read, so two quick events cannot both answer one question.
   const attemptRef = useRef<Attempt | null>(null);
@@ -93,15 +90,15 @@ export function FretboardQuiz() {
   const [, hi] = focusFrets(inst, focus);
 
   /** The next question, from this render's settings and history plus answers not in it yet. Never the same item twice in a row. */
-  const draw = (extra: readonly QuizAnswer[], only: string[] | undefined) => {
+  const draw = (extra: readonly QuizAnswer[]) => {
     try {
-      const q = fretboardQuestion(settings.mode, inst, focus, [...round.history, ...extra], rng, lastItem.current, only);
+      const q = fretboardQuestion(settings.mode, inst, focus, [...practice.history, ...extra], rng, lastItem.current);
       lastItem.current = q.item;
       setProblem(null);
-      setAttempt({ q, started: Date.now(), failed: false, found: [], wrong: [], feedback: null });
+      setAttempt({ q, failed: false, found: [], wrong: [], feedback: null });
     } catch (error) {
       if (!(error instanceof Error)) throw error;
-      const kind = error instanceof QuizFocusError ? 'focus' : error instanceof NothingToPractise ? 'practise' : 'other';
+      const kind = error instanceof QuizFocusError ? 'focus' : 'other';
       if (kind === 'other') console.error(error);
       setAttempt(null);
       setProblem({ kind, message: error.message });
@@ -112,8 +109,8 @@ export function FretboardQuiz() {
   const focusKey = [doc !== null, settings.mode, settings.strings.join(), settings.frets.join(), settings.accidentals, inst.tuning.join()].join('|');
   useEffect(() => {
     // No readable document (the file could not be read mid-round): no question is on offer, so no key or tap can
-    // answer one. The round's results are kept; when the file reads again a fresh question is drawn.
-    if (doc) draw([], round.only);
+    // answer one. When the file reads again a fresh question is drawn.
+    if (doc) draw([]);
     else {
       setAttempt(null);
       setProblem(null);
@@ -124,13 +121,13 @@ export function FretboardQuiz() {
   const setSettings = (patch: Partial<FretboardQuizSettings>) => {
     if ((Object.keys(patch) as (keyof FretboardQuizSettings)[]).every((k) => JSON.stringify(patch[k]) === JSON.stringify(settings[k]))) return;
     update((d) => ({ ...d, quiz: { ...d.quiz, settings: { ...d.quiz.settings, fretboard: { ...d.quiz.settings.fretboard, ...patch } } } }));
-    round.restart();
   };
 
-  const finish = (a: Attempt, text: string, msEach: number) => {
+  const finish = (a: Attempt) => {
     setAttempt(null);
-    const recorded = round.record({ quiz: 'fretboard', mode: a.q.mode, item: a.q.item, correct: !a.failed, ms: Math.max(0, Math.round(msEach)), text });
-    if (recorded && !recorded.done) draw([recorded.stored], round.only);
+    // The first try is what informs which questions come back; nothing is shown or counted.
+    const stored = practice.record({ quiz: 'fretboard', mode: a.q.mode, item: a.q.item, correct: !a.failed });
+    draw([stored]);
   };
 
   const miss = (a: Attempt, cell: Cell | null, feedback: string) =>
@@ -139,7 +136,7 @@ export function FretboardQuiz() {
   const answerNote = (pc: number) => {
     const a = attemptRef.current;
     if (!doc || !a || a.q.mode !== 'name-note') return;
-    if (pc === a.q.answerPc) finish(a, cellText(inst, a.q.item), Date.now() - a.started);
+    if (pc === a.q.answerPc) finish(a);
     else miss(a, null, `✕ not ${pretty(plainName(pc))}. Try again.`);
   };
 
@@ -151,7 +148,7 @@ export function FretboardQuiz() {
     const name = pretty(plainName(pc));
     if (q.mode === 'find-interval') {
       if (same(cell, q.cell)) return miss(a, null, "✕ that's the note you started from");
-      if (q.targets.some((t) => same(t, cell))) return finish(a, cellText(inst, q.item), Date.now() - a.started);
+      if (q.targets.some((t) => same(t, cell))) return finish(a);
       if (pc === q.answerPc) return miss(a, cell, `✕ that's ${name}, ${OUTSIDE}`);
       const d = mod12(pc - pcAt(inst, q.cell));
       return miss(a, cell, d === 0 ? `✕ that's ${name}, the note you started from` : `✕ that's ${name}, a ${INTERVAL_NAMES[d]} above`);
@@ -160,9 +157,7 @@ export function FretboardQuiz() {
     if (q.targets.some((t) => same(t, cell))) {
       const found = [...a.found, cell];
       if (found.length < q.targets.length) return setAttempt({ ...a, found, feedback: null });
-      const text = q.mode === 'find-note' ? `every ${pretty(plainName(q.pc))}` : pretty(q.symbol);
-      // Time per note, so a chord of five is not slower than a single note.
-      return finish({ ...a, found }, text, (Date.now() - a.started) / q.targets.length);
+      return finish({ ...a, found });
     }
     if (q.mode === 'spell-chord') {
       const info = chordInfo(q.symbol);
@@ -195,12 +190,7 @@ export function FretboardQuiz() {
     return () => window.removeEventListener('keydown', listener);
   }, [settings.mode]);
 
-  const startRound = (only?: string[]) => {
-    round.restart(only);
-    draw([], only);
-  };
   const widen = () => setSettings({ strings: [], frets: [0, frets], accidentals: true });
-  const reset = round.resetHistory;
 
   const header = (
     <ToolHeader title="Fretboard quiz">
@@ -214,13 +204,12 @@ export function FretboardQuiz() {
       <>
         {header}
         <p className={styles.errorText} role="alert">
-          The quiz needs theory.json, which could not be read (see above), so it has nowhere to save your answers. Nothing was started.
+          The quiz needs theory.json, which could not be read (see above), so it has nowhere to keep your place. Nothing was started.
         </p>
       </>
     );
   }
 
-  const stats = roundStats(round.results);
   const q = attempt?.q;
   const dots: NeckDot[] = [];
   if (q && attempt) {
@@ -237,16 +226,13 @@ export function FretboardQuiz() {
   return (
     <>
       {header}
-      {round.done ? (
-        <RoundSummary results={round.results} onRestart={startRound} />
-      ) : problem ? (
+      {problem ? (
         <Panel className={styles.stack}>
           <p className={styles.errorText} role="alert">
             {problem.message}
           </p>
           <div className={styles.row}>
             {problem.kind === 'focus' && <Button onClick={widen}>Widen the focus</Button>}
-            {problem.kind === 'practise' && <Button onClick={() => startRound()}>Start a normal round</Button>}
           </div>
         </Panel>
       ) : (
@@ -255,7 +241,6 @@ export function FretboardQuiz() {
           <>
             <div className={styles.row}>
               <div className={styles.stack}>
-                <span className={styles.cap}>{`round ${round.number} of ${ROUND}`}</span>
                 <span className={styles.big} aria-live="polite">
                   {q.prompt}
                 </span>
@@ -268,11 +253,7 @@ export function FretboardQuiz() {
                       : `${attempt.found.length} found · ${q.targets.length - attempt.found.length} to go · tap the neck`}
                   </span>
                 )}
-                {round.only && <span className={styles.dimText}>practising the {round.only.length} weakest from your last round</span>}
               </div>
-              <span className={styles.stat}>
-                <b>{stats.correct}</b>/{stats.answered} first try
-              </span>
             </div>
             <div className={styles.neck}>
               <TheoryNeck
@@ -324,7 +305,7 @@ export function FretboardQuiz() {
         />
       </div>
       <HelpBox>{HELP[settings.mode]}</HelpBox>
-      <FretboardStats instrument={inst} history={round.history} frets={frets} onReset={reset} />
+      <StartFresh onReset={practice.resetHistory} />
     </>
   );
 }

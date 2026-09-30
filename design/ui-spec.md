@@ -136,8 +136,8 @@ hit-target tiers rather than one.
   are ok/error.** Every neck (Scale sheet, Play along, the Theory tab's `Neck`) draws the
   highest string on top, as a player looks down at it. The root dot takes `--ds-bass` on
   bass and guitar alike, carrying on from the Scale sheet. The dot to play now, a quiz
-  question and every lit picker are accent. A quiz's right and wrong answers, and the
-  weak-spot heatmap, use the vivid `--ds-ok` and `--ds-error`, since that is the job
+  question and every lit picker are accent. A quiz's right and wrong answers
+  use the vivid `--ds-ok` and `--ds-error`, since that is the job
   U-01 gives vivid hues. Dots outside a highlighted position drop to 28 % and keep a
   legible label. Open strings get their own column left of the nut.
   *Because:* one visual language across three screens, so the Theory tab teaches the
@@ -201,7 +201,7 @@ other), a permanent text label, and a fixed lane position; hue is an accelerator
 | Progress bar, job row | setup | estimate derives from the job's recorded device and N-01 |
 | Table | setup | the only place 13 px is permitted |
 | Empty state | — | |
-| Neck | setup | the Theory tab's fretboard (D-19): any instrument and tuning, fret window with an open-string column, labels by note / interval / degree / none, a position window, markers (root, note, accent, question, coming next, correct, wrong ✕, play-order number, muted ✕), a weak-spot heatmap, click targets, left-handed flip. Colours per U-13. Reference: `components/neck.html` |
+| Neck | setup | the Theory tab's fretboard (D-19): any instrument and tuning, fret window with an open-string column, labels by note / interval / degree / none, a position window, markers (root, note, accent, question, coming next, correct, wrong ✕, play-order number, muted ✕), click targets, left-handed flip. Colours per U-13. Reference: `components/neck.html` |
 | Note picker | setup | 12 buttons C … B with both spellings on the black keys; one lit in accent. Shared by every Theory tool, and the selection carries across tools |
 | Scale / quality chips | setup | `button.chip` with `aria-pressed`; lit is accent, never a stem hue. Grouped under a small caps label (Common / Modes / More) |
 | Note chips | setup | a scale's or chord's notes, each with its interval in small type; the root filled in the bass hue |
@@ -280,9 +280,9 @@ assuming it can vary.
    picker, that tool's own pickers, one `Neck`, the note chips, and a help box. Scale finder
    highlights one position at a time; Chord finder adds voicing cards (5-fret zoomed necks)
    on guitar; Chords in a key has seven numeral cards with their function, progressions and
-   a circle of fifths. The Fretboard quiz shows the question large, first-try score as a mono stat
-   (U-04; no streak or timer, on purpose: they make practice stressful), feedback in an error chip that explains the mistake,
-   focus settings, and the weak-spot heatmap. `theory.json` failures are an error banner
+   a circle of fifths. The Fretboard quiz shows the question large, with
+   no score, round counter, streak, timer or stats (on purpose: practice stays relaxed), feedback in an error chip that explains the mistake,
+   focus settings, and a quiet **Start fresh**. `theory.json` failures are an error banner
    with the verbatim validation error and a confirmed **Reset to defaults** (U-09). A failed
    save is a warn banner with **Retry**, and unsaved answers are never dropped. References:
    `screens/theory-*.html`.

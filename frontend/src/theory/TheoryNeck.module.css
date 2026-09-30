@@ -135,14 +135,6 @@
   dominant-baseline: central;
 }
 
-.heatWeak {
-  fill: var(--ds-error);
-}
-
-.heatStrong {
-  fill: var(--ds-ok);
-}
-
 .pick {
   fill: transparent;
   cursor: pointer;

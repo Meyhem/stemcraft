@@ -399,7 +399,6 @@ export interface QuizAnswer {
   mode: string;
   item: string;
   correct: boolean;
-  ms: number;
   at: string;
 }
 

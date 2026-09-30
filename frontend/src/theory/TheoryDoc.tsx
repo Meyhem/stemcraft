@@ -1,8 +1,7 @@
 // theory.json in the browser (D-19): one GET, then every change is applied
 // locally at once and PUT as the whole document. Instrument and last-tool
-// changes are debounced 500 ms; quiz answers are sent immediately when a round
-// ends. A failed save keeps the unsaved document in memory and says so with a
-// Retry; nothing is dropped and nothing is retried silently (N-08).
+// changes are debounced 500 ms; quiz answers are sent immediately, one by one. A
+// failed save keeps the unsaved document in memory and says so with a Retry; nothing is dropped and nothing is retried silently (N-08).
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createContext,

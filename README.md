@@ -28,10 +28,11 @@ instrument and play along.
   fifths, 15 progressions in any key and scales that fit a chord. Pick an analysed song
   and one of its key candidates to load its key and chords: they show as chips in the
   chord tools, and Progressions charts the song with numerals, borrowed chords labelled.
-  Two quizzes ask about your weak spots more often: a fretboard quiz (name the note, find
-  the note, find the interval, spell the chord) shows them on a heatmap of the neck, kept
-  per tuning, and a theory quiz (keys, chords, intervals) lists your weakest facts; the
-  history is kept in `data/theory.json`
+  Two relaxed quizzes for casual practice, with no scores, rounds, streaks or clocks: a
+  fretboard quiz (name the note, find the note, find the interval, spell the chord) and a
+  theory quiz (keys, chords, intervals). A wrong answer is explained and the question
+  stays; things you found tricky quietly come back a little more often. What you have
+  practised is kept in `data/theory.json`, and Start fresh forgets it
 - Album splitter: cut a full album rip into tagged MP3s. Silence detection proposes cuts;
   on a full-length waveform you play, zoom with the wheel or by dragging across a range,
   drag, add and delete cuts, or type exact start and end times to the millisecond, then

@@ -403,7 +403,7 @@ test('nothing is written while this visit’s GET is still in flight; the kept d
   await waitFor(() => expect(puts.map((p) => p.last_tool)).toEqual(['triads']));
 });
 
-const answer = (i: number, at: string, item = `s0f${i}`): QuizAnswer => ({ quiz: 'fretboard', mode: 'name-note', item, correct: true, ms: 100, at });
+const answer = (i: number, at: string, item = `s0f${i}`): QuizAnswer => ({ quiz: 'fretboard', mode: 'name-note', item, correct: true, at });
 
 test('mergeHistory: every answer once, oldest first, the newest 2,000, mixed time formats in time order', () => {
   const a = answer(1, '2026-01-01T00:00:00Z');

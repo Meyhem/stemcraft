@@ -21,7 +21,7 @@ reference next to the practice tool they already use.
 - Works for **bass (4 and 5 string) and guitar (6 string)**, any tuning, left-handed.
 - Correct **note spelling** everywhere (letter-based, not a sharp/flat family).
 - A **"from a song"** card that loads an analysed song's key and chords into the tools.
-- Two **quizzes** that weight questions towards the player's weak spots.
+- Two relaxed **quizzes**: no scores, rounds, streaks, points or clocks. Questions quietly favour what the player found tricky.
 - Settings and quiz history persist on the server, so they follow the player across
   browsers and devices.
 
@@ -239,16 +239,15 @@ It never falls back to another song silently.
 
 ## Quizzes
 
-**Round:** 20 questions. The mode and focus settings are chosen before starting and
-saved in `quiz.settings`. Each answer gets immediate feedback:
+**Practice, not rounds:** questions simply go on, with no end, count, score or timer
+(amended: the first design had 20-question rounds, a score, average time and a weak-spot
+heatmap, all removed so practice stays comfortable). The mode and focus settings are
+saved in `quiz.settings`. Each answer is saved at once and gets immediate feedback:
 
 - right: the next question follows at once (single-answer modes) or the found dots turn green (find-note, spell-chord);
 - wrong: a red ✕ and an explanation ("that's G♯, one fret too high"), and the
-  question stays until it is answered right. Only the first attempt is scored and
-  recorded.
-
-The end-of-round summary shows the score, the average time, the 3 weakest items and
-**Practise these** (a round restricted to them).
+  question stays until it is answered right. Only the first attempt is recorded, as
+  right or wrong; how long it took is not recorded.
 
 **Fretboard quiz modes** (all within the focus strings and fret range):
 
@@ -261,17 +260,14 @@ The end-of-round summary shows the score, the average time, the 3 weakest items 
 minor, number of sharps/flats), chords (notes of X, name these notes), intervals
 (C to A is a…). Wrong options are plausible: neighbouring keys, one changed chord tone.
 
-**Weighting:** each item's weakness is computed from its last 5 answers:
-`weakness = 0.6 · wrong_rate + 0.4 · min(avg_ms / 6000, 1)`. Items with no answers
-score 1.0. The pick probability is proportional to `0.15 + weakness`, so strong items
+**Weighting:** each item's weakness is its wrong rate over its last 5 answers. Items
+with no answers weigh 1.0. The pick probability is proportional to `0.15 + weakness`, so strong items
 still appear. The same item never comes twice in a row. `quiz.ts` takes a seeded RNG
 so tests are deterministic.
 
-**Stats panel** (both quiz pages): for the fretboard, a heatmap on the `TheoryNeck`,
-coloured per position from `--ds-error` (weak) to `--ds-ok` (strong) at reduced
-opacity. Positions never asked are left blank. For the theory quiz, a list of the 10
-weakest facts. **Reset history** asks for confirmation, then PUTs an empty history.
-Red and green mean wrong and right here, which is the design system's rule for vivid hues.
+**No stats panel.** The weighting is invisible: nothing ranks, scores or labels the
+player's answers. The one control is **Start fresh**, which asks for confirmation, then
+PUTs an empty history.
 
 ## Errors (N-08)
 

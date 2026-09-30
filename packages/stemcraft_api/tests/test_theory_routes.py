@@ -21,7 +21,6 @@ def _answer(i: int) -> dict:
         "mode": "keys",
         "item": f"v:{i}",
         "correct": i % 2 == 0,
-        "ms": 900,
         "at": "2026-09-29T00:00:00Z",
     }
 

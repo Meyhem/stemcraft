@@ -538,8 +538,8 @@ audit requirement exists.
   music logic is pure TypeScript in `music/`, the only place `tonal` (pinned 6.4.3) is
   imported; no component imports it. The existing `theory.ts` is untouched. Instrument, last tool, the chosen
   song and quiz history live in `<data_dir>/theory.json`, written only by the API
-  (`GET`/`PUT /api/theory`, atomic, history capped at 2,000 answers). Quiz stats and
-  weak spots are derived from the history, never stored. The worker never touches it.
+  (`GET`/`PUT /api/theory`, atomic, history capped at 2,000 answers). The quiz's repeat
+  weighting is derived from the history, never stored; answer time is not recorded. The worker never touches it.
   *Because:* like the scale view (R-05), this is arithmetic with no failure mode, so
   it belongs in the browser where every picker change is instant. Letter-correct
   spelling across modes, harmonic minor and ~40 chord qualities, plus chord-symbol

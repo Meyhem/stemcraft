@@ -9,7 +9,6 @@ import {
   focusCells,
   focusFor,
   fretboardQuestion,
-  heatmap,
   mulberry32,
   nextTheoryQuestion,
   parseCellKey,
@@ -20,7 +19,6 @@ import {
   shuffle,
   theoryItems,
   theoryQuestion,
-  weakestFacts,
   weakness,
   type Answer,
 } from './quiz';
@@ -29,7 +27,7 @@ import { DEFAULT_INSTRUMENT, PRESETS, instrumentFor, neckFrets, type Instrument 
 
 const bass4 = DEFAULT_INSTRUMENT;
 const at = '2026-09-29T00:00:00Z';
-const ans = (item: string, correct: boolean, ms: number, mode = 'name-note'): Answer => ({ quiz: 'fretboard', mode, item, correct, ms, at });
+const ans = (item: string, correct: boolean, ms: number, mode = 'name-note'): Answer => ({ quiz: 'fretboard', mode, item, correct, at });
 /** A cell item of the default bass, written out rather than built with cellItem. */
 const B = (cell: string) => `E1-A1-D2-G2/${cell}`;
 
@@ -143,11 +141,9 @@ describe('cell items carry the tuning they were asked on', () => {
     expect(fretboardQuestion('find-note', dropD, focus, [], mulberry32(1)).item).toMatch(/^n\d+$/);
   });
 
-  test('answers from another tuning, or from before items carried one, neither weigh a cell nor colour the heatmap', () => {
+  test('answers from another tuning, or from before items carried one, do not weigh a cell', () => {
     const wrong = (item: string) => Array.from({ length: 5 }, () => ans(item, false, 6000));
     const history = [...wrong('E1-A1-D2-G2/s3f3'), ...wrong('s3f5'), ...wrong('D1-A1-D2-G2/s3f1')];
-    expect(heatmap(history, dropD)).toEqual([{ string: 3, fret: 1, weakness: 1 }]);
-    expect(heatmap(history, bass4)).toEqual([{ string: 3, fret: 3, weakness: 1 }]);
     expect(weakness(history, 'fretboard', 'name-note', 'D1-A1-D2-G2/s3f3')).toBe(1); // never asked in drop D: unknown, so weak
   });
 
@@ -216,19 +212,6 @@ describe('theory questions', () => {
   test('next question respects topics', () => {
     const q = nextTheoryQuestion(['intervals'], [], mulberry32(2));
     expect(q.topic).toBe('intervals');
-  });
-});
-
-describe('stats', () => {
-  test('heatmap per cell from the last five answers', () => {
-    const h = heatmap([ans(B('s2f7'), false, 6000), ans(B('s2f7'), false, 6000), ans('n7', true, 100, 'find-note')], bass4);
-    expect(h).toEqual([{ string: 2, fret: 7, weakness: 1 }]);
-  });
-
-  test('weakest facts', () => {
-    const t = (item: string, correct: boolean): Answer => ({ quiz: 'theory', mode: 'keys', item, correct, ms: 1000, at });
-    const w = weakestFacts([t('v:C', true), t('v:G', false), t('sig:D', true)], 2);
-    expect(w.map((x) => x.item)).toEqual(['v:G', 'v:C']);
   });
 });
 
@@ -717,7 +700,7 @@ describe('property: theory questions for every item', () => {
         previous = q.item;
       }
     }
-    const t = (item: string, correct: boolean, ms: number): Answer => ({ quiz: 'theory', mode: 'keys', item, correct, ms, at });
+    const t = (item: string, correct: boolean, ms: number): Answer => ({ quiz: 'theory', mode: 'keys', item, correct, at });
     const history = [
       ...Array.from({ length: 5 }, () => t('v:C', false, 6000)),
       ...Array.from({ length: 5 }, () => t('v:D', true, 0)),
@@ -732,7 +715,7 @@ describe('property: theory questions for every item', () => {
 });
 
 describe('property: weighting', () => {
-  const at2 = (quiz: 'fretboard' | 'theory', mode: string, item: string, correct: boolean, ms: number): Answer => ({ quiz, mode, item, correct, ms, at });
+  const at2 = (quiz: 'fretboard' | 'theory', mode: string, item: string, correct: boolean, ms: number): Answer => ({ quiz, mode, item, correct, at });
 
   test('exact values: the wrong rate, answer time is ignored', () => {
     const h = [true, true, false, true, false].map((c, i) => ans('s1f1', c, [100, 3000, 60000, 0, 9000][i]!));
@@ -863,84 +846,5 @@ describe('property: weighting', () => {
     expect(out).not.toEqual(xs);
     expect(xs).toEqual(iota(20));
     expect(shuffle([], mulberry32(1))).toEqual([]);
-  });
-});
-
-describe('property: derived stats', () => {
-  const th = (mode: string, item: string, correct: boolean, ms: number): Answer => ({ quiz: 'theory', mode, item, correct, ms, at });
-
-  test('heatmap: last five across modes per cell, ignoring non-cells and the theory quiz', () => {
-    const history: Answer[] = [
-      ans(B('s0f0'), false, 6000),
-      ans(B('s0f0'), true, 0, 'find-interval'),
-      ans(B('s3f12'), true, 0),
-      ans('n7', false, 6000, 'find-note'),
-      ans('Dm', false, 6000, 'spell-chord'),
-      th('keys', B('s1f1'), false, 6000), // a theory fact that happens to look like a cell
-      th('keys', 'v:C', false, 6000),
-      ans(B('s1f1'), false, 6000, 'find-note'), // a find-note answer never counts, whatever its item looks like
-      ans(B('s10'), false, 6000), // not a cell key
-      ans(B('sxf1'), false, 6000),
-      ans(B('s1f'), false, 6000),
-      ans(B('s1f1x'), false, 6000),
-      ans('s2f2', false, 6000), // a bare cell key from before items carried their tuning
-      ans('D1-A1-D2-G2/s2f2', false, 6000), // another tuning
-    ];
-    const before = JSON.stringify(history);
-    expect(heatmap(history, bass4)).toEqual([
-      { string: 0, fret: 0, weakness: 0.5 },
-      { string: 3, fret: 12, weakness: 0 },
-    ]);
-    expect(JSON.stringify(history)).toBe(before);
-    expect(heatmap([], bass4)).toEqual([]);
-  });
-
-  test('heatmap: matches an independent computation on a random history and is repeatable', () => {
-    const rng = mulberry32(2);
-    const cells = ['s0f0', 's1f3', 's2f7', 's3f12'].map(B);
-    const modes = ['name-note', 'find-interval'];
-    const history = Array.from({ length: 200 }, () => ans(cells[Math.floor(rng() * 4)]!, rng() < 0.6, Math.floor(rng() * 9000), modes[Math.floor(rng() * 2)]));
-    const got = heatmap(history, bass4);
-    expect(heatmap(history, bass4)).toEqual(got);
-    for (const cell of cells) {
-      const last = history.filter((a) => a.item === cell).slice(-5);
-      const want = last.filter((a) => !a.correct).length / last.length;
-      const c = parseCellKey(cell)!;
-      expect(got.find((g) => g.string === c.string && g.fret === c.fret)!.weakness).toBeCloseTo(want, 12);
-    }
-    expect(got).toHaveLength(4);
-  });
-
-  test('heatmap order is fixed by the history (first time each cell was asked), not by chance', () => {
-    const h = [ans(B('s2f2'), true, 0), ans(B('s0f5'), true, 0), ans(B('s2f2'), false, 0), ans(B('s1f1'), true, 0)];
-    expect(heatmap(h, bass4).map(cellKey)).toEqual(['s2f2', 's0f5', 's1f1']);
-  });
-
-  test('weakestFacts: theory answers only, weakest first, ties keep the order first asked', () => {
-    const history: Answer[] = [
-      th('keys', 'v:C', true, 0),
-      th('keys', 'v:D', true, 0),
-      th('keys', 'v:A', true, 0),
-      th('chords', 'notes:Cm', false, 6000),
-      ans('s0f0', false, 6000), // fretboard: ignored
-      ans('v:G', false, 6000),
-    ];
-    const facts = weakestFacts(history, 10);
-    expect(facts.map((f) => f.item)).toEqual(['notes:Cm', 'v:C', 'v:D', 'v:A']);
-    expect(facts.map((f) => f.weakness)).toEqual([1, 0, 0, 0]);
-    expect(weakestFacts(history, 10)).toEqual(facts); // repeatable
-    expect(weakestFacts([...history].reverse(), 10).map((f) => f.item)).toEqual(['notes:Cm', 'v:A', 'v:D', 'v:C']);
-    expect(weakestFacts(history, 2).map((f) => f.item)).toEqual(['notes:Cm', 'v:C']);
-    expect(weakestFacts(history, 0)).toEqual([]);
-    expect(weakestFacts(history, -1)).toEqual([]);
-    expect(weakestFacts([], 3)).toEqual([]);
-  });
-
-  test('weakestFacts uses the last five answers of each fact', () => {
-    const history = [th('keys', 'v:C', false, 6000), ...Array.from({ length: 5 }, () => th('keys', 'v:C', true, 0)), th('keys', 'v:D', false, 6000)];
-    expect(weakestFacts(history, 2)).toEqual([
-      { item: 'v:D', weakness: 1 },
-      { item: 'v:C', weakness: 0 },
-    ]);
   });
 });

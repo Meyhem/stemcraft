@@ -1,4 +1,4 @@
-// Quiz questions and the weak-spot weighting (D-19). Pure: every random choice
+// Quiz questions and the gentle repeat weighting (D-19): what was tricky comes back a bit more often. Pure: every random choice
 // goes through an injected Rng, so a seeded test sees the same round every
 // time. Stats are derived from the answer history on every call and never
 // stored, the same rule as song state.
@@ -33,7 +33,7 @@ export type Answer = QuizAnswer;
 
 export const WINDOW = 5;
 
-/** Share of these answers that were wrong. Answer time is recorded but deliberately not scored: it only adds stress. */
+/** Share of these answers that were wrong. Only the first try counts, and how long it took is not recorded. */
 function score(answers: readonly Answer[]): number {
   return answers.filter((a) => !a.correct).length / answers.length;
 }
@@ -419,44 +419,6 @@ export function nextTheoryQuestion(
   const items = restrict(all, only);
   const item = pickItem(items, (i) => weakness(history, 'theory', TOPIC_OF[i.split(':')[0]!]!, i), rng, previous);
   return theoryQuestion(item, rng);
-}
-
-// ---------------------------------------------------------------- stats
-
-export interface CellStat extends Cell {
-  weakness: number;
-}
-
-/**
- * Per-cell weakness for the neck's heat map, from the name-note and find-interval
- * answers asked in this instrument's tuning, whose items are its cells (`cellItem`).
- * Answers from another tuning, bare cell keys from before items carried one,
- * and find-note (`n{pc}`) and spell-chord items never count. Unlike `weakness`, which is per mode because the
- * mode is what is being picked, this pools both modes per cell, last 5 answers
- * across them: the neck shows how well a position is known however it was asked,
- * and one cell must be one entry. Cells never asked are absent; order is the
- * order each cell was first asked in.
- */
-export function heatmap(history: readonly Answer[], inst: Instrument): CellStat[] {
-  const tag = tuningTag(inst);
-  const byCell = new Map<string, Answer[]>();
-  for (const a of history) {
-    if (a.quiz !== 'fretboard' || !CELL_MODES.includes(a.mode) || cellItemTuning(a.item) !== tag) continue;
-    const answers = byCell.get(a.item);
-    if (answers) answers.push(a);
-    else byCell.set(a.item, [a]);
-  }
-  return [...byCell.entries()].map(([key, answers]) => ({ ...parseCellKey(key)!, weakness: score(answers.slice(-WINDOW)) }));
-}
-
-/** The `n` weakest theory facts that have been asked at least once; equally weak facts keep the order they were first asked in. */
-export function weakestFacts(history: readonly Answer[], n: number): { item: string; weakness: number }[] {
-  const facts = new Map<string, { mode: string; item: string }>();
-  for (const a of history) if (a.quiz === 'theory') facts.set(JSON.stringify([a.mode, a.item]), { mode: a.mode, item: a.item });
-  return [...facts.values()]
-    .map(({ mode, item }) => ({ item, weakness: weakness(history, 'theory', mode, item) }))
-    .sort((a, b) => b.weakness - a.weakness)
-    .slice(0, Math.max(0, n));
 }
 
 /** Pitch-class of a tapped cell, for checking answers. */
