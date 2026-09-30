@@ -1,0 +1,110 @@
+.root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+  flex: none;
+}
+
+.caption {
+  font: 600 var(--ds-t-xs) / 1 var(--ds-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+}
+
+.root > .button {
+  min-width: 180px;
+  justify-content: space-between;
+  gap: var(--ds-3);
+  padding-inline: var(--ds-4);
+  font-size: var(--ds-t-sm);
+}
+
+.bars {
+  font: 400 var(--ds-t-sm) / 1 var(--ds-mono);
+  font-variant-numeric: tabular-nums; /* U-04 */
+  color: var(--ds-text-2);
+}
+
+/* Above the pinned transport's own layer and the time axis under it. */
+.pop {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  margin-top: var(--ds-2);
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+  padding: var(--ds-3);
+  background: var(--ds-overlay);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-panel);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--ds-t-sm);
+  color: var(--ds-text-2);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  gap: var(--ds-1);
+}
+
+.recall {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--ds-hit-setup);
+  padding-inline: var(--ds-3);
+  font: 400 var(--ds-t-sm) / 1 var(--ds-font);
+  color: var(--ds-text);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+  text-align: left;
+  cursor: pointer;
+}
+
+.recall[aria-current='true'] {
+  border-color: var(--ds-accent);
+  background: color-mix(in srgb, var(--ds-accent) 12%, var(--ds-raised));
+}
+
+.row > .delete {
+  width: var(--ds-hit-setup);
+  padding: 0;
+}
+
+.save {
+  display: flex;
+  gap: var(--ds-2);
+  padding-top: var(--ds-2);
+  border-top: 1px solid var(--ds-border);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--ds-hit-setup);
+  padding-inline: var(--ds-3);
+  font: 400 var(--ds-t-sm) / 1 var(--ds-font);
+  color: var(--ds-text);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-input);
+}
