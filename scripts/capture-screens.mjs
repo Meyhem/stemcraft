@@ -33,7 +33,7 @@ const READY = {
   'theory-shapes': '[data-cell]',
   'theory-quiz': '[data-marker="question"]', // a question is on the neck: the document is read and the round has started
   'album-splitter': '[data-testid="album-canvas"]',
-  'job-queue': '[data-testid="job-stats"]',
+  'job-queue': '[aria-label="Jobs"] li', // a job row: the list is in
 };
 
 // Screens taller than the default viewport: the play-along neck sits below the pickers;
