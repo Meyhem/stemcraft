@@ -206,16 +206,3 @@ proves the script's logic (order, rendering, failure behaviour), not systemd's.
    if CUDA was not ready, the worker falls back to CPU for its whole uptime. `"device":"cpu"`
    with a `fallback_reason` means the worker started before the GPU was ready: run
    `systemctl --user restart stemcraft-worker`.
-
-## Docker Compose alternative
-
-`compose.yaml` runs the same two processes as containers instead of systemd units; see "Run with
-Docker" in the [README](../README.md). Use one or the other on a machine, not both, since they
-share `data/`, `songs/` and `albums/`. Files: `docker/api.Dockerfile`, `docker/worker.Dockerfile`,
-`docker/entrypoint.sh` (refreshes yt-dlp before each start; a failed update logs a warning and the
-image's yt-dlp is used). Redeploy with `git pull && docker compose up -d --build`. Logs:
-`docker compose logs -f worker`. The worker's boot inference still runs, so a broken GPU
-passthrough shows up as a crash-looping `worker` with the real error in its logs (N-08).
-
-Not yet verified by running: the images were not built or started when this was written, only
-`docker compose config` was checked.

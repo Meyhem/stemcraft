@@ -116,33 +116,6 @@ STEMCRAFT_DIST_DIR=frontend/dist uv run stemcraft-api
 
 Open <http://localhost:8000>.
 
-## Run with Docker
-
-An alternative to the systemd install below. Requirements: Docker with Compose, an NVIDIA
-driver that supports CUDA 12.8 or newer (the RTX 5080 needs it) and
-[nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
-The CUDA libraries ship inside the worker image; the host only supplies the driver.
-
-```bash
-mkdir -p data songs albums
-```
-
-```bash
-cp .env.example .env
-```
-
-```bash
-docker compose up -d --build
-```
-
-Open <http://localhost:8000>. Two containers run: `api` (torch-free, serves the UI) and
-`worker` (owns the GPU). Songs, albums and the job database are bind-mounted from `./songs`,
-`./albums` and `./data`, so they survive rebuilds; model weights cache under `data/cache`. Both
-containers update `yt-dlp` at start (`STEMCRAFT_SKIP_YTDLP_UPDATE=1` in `.env` turns that off), so
-`docker compose restart` refreshes it. Set `UID`/`GID` in `.env` to your host user so the files are
-yours. All settings are in [.env.example](.env.example). The mounts must be on a local disk, not NFS:
-SQLite's WAL mode needs shared memory between the two containers.
-
 ## Deploy
 
 `ops/install.sh` installs two systemd user units, `stemcraft-api` and `stemcraft-worker`, that
