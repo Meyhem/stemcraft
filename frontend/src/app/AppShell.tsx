@@ -3,14 +3,12 @@ import { Link, matchPath, Outlet, useLocation } from 'react-router-dom';
 
 import { useHealth } from '../api/queries';
 import { useJobStream } from '../api/useJobStream';
-import { importLinkState } from '../screens/import/importLink';
 import { Banner } from '../ui';
 import styles from './AppShell.module.css';
 import { PulseSlotContext } from './pulseSlot';
 
 const NAV = [
   { to: '/', label: 'Library' },
-  { to: '/import', label: 'Import' },
   { to: '/splitter', label: 'Album splitter' },
   { to: '/jobs', label: 'Job queue' },
   { to: '/theory', label: 'Theory' },
@@ -25,7 +23,7 @@ export function AppShell() {
   // case left is a direct visit to /import, which draws the Library.
   const current = location.pathname === '/import' ? '/' : location.pathname;
   const active = (to: string) =>
-    to !== '/import' && matchPath({ path: to, end: to === '/' }, current) !== null;
+    matchPath({ path: to, end: to === '/' }, current) !== null;
   const broken = health.data?.deps.filter((d) => !d.ok) ?? [];
   // State, not a ref: the consumer has to re-render once the element exists.
   const [pulseSlot, setPulseSlot] = useState<HTMLElement | null>(null);
@@ -37,7 +35,6 @@ export function AppShell() {
           <Link
             key={item.to}
             to={item.to}
-            state={item.to === '/import' ? importLinkState(location) : undefined}
             className={active(item.to) ? styles.active : styles.link}
             aria-current={active(item.to) ? 'page' : undefined}
           >

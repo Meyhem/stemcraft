@@ -4,8 +4,9 @@
 // (D-18), so switching content never stops the music; this layout only makes sure the
 // controls do not move either.
 import { useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 
+import { ButtonLink } from '../ui';
 import { useSongSession } from '../session/SongSession';
 import { TitleEditor } from '../songview/TitleEditor';
 import { Transport } from '../songview/Transport';
@@ -66,9 +67,9 @@ export function SongScreen() {
         <p className={styles.note}>
           This song has not been separated yet &mdash; playback needs its four stems.
         </p>
-        <Link className={styles.link} to="/jobs">
+        <ButtonLink variant="ghost" to="/jobs">
           Job queue &rarr;
-        </Link>
+        </ButtonLink>
       </section>
     );
   }
@@ -76,17 +77,17 @@ export function SongScreen() {
   return (
     <section className={styles.page}>
       <header className={styles.header}>
-        <Link className={styles.link} to="/">
+        <ButtonLink variant="ghost" to="/">
           &larr; Library
-        </Link>
+        </ButtonLink>
         <TitleEditor
           title={song?.title ?? fetchedSong?.title ?? songId}
           artist={song?.artist ?? fetchedSong?.artist ?? ''}
           onRename={session.onRename}
         />
-        <Link className={`${styles.link} ${styles.export}`} to={`/songs/${songId}/export`}>
+        <ButtonLink className={styles.export} to={`/songs/${songId}/export`}>
           Export
-        </Link>
+        </ButtonLink>
       </header>
 
       {engineError && (

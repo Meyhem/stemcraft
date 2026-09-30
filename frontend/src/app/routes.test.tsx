@@ -146,7 +146,7 @@ test('running separation on cpu shows a fallback banner naming the reason', asyn
   expect(banner.textContent).toMatch(/no cuda device found/i);
 });
 
-test('the nav highlights the page under the Import modal, not Import', async () => {
+test('the nav highlights the page under the Import modal, and has no Import tab', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
@@ -164,14 +164,14 @@ test('the nav highlights the page under the Import modal, not Import', async () 
   await screen.findByRole('dialog', { name: 'Add song' });
   // The dialog is modal, so the nav sits outside the accessibility tree: query hidden.
   expect(screen.getByRole('link', { name: 'Job queue', hidden: true })).toHaveAttribute('aria-current', 'page');
-  expect(screen.getByRole('link', { name: 'Import', hidden: true })).not.toHaveAttribute('aria-current');
+  expect(screen.queryByRole('link', { name: 'Import', hidden: true })).toBeNull();
 });
 
 test('a direct visit to /import highlights the Library drawn underneath', async () => {
   renderAt('/import');
   await screen.findByRole('dialog', { name: 'Add song' });
   expect(screen.getByRole('link', { name: 'Library', hidden: true })).toHaveAttribute('aria-current', 'page');
-  expect(screen.getByRole('link', { name: 'Import', hidden: true })).not.toHaveAttribute('aria-current');
+  expect(screen.queryByRole('link', { name: 'Import', hidden: true })).toBeNull();
 });
 
 test('the Import modal opens with the file input focused', async () => {

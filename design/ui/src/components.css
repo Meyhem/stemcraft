@@ -312,3 +312,10 @@ button.chip{cursor:pointer}
 .qstat{display:flex;flex-direction:column;gap:2px}
 .qstat b{font:700 var(--ds-t-xl)/1 var(--ds-mono);font-variant-numeric:tabular-nums}
 .qstat span{font-size:var(--ds-t-xs);color:var(--ds-text-3)}
+/* Links: nav pills (top bar) and prose links. Underline fades in on hover/focus. */
+.nav-pill{position:relative;display:inline-flex;align-items:center;min-height:var(--ds-hit-setup);padding:0 var(--ds-3);border-radius:999px;color:var(--ds-text-2);font:600 var(--ds-t-sm)/1 var(--ds-font);text-decoration:none}
+.nav-pill:hover{background:var(--ds-raised);color:var(--ds-text)}
+.nav-pill[aria-current=page]{background:var(--ds-raised);color:var(--ds-text)}
+.nav-pill[aria-current=page]::after{content:'';position:absolute;bottom:6px;left:50%;width:16px;height:2px;border-radius:2px;background:var(--ds-accent);transform:translateX(-50%)}
+.text-link{color:var(--ds-accent);text-decoration:underline;text-decoration-color:transparent;text-decoration-thickness:1.5px;text-underline-offset:3px}
+.text-link:hover,.text-link:focus-visible{text-decoration-color:currentColor}

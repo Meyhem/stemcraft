@@ -17,12 +17,6 @@
   gap: var(--ds-4);
 }
 
-.link {
-  color: var(--ds-accent);
-  min-height: var(--ds-hit-setup);
-  display: inline-flex;
-  align-items: center;
-}
 
 .export {
   margin-left: auto;

@@ -18,13 +18,15 @@
 
 .link,
 .active {
+  position: relative;
   display: flex;
   align-items: center;
   min-height: var(--ds-hit-setup);
   padding: 0 var(--ds-3);
-  border-radius: var(--ds-r-btn);
+  border-radius: 999px;
   color: var(--ds-text-2);
   font: 600 var(--ds-t-sm) / 1 var(--ds-font);
+  letter-spacing: 0.01em;
   text-decoration: none;
   transition:
     background var(--ds-m-flip) var(--ds-ease),
@@ -36,12 +38,29 @@
   color: var(--ds-text);
 }
 
-/* The selected tab is chrome, so the marker is the accent (U-01). A row of tabs needs
-   a shape cue too, not just a hue -- the inset bottom border is it. */
+.link:focus-visible,
+.active:focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}
+
+/* The selected tab is chrome, so the marker is the accent (U-01). A pill alone is
+   only a tint; the accent dot under the label is the shape cue. */
 .active {
   background: var(--ds-raised);
-  box-shadow: inset 0 -2px 0 var(--ds-accent);
   color: var(--ds-text);
+}
+
+.active::after {
+  content: '';
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  width: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ds-accent);
+  transform: translateX(-50%);
 }
 
 /* Where a playing song draws its stem pulse (U-14). Laid over the nav's own
