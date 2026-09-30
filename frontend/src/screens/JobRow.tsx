@@ -1,4 +1,4 @@
-// §10 + D-17: one job, one row. Running and failed rows open on their steps by
+// §10 + D-17: one job, one table row (plus a detail row when open). Running and failed rows open on their steps by
 // default, so a traceback is never hidden behind a click (N-08).
 import { useId, useState } from 'react';
 
@@ -37,6 +37,9 @@ function summary(job: Job): string | null {
   return null;
 }
 
+// Column count of the Jobs table in JobQueue.tsx; the detail row spans it.
+const COLS = 9;
+
 export interface JobRowProps {
   job: Job;
   defaultOpen?: boolean;
@@ -53,55 +56,67 @@ export function JobRow({ job, defaultOpen, onCancel }: JobRowProps) {
   const began = initiated(job);
 
   return (
-    <li className={styles.row} data-state={job.state}>
-      <div className={styles.head}>
-        <button
-          type="button"
-          className={styles.disclosure}
-          aria-expanded={open}
-          aria-controls={bodyId}
-          aria-label={`Steps of ${job.kind} job ${job.id}`}
-          onClick={() => setToggled(!open)}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z" />
-          </svg>
-        </button>
-        <Chip tone={jobStateTone(job.state)} dot>
-          {job.state}
-        </Chip>
-        <div className={styles.main}>
-          <div className={styles.title}>
-            <span className={styles.kind}>{job.kind}</span>
-            {job.device ? <Chip>{job.device}</Chip> : <span className="dim3">—</span>}
-          </div>
-          {job.state === 'running' && <ProgressBar value={job.progress} label={`${job.kind} progress`} />}
-          <span className={styles.meta} data-failed={job.state === 'failed'}>
-            {/* U-04: a ticking duration must not jitter. */}
-            {began}
-            {began && ' · '}
-            {[line, duration(job)].filter(Boolean).join(' · ')}
+    <>
+      <tr className={styles.row} data-state={job.state}>
+        <td className={styles.toggle}>
+          <button
+            type="button"
+            className={styles.disclosure}
+            aria-expanded={open}
+            aria-controls={bodyId}
+            aria-label={`Steps of ${job.kind} job ${job.id}`}
+            onClick={() => setToggled(!open)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 6l6 6-6 6-1.4-1.4 4.6-4.6-4.6-4.6z" />
+            </svg>
+          </button>
+        </td>
+        <td>
+          <Chip tone={jobStateTone(job.state)} dot>
+            {job.state}
+          </Chip>
+        </td>
+        <td className={styles.kind}>{job.kind}</td>
+        <td className={`${styles.num} ${styles.narrowHide}`}>#{job.id}</td>
+        <td className={styles.narrowHide}>
+          {job.device ? <Chip>{job.device}</Chip> : <span className="dim3">—</span>}
+        </td>
+        {/* U-04: times and a ticking duration are tabular, so they must not jitter. */}
+        <td className={styles.num}>{began}</td>
+        <td className={styles.num}>{duration(job)}</td>
+        <td className={styles.progress} data-failed={job.state === 'failed'}>
+          <div className={styles.progressCell}>
+            {job.state === 'running' && (
+              <ProgressBar value={job.progress} label={`${job.kind} progress`} />
+            )}
+            {line && <span>{line}</span>}
             {!open && job.steps.length > 0 && <StepStrip steps={job.steps} />}
-          </span>
-        </div>
-        {(job.state === 'queued' || job.state === 'running') && (
-          <Button variant="danger" onClick={onCancel}>
-            Cancel
-          </Button>
-        )}
-      </div>
-      {open && (
-        <div id={bodyId} className={styles.body}>
-          {job.steps.length > 0 ? (
-            <StepList steps={job.steps} error={job.error} />
-          ) : (
-            <>
-              <p className={styles.none}>No step record. This job ran before step tracking existed.</p>
-              {job.error && <Banner tone="error" title={`${job.kind} job ${job.id} failed`} trace={job.error} />}
-            </>
+          </div>
+        </td>
+        <td className={styles.action}>
+          {(job.state === 'queued' || job.state === 'running') && (
+            <Button variant="danger" onClick={onCancel}>
+              Cancel
+            </Button>
           )}
-        </div>
+        </td>
+      </tr>
+      {open && (
+        <tr className={styles.detail} data-state={job.state}>
+          <td />
+          <td colSpan={COLS - 1} id={bodyId} className={styles.body}>
+            {job.steps.length > 0 ? (
+              <StepList steps={job.steps} error={job.error} />
+            ) : (
+              <>
+                <p className={styles.none}>No step record. This job ran before step tracking existed.</p>
+                {job.error && <Banner tone="error" title={`${job.kind} job ${job.id} failed`} trace={job.error} />}
+              </>
+            )}
+          </td>
+        </tr>
       )}
-    </li>
+    </>
   );
 }

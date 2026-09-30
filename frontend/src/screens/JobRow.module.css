@@ -1,18 +1,19 @@
-.row { border-bottom: 1px solid var(--ds-border); }
-.row:last-child { border-bottom: 0; }
-.row[data-state='running'] { background: color-mix(in srgb, var(--ds-accent) 5%, transparent); }
-
-.head {
-  display: grid;
-  grid-template-columns: 28px 112px 1fr auto;
-  gap: var(--ds-4);
-  align-items: center;
-  padding: var(--ds-4);
+/* One table row per job: cells stay on a single line, so the row is as tall as its chip. */
+.row > td {
+  padding: var(--ds-1) var(--ds-3);
+  border-bottom: 1px solid var(--ds-border);
+  vertical-align: middle;
+  white-space: nowrap;
 }
+tbody > :last-child > td { border-bottom: 0; }
+.row[data-state='running'],
+.detail[data-state='running'] { background: color-mix(in srgb, var(--ds-accent) 5%, transparent); }
+
+.toggle { width: 28px; padding-right: 0 !important; }
 
 .disclosure {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -26,26 +27,26 @@
 .disclosure svg { width: 18px; height: 18px; fill: currentColor; transition: transform var(--ds-m-flip) var(--ds-ease); }
 .disclosure[aria-expanded='true'] svg { transform: rotate(90deg); }
 
-.main { display: flex; flex-direction: column; gap: var(--ds-2); min-width: 0; }
-.title { display: flex; align-items: center; gap: var(--ds-3); }
 .kind { font-size: var(--ds-t-md); font-weight: 600; }
 
-.meta {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-2);
+.num {
   font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-mono);
   font-variant-numeric: tabular-nums;
   color: var(--ds-text-2);
 }
-.meta[data-failed='true'] { color: var(--ds-error); }
 
-/* Steps line up under the title column: disclosure + chip + two gaps. */
-.body { padding: 0 var(--ds-4) var(--ds-5) calc(var(--ds-4) + 28px + 112px + 2 * var(--ds-4)); }
+.progress { width: 100%; font: 400 var(--ds-t-sm) / var(--ds-lh-sm) var(--ds-mono); color: var(--ds-text-2); }
+.progress[data-failed='true'] { color: var(--ds-error); }
+.progressCell { display: flex; align-items: center; gap: var(--ds-3); min-width: 0; }
+.progressCell > :first-child[role='progressbar'] { flex: 0 0 120px; }
+
+.action { text-align: right; }
+
+/* Steps sit under the State column, in the detail row. */
+.detail > td { border-bottom: 1px solid var(--ds-border); }
+.body { padding: 0 var(--ds-3) var(--ds-4); }
 .none { margin: 0 0 var(--ds-3); font-size: var(--ds-t-sm); color: var(--ds-text-3); }
 
 @media (max-width: 760px) {
-  .head { grid-template-columns: 28px 1fr auto; }
-  .head > :nth-child(2) { display: none; }
-  .body { padding-left: var(--ds-4); }
+  .narrowHide { display: none; }
 }

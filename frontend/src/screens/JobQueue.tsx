@@ -38,7 +38,21 @@ export function JobQueue() {
       {jobs.data?.length === 0 && <EmptyState title="No jobs yet." />}
 
       {jobs.data && jobs.data.length > 0 && (
-        <ul className={styles.list} aria-label="Jobs">
+        <table className={styles.table} aria-label="Jobs">
+          <thead>
+            <tr>
+              <th scope="col"><span className={styles.srOnly}>Steps</span></th>
+              <th scope="col">State</th>
+              <th scope="col">Kind</th>
+              <th scope="col" className={styles.narrowHide}>ID</th>
+              <th scope="col" className={styles.narrowHide}>Device</th>
+              <th scope="col">Started</th>
+              <th scope="col">Duration</th>
+              <th scope="col">Progress</th>
+              <th scope="col"><span className={styles.srOnly}>Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
           {jobs.data.map((job) => (
             <JobRow
               key={job.id}
@@ -47,7 +61,8 @@ export function JobQueue() {
               onCancel={() => cancel.mutate(job.id)}
             />
           ))}
-        </ul>
+          </tbody>
+        </table>
       )}
     </section>
   );

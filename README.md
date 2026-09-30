@@ -37,8 +37,8 @@ instrument and play along.
   drag, add and delete cuts, or type exact start and end times to the millisecond, then
   download a zip or add the tracks to the library as Songs
 - Export the current mix
-- Job queue screen: every job shows when it started (or was queued) at a glance, and
-  expands to its named steps, live, with a duration each and a failure's real traceback
+- Job queue screen: a compact table, one line per job (state, kind, device, when it started or was queued, duration, progress), and
+  each row expands to its named steps, live, with a duration each and a failure's real traceback
   under the step that failed
 - Failures and CPU fallbacks are shown in the UI with the real error message
 

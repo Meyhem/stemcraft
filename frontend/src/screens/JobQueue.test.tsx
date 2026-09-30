@@ -123,7 +123,7 @@ test('a failed job and a done job never share a chip tone', async () => {
   ]);
 
   // The stats row also carries a "failed" label, so scope the lookup to the table.
-  const table = within(await screen.findByRole('list', { name: 'Jobs' }));
+  const table = within(await screen.findByRole('table', { name: 'Jobs' }));
   expect(table.getByText('failed')).toHaveClass('chip', 'error');
   expect(table.getByText('done')).toHaveClass('chip', 'ok');
 });

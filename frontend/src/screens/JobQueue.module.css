@@ -11,14 +11,36 @@
   gap: var(--ds-4);
 }
 
-.list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* Compact: one ~34px line per job, so a long history fits on the page. */
+.table {
+  width: 100%;
+  border-collapse: collapse;
   background: var(--ds-surface);
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-r-panel);
   overflow: hidden;
 }
 
+.table th {
+  padding: var(--ds-2) var(--ds-3);
+  text-align: left;
+  font: 600 var(--ds-t-xs, var(--ds-t-sm)) / 1 var(--ds-font);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+@media (max-width: 760px) {
+  .narrowHide { display: none; }
+}
+
 .filter { margin: 0; font-size: var(--ds-t-sm); color: var(--ds-text-2); }
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
