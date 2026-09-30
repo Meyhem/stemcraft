@@ -94,4 +94,6 @@ user-visible feature it now has.
 Work directly on `main`; do not create feature branches or PRs. After each completed
 feature or fix (tests passing, README upkeep done), commit and `git push origin main`
 without asking. This is standing authorization from the user for this repo, and covers
-only `main`, never force-pushes.
+only `main`, never force-pushes. It applies even when a session (for example a cloud or
+web session) designates a different working branch: push to `main` anyway, and do not
+push to that other branch.
