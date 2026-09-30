@@ -56,6 +56,7 @@ import {
   TextLink,
   type ChipTone,
 } from '../ui';
+import { When } from './When';
 import styles from './AlbumSplitter.module.css';
 
 // D-03: the one sample rate. The <audio> element speaks seconds; album.json
@@ -204,32 +205,58 @@ function AlbumPicker() {
       {del.isError && (
         <Banner tone="error" title="The album could not be deleted" trace={String(del.error)} />
       )}
-      <ul className={styles.grid}>
-        {(albums.data ?? []).map((entry) => (
-          <li key={entry.dir} className={styles.card}>
-            {entry.album ? (
-              <>
-                <TextLink className={styles.albumTitle} to={`/splitter/${entry.album.id}`}>
-                  {entry.album.title}
-                </TextLink>
-                <span className={styles.artist}>{entry.album.artist}</span>
-                <Chip tone={STATE_TONE[entry.state ?? ''] ?? 'neutral'} dot>
-                  {entry.state}
-                </Chip>
-              </>
-            ) : (
-              <>
-                <span>{entry.dir}</span>
-                {/* §9: one unreadable album never breaks the list. */}
-                <Banner tone="error" title="This album could not be read" trace={entry.unreadable} />
-              </>
-            )}
-            <Button className={styles.delete} variant="danger" onClick={() => handleDelete(entry)}>
-              Delete
-            </Button>
-          </li>
-        ))}
-      </ul>
+      {(albums.data?.length ?? 0) > 0 && (
+        <table className={styles.table} aria-label="Albums">
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">Artist</th>
+              <th scope="col">State</th>
+              <th scope="col" className={styles.narrowHide}>Tracks</th>
+              <th scope="col" className={styles.narrowHide}>Added</th>
+              <th scope="col"><span className={styles.srOnly}>Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {(albums.data ?? []).map((entry) => (
+              <tr key={entry.dir}>
+                {entry.album ? (
+                  <>
+                    <td>
+                      <TextLink className={styles.albumTitle} to={`/splitter/${entry.album.id}`}>
+                        {entry.album.title}
+                      </TextLink>
+                    </td>
+                    <td className={styles.artist}>{entry.album.artist}</td>
+                    <td>
+                      <Chip tone={STATE_TONE[entry.state ?? ''] ?? 'neutral'} dot>
+                        {entry.state}
+                      </Chip>
+                    </td>
+                    <td className={`${styles.num} ${styles.narrowHide}`}>{entry.album.tracks.length}</td>
+                    <td className={`${styles.num} ${styles.narrowHide}`}>
+                      <When iso={entry.album.created_at} />
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td>{entry.dir}</td>
+                    {/* §9: one unreadable album never breaks the list. */}
+                    <td colSpan={4}>
+                      <Banner tone="error" title="This album could not be read" trace={entry.unreadable} />
+                    </td>
+                  </>
+                )}
+                <td className={styles.action}>
+                  <Button variant="danger" onClick={() => handleDelete(entry)}>
+                    Delete
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }

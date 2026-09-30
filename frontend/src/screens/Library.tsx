@@ -4,8 +4,8 @@ import { Link, useLocation } from 'react-router-dom';
 
 import type { SongEntry } from '../api/client';
 import { useDeleteSong, useSongs } from '../api/queries';
-import { formatJobTime, formatJobTimeFull } from './jobTime';
 import { importLinkState } from './import/importLink';
+import { When } from './When';
 import { Banner, Button, ButtonLink, Chip, EmptyState, type ChipTone } from '../ui';
 import styles from './Library.module.css';
 
@@ -21,17 +21,6 @@ const STATE_TONE: Record<string, ChipTone> = {
 
 function sortKey(entry: SongEntry): string {
   return entry.song?.last_played_at ?? entry.song?.created_at ?? '';
-}
-
-// ISO timestamp from song.json; a song that was never played has none.
-function when(iso: string | null) {
-  const ms = iso ? Date.parse(iso) : NaN;
-  if (Number.isNaN(ms)) return <span className="dim3">—</span>;
-  return (
-    <time dateTime={new Date(ms).toISOString()} title={formatJobTimeFull(ms / 1000)}>
-      {formatJobTime(ms / 1000)}
-    </time>
-  );
 }
 
 export function Library() {
@@ -101,8 +90,8 @@ export function Library() {
                         {entry.state}
                       </Chip>
                     </td>
-                    <td className={`${styles.num} ${styles.narrowHide}`}>{when(entry.song.created_at)}</td>
-                    <td className={`${styles.num} ${styles.narrowHide}`}>{when(entry.song.last_played_at)}</td>
+                    <td className={`${styles.num} ${styles.narrowHide}`}><When iso={entry.song.created_at} /></td>
+                    <td className={`${styles.num} ${styles.narrowHide}`}><When iso={entry.song.last_played_at} /></td>
                   </>
                 ) : (
                   <>
