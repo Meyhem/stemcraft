@@ -39,7 +39,7 @@ const READY = {
 // Screens taller than the default viewport: the play-along neck sits below the pickers;
 // the Theory rail's instrument footer (tuning, left-handed) sits below the fold at 900; the
 // quiz's question, neck, note buttons and weak-spot heatmap need a tall page to be seen together.
-const HEIGHTS = { 'play-along': 1330, theory: 960, 'theory-shapes': 960, 'theory-quiz': 1100 };
+const HEIGHTS = { 'play-along': 1420, theory: 960, 'theory-shapes': 960, 'theory-quiz': 1100 };
 
 // Screens that only show their point once playing: press Space, let a few bars go by,
 // press Space again so the frame is still. (The neck is empty before the first bar.)

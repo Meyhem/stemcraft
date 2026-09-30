@@ -178,10 +178,11 @@ other), a permanent text label, and a fixed lane position; hue is an accelerator
 | Slider | both | tempo/pitch are performance (14 px track, 32 px knob); gain is setup. **Every slider mirrors its value as a mono readout** — a knob position is unreadable at 1.5 m. Gain fill takes the stem hue; tempo fill takes the accent |
 | Stem strip | performance | the signature component. M/S are 56×44. A muted lane drops to 28 % opacity so the mute is visible across a room, not just as a toggle. A **near-silent** lane (U-10) dims its waveform to 16 %, carries an explanatory pill, and renders M/S inert |
 | Timeline | — | seek ruler as a tinted band (U-11), beat grid (faint) and downbeat grid (bright), A–B region with bar labels, playhead; lanes painted from envelopes on a viewport-sized canvas |
-| Zoom controls | setup | `−` / readout of what is in view / `+` / `Fit`, identical on the Song view transport and the splitter toolbar (U-12) |
+| Zoom controls | setup | `−` / readout of what is in view / `+` / `Fit`, identical on the Stems view tools and the splitter toolbar (U-12) |
 | Cut marker | — | Album splitter. One 2 px amber line plus a numbered tag (cut N ends track N). A press within 8 px grabs it; the tag grabs exactly that cut; overlapping cuts resolve by drag direction. Selected: line turns accent, tag gets the focus ring |
 | Cut list | setup | per track: ▶ (play from its first sample), title, **Start** and **End** typed as `m:ss.mmm`, length, the exact filename the split will write, and × (remove the cut after it). A time that crosses a neighbour is refused with the allowed range — never clamped |
-| Transport bar | performance | bar number in display/48 mono; untouched tempo/pitch values render muted |
+| Transport bar | performance | bar number in display/48 mono; untouched tempo/pitch values render muted; tempo 50–150 % with a tick at 100 %; loop set by bar steppers, a saved-loops menu and count-in. Identical over Stems and Tabs |
+| View switch | setup (48 px) | Stems / Tabs, two links styled as a segmented control; the chosen view's own tools sit to its right |
 | Banner | — | warn and error; carries the verbatim trace (U-09) |
 | Progress bar, job row | setup | estimate derives from the job's recorded device and N-01 |
 | Table | setup | the only place 13 px is permitted |
@@ -220,13 +221,20 @@ assuming it can vary.
    queue, so the wait is legible rather than a spinner. A job not queued yet draws its
    declared steps as pending. Closing doesn't stop the work; "Open job queue" goes to
    `/jobs?song=<id>`.
-3. **Song view** — the hard screen. The transport sits on top (play, bar, chord → next,
-   tempo, pitch, metronome, loop, Set A/B, zoom, Follow playhead). Below it one horizontally
-   scrolling time axis holds, in order, the seek ruler, the chord row aligned to bars, and
-   four full-height stem lanes with beat and downbeat grid, A–B region and playhead; the
-   200 px lane heads stay put while it scrolls. Zoom and pan per U-12. A 320 px right rail
-   holds key candidates, saved loops and count-in — all setup tier, all out of the way.
-   Every value auto-saves to `song.json`; zoom and scroll are view state and never do.
+3. **Song screen** — the hard screen, and the only one a song is played on. Top to
+   bottom: a header (back to library, title and artist with in-place **Rename**, Export);
+   the transport, pinned (play, bar, chord → next, tempo 50–150 % with a tick at 100 %,
+   pitch, loop, loop bars, saved loops, metronome, count-in); a **Stems / Tabs** switch
+   with the chosen view's tools beside it; then the content. **Stems** is one
+   horizontally scrolling time axis holding the seek ruler, the chord row aligned to
+   bars, and four full-height stem lanes with beat and downbeat grid, loop region and
+   playhead; the 200 px lane heads stay put while it scrolls; its tools are zoom and
+   Follow playhead (U-12). **Tabs** is the play-along content: key and pattern pickers,
+   the neck, the beat lane and the chord ribbon; its tool is the Scale & fretboard link.
+   There is no right rail: key candidates live only in the Tabs key picker. Switching
+   content never stops playback and never moves a control (D-18). Every value auto-saves
+   to `song.json`; zoom and scroll are view state and never do. Mockup:
+   `docs/superpowers/specs/2026-09-30-unified-song-screen-mockup.html`.
 4. **Scale & fretboard** — bass or guitar, generated from the selected key candidate.
    Pure arithmetic; no model, no failure mode. The page says so, because the chips above
    it are probabilistic and the board below it is not (R-05).
@@ -268,9 +276,9 @@ assuming it can vary.
 ## 7. Keyboard
 
 Performance controls all have keys, because reaching for a mouse mid-song is what the
-layout is trying to avoid. `Space` play/pause · `L` arm loop · `A`/`B` set loop points
-at the current bar · `M` metronome · `1`–`4` mute stem by lane position · `↑`/`↓` tempo
-±5 % · `←`/`→` jump one bar.
+layout is trying to avoid. `Space` play/pause · `L` arm loop · `A`/`B` set the loop's
+start / end to the current bar (the transport's bar steppers set them by number) · `M` metronome · `1`–`4` mute stem by lane position · `↑`/`↓` tempo
+±5 % · `←`/`→` jump one bar. All of these work in both Stems and Tabs.
 
 Album splitter, on a selected cut (click its number): `←`/`→` nudge 0.1 s, with `Shift`
 1 s · `Home`/`End` jump to the limits its neighbours allow · `Delete` or `Backspace`
@@ -282,10 +290,7 @@ from the summary.
 
 ## 8. Deferred
 
-- **Tabs / alphaTab view.** Deferred with the pipeline itself (§12, R-06).
-- **Practice mode** — a stripped Song view that drops the right rail and scales the
-  transport further. Worth building only after real use shows which rail items are
-  actually touched mid-song.
+- **Transcribed tabs (alphaTab).** Deferred with the pipeline itself (§12, R-06).
 - **Light theme.** No need identified; the app is used in a practice room.
 
 ## 9. Open questions

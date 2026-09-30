@@ -31,6 +31,16 @@ describe('SavedLoops', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('says Unsaved for an active loop nobody has named, None for no loop', () => {
+    const { unmount } = render(
+      <SavedLoops savedLoops={[]} activeLoop={{ name: '', start_bar: 4, end_bar: 8 }} onRecallLoop={vi.fn()} onSaveActiveLoop={vi.fn()} onDeleteLoop={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: /saved loops/i })).toHaveTextContent('Unsaved');
+    unmount();
+    render(<SavedLoops savedLoops={[]} activeLoop={null} onRecallLoop={vi.fn()} onSaveActiveLoop={vi.fn()} onDeleteLoop={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /saved loops/i })).toHaveTextContent('None');
+  });
+
   it('shows bars 1-based and inclusive, like the loop steppers', async () => {
     renderMenu();
     await open();

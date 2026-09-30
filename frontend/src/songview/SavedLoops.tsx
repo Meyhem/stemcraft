@@ -59,7 +59,7 @@ export function SavedLoops({ savedLoops, activeLoop, onRecallLoop, onSaveActiveL
         aria-expanded={open}
         onClick={() => setOpen((was) => !was)}
       >
-        <span>{activeLoop?.name || 'None'}</span>
+        <span>{activeLoop ? activeLoop.name || 'Unsaved' : 'None'}</span>
         <span className={styles.bars}>{activeLoop ? bars(activeLoop) : ''} ▾</span>
       </Button>
 

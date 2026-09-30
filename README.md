@@ -8,17 +8,18 @@ instrument and play along.
   analysis live, step by step
 - GPU stem separation into vocals, drums, bass and other
 - Live mixer: mute, solo and volume per stem
-- Song view time axis: the wheel zooms at the pointer, dragging across the lanes zooms to
+- Stems view time axis: the wheel zooms at the pointer, dragging across the lanes zooms to
   that range, Shift+wheel or the scrollbar pans, and a click on the ruler seeks
-- Tempo and pitch change without re-separating; stems are never modified
-- Sample-accurate seamless loops on the beat grid, with optional count-in
+- Tempo (50–150 %) and pitch change without re-separating; stems are never modified
+- Sample-accurate seamless loops on the beat grid, set by bar number (or with the A/B keys at the playhead), saved by name, with optional count-in
 - Beat, key and chord analysis, plus a fretboard view
-- Play along screen for bass: a live neck shows what to play in the current and the next
+- One song screen: a single transport stays put while you switch between Stems (waveforms and the mixer) and Tabs (the play-along neck below); the music never stops. Rename a song's title and artist in place
+- Tabs view for bass: a live neck shows what to play in the current and the next
   bar, with a beat lane underneath showing when. The notes are generated from the chord
   chart by a pattern you pick (root, root–5th, root–5th–octave, octave, chord or diatonic triad, 7th; whole
   to eighth notes; optional chromatic, scale or fifth approach into the next bar), in the
   detected key or another candidate, and follow the pitch shift. Click a bar in the chord ribbon
-  to jump there; loop by bar numbers or by Ctrl- and Shift-clicking the ribbon; playback carries on when you switch back to the Song view
+  to jump there; loop by bar numbers or by Ctrl- and Shift-clicking the ribbon
 - Theory tab for 4- and 5-string bass and 6-string guitar in any tuning, left-handed too:
   scale, chord and note finders, name a chord from notes you tap, scale positions
   (pentatonic boxes, 3-notes-per-string, CAGED, position boxes), triads and inversions,
@@ -44,8 +45,8 @@ instrument and play along.
 
 ![Library](docs/screenshots/library.png)
 ![Add song](docs/screenshots/import.png)
-![Song view](docs/screenshots/song-view.png)
-![Play along](docs/screenshots/play-along.png)
+![Song screen — Stems](docs/screenshots/song-view.png)
+![Song screen — Tabs](docs/screenshots/play-along.png)
 ![Theory](docs/screenshots/theory.png)
 ![Theory: scale positions](docs/screenshots/theory-shapes.png)
 ![Theory: fretboard quiz](docs/screenshots/theory-quiz.png)
@@ -54,7 +55,7 @@ instrument and play along.
 
 All nine are captures of the running app, made with
 `node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> play-along=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" "theory-shapes=/theory/scale-positions?root=A&scale=minor-pentatonic" theory-quiz=/theory/fretboard-quiz album-splitter=/splitter/<id> job-queue=/jobs`
-(API and dev server running; it loads the pages, and for Play along it presses Space to play a few bars and pause again). The design system these follow —
+(API and dev server running; it loads the pages, and for the Tabs view it presses Space to play a few bars and pause again). The design system these follow —
 tokens, components and screen mockups — is in [design/ui](design/ui) (build it with
 `python3 design/ui/build.py`), with its rules in [design/ui-spec.md](design/ui-spec.md).
 

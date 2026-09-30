@@ -1,70 +1,125 @@
-<!-- @dsCard group="Screens" name="Song view — play along" subtitle="The hard screen: transport on top, one zoomable time axis — seek ruler, chords, lanes" viewport="1440x1000" -->
-<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Song view — Stemcraft</title><style>/* @inject */
-.body2{display:grid;grid-template-columns:1fr 320px;flex:1;min-height:0}
-.stage{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--ds-border)}
+<!-- @dsCard group="Screens" name="Song screen — Stems" subtitle="One header, one pinned transport, a zoomable time axis" viewport="1440x1000" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Song screen — Stems — Stemcraft</title><style>/* @inject */
+
+.body2{display:flex;flex-direction:column;flex:1;min-height:0}
+.stage{display:flex;flex-direction:column;min-width:0;flex:1}
 .rail{background:var(--ds-surface);overflow:auto;padding:var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-5)}
 .lanes{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
-.stem-row{flex:1}
-.stem-lane{height:auto}
-.axis{position:relative;display:flex;flex-direction:column;flex:1;min-height:0;margin:0 var(--ds-4) var(--ds-4);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
+.stem-row{flex:1}.stem-lane{height:auto}
+.axis{position:relative;display:flex;flex-direction:column;flex:1;min-height:420px;margin:0 var(--ds-4) var(--ds-4);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
 .axrow{display:grid;grid-template-columns:200px 1fr;flex:none}
 .axhead{display:flex;align-items:center;justify-content:flex-end;padding-right:var(--ds-4);background:var(--ds-surface);border-bottom:1px solid var(--ds-border);border-right:1px solid var(--ds-border)}
 .chords{display:flex;height:44px;background:var(--ds-surface);position:relative;border-bottom:1px solid var(--ds-border)}
 .chords .c{position:absolute;top:0;bottom:0;display:flex;align-items:center;padding-left:var(--ds-2);border-left:1px solid var(--ds-border);font:600 var(--ds-t-md)/1 var(--ds-font)}
-.tpanel{margin:var(--ds-4);padding:var(--ds-4);background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);display:flex;flex-direction:column;gap:var(--ds-3)}
-.tpanel .row{gap:var(--ds-4)}
+.chords .c.now{background:rgba(79,163,255,.12);color:var(--ds-text)}
 .axis .grid-bars{background:repeating-linear-gradient(90deg,rgba(255,255,255,.16) 0 1px,transparent 1px 140px)}
 .axis .grid-beats{background:repeating-linear-gradient(90deg,rgba(255,255,255,.055) 0 1px,transparent 1px 35px)}
 .hscroll{height:10px;position:relative;border-top:1px solid var(--ds-border);background:var(--ds-ground)}
 .hscroll i{position:absolute;top:2px;height:6px;border-radius:3px;background:var(--ds-border-strong)}
-.chords .c.now{background:rgba(79,163,255,.12);color:var(--ds-text)}
-.loopitem{display:flex;align-items:center;gap:var(--ds-3);min-height:var(--ds-hit-setup);padding:var(--ds-2) var(--ds-3);border-radius:var(--ds-r-btn);border:1px solid transparent;cursor:pointer}
-.loopitem:hover{background:var(--ds-raised)}
-.loopitem[aria-current=true]{background:rgba(79,163,255,.12);border-color:rgba(79,163,255,.5)}
 .keyrow{display:flex;flex-direction:column;gap:var(--ds-2)}
+.fb{background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);padding:var(--ds-4) var(--ds-3) var(--ds-3)}
+.fb svg{width:100%;height:auto;display:block}
+.fb text{font-family:var(--ds-font)}
+.fb .fnum{font:500 13px var(--ds-mono);fill:var(--ds-text-3)}
+.fb .sname{font-weight:600;font-size:17px;fill:var(--ds-text-3)}
+.fb .dotn{font-weight:700;font-size:15px;fill:var(--ds-ground)}
+.fb .doto{font-weight:700;font-size:10px;fill:var(--ds-ground)}
+.fb .lanel{font-weight:600;font-size:13px;fill:var(--ds-text)}
+.fb .chipn{font-weight:700;font-size:15px;fill:var(--ds-ground)}
+.fb .dim{fill:var(--ds-text-3)}
+.ribbon{display:grid;grid-template-columns:repeat(16,1fr);gap:3px}
+.rb{min-height:var(--ds-hit-setup);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:var(--ds-raised);border:1px solid var(--ds-border);border-radius:var(--ds-r-input);color:var(--ds-text-2);font:600 var(--ds-t-sm)/1 var(--ds-font);cursor:pointer}
+.rb .num{font:500 11px var(--ds-mono);color:var(--ds-text-3)}
+.rb.inloop{background:rgba(79,195,176,.12)}
+.rb.now{border-color:var(--ds-bass);color:var(--ds-bass)}
+.legend{display:flex;gap:var(--ds-5);flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;width:18px;height:18px;border-radius:50%;vertical-align:-4px;margin-right:var(--ds-2)}
+
+/* ---- new in this design ---- */
+.loopmenu{position:relative}
+.tpanel{margin:var(--ds-4) var(--ds-4) 0;padding:var(--ds-4);background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);display:flex;flex-direction:column;gap:var(--ds-4)}
+.tpanel .row{gap:var(--ds-5)}
+.barstep{display:inline-flex;align-items:center;gap:var(--ds-1)}
+.barstep output{min-width:52px;text-align:center;font:600 var(--ds-t-xl)/1 var(--ds-mono)}
+.barstep .btn{min-width:var(--ds-hit-perform);padding:0}
+.viewbar{display:flex;align-items:flex-end;gap:var(--ds-5);margin:var(--ds-4);min-height:56px}
+.viewseg > button{min-height:48px;padding:0 var(--ds-6);font-size:var(--ds-t-md)}
+.tabs-body{margin:0 var(--ds-4) var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-4)}
+.pattern{display:flex;flex-wrap:wrap;gap:var(--ds-4) var(--ds-5);align-items:flex-end}
+.titlebtn{display:flex;align-items:center;gap:var(--ds-3);background:transparent;border:1px solid transparent;border-radius:var(--ds-r-btn);padding:var(--ds-1) var(--ds-3);margin-left:calc(-1 * var(--ds-3));color:inherit;cursor:text;text-align:left;font:inherit}
+.titlebtn:hover,.titlebtn:focus-visible{border-color:var(--ds-border-strong);background:var(--ds-raised)}
+.titlebtn svg{width:16px;height:16px;fill:var(--ds-text-3);flex:none}
+.titlebtn:hover svg{fill:var(--ds-text)}
+
 </style></head><body><div class="app">
 
 <div class="topbar">
   <button class="iconbtn" aria-label="Back to library"><svg viewBox="0 0 24 24"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg></button>
-  <div class="col" style="gap:0;min-width:0">
-    <span class="t-md" style="font-weight:600;white-space:nowrap">Tightrope</span>
-    <span class="t-sm dim" style="white-space:nowrap">Walk the Moon</span>
-  </div>
+
+  <!-- Rename: the title block is the control. Click it, edit title and artist in place. -->
+  <button class="titlebtn" title="Rename">
+    <span class="col" style="gap:0;min-width:0">
+      <span class="t-md" style="font-weight:600;white-space:nowrap">Tightrope</span>
+      <span class="t-sm dim" style="white-space:nowrap">Walk the Moon</span>
+    </span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+  </button>
+
   <div class="grow"></div>
-  <span class="chip chip-ok">cuda · RTX 5080</span>
-  <button class="btn">Re-analyze</button>
   <button class="btn btn-primary">Export</button>
 </div>
 
 <div class="body2">
-
   <div class="stage">
+
+    <!-- ONE transport, identical in both views, pinned while the content scrolls -->
     <div class="tpanel">
       <div class="row wrap">
         <button class="iconbtn iconbtn-perform" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>
-        <div class="readout"><span class="cap" style="align-self:center;margin-right:var(--ds-2)">bar</span><span class="big">17</span></div>
+        <div class="readout"><span class="cap" style="align-self:center;margin-right:var(--ds-2)">bar</span><span class="big">17</span><span class="unit">beat 3</span></div>
         <div class="col" style="gap:2px"><span class="cap">chord</span><span class="t-lg" style="font-weight:600">Gm <span class="dim">&rarr; Dm</span></span></div>
-        <div class="slider slider-perform" style="max-width:200px"><div class="shead"><span class="slabel">Tempo</span><span class="sval num">82%</span></div><div class="track"><i class="fill" style="width:64%"></i><i class="knob" style="left:64%"></i></div></div>
-        <div class="slider slider-perform" style="max-width:180px"><div class="shead"><span class="slabel">Pitch</span><span class="sval num">&minus;2 st</span></div><div class="track"><i class="center-tick"></i><i class="knob" style="left:33%"></i></div></div>
-        <button class="btn btn-perform" aria-pressed="true">Metronome</button>
-        <button class="btn btn-perform" aria-pressed="true">Loop</button>
-        <button class="btn btn-perform">Set A</button>
-        <button class="btn btn-perform">Set B</button>
+        <!-- 50..150 %: 100 % sits at the centre tick, the fill grows away from it -->
+        <div class="slider slider-perform" style="width:220px"><div class="shead"><span class="slabel">Tempo</span><span class="sval num">120%</span></div><div class="track"><i class="fill" style="left:50%;width:20%;border-radius:0"></i><i class="center-tick"></i><i class="knob" style="left:70%"></i></div></div>
+        <div class="slider slider-perform" style="width:180px"><div class="shead"><span class="slabel">Pitch</span><span class="sval num">&minus;2 st</span></div><div class="track"><i class="center-tick"></i><i class="knob" style="left:42%"></i></div></div>
       </div>
-      <div class="row wrap">
+      <div class="row wrap" style="align-items:flex-end">
+        <button class="btn btn-perform" aria-pressed="true">Loop</button>
         <div class="col" style="gap:var(--ds-1)">
-          <span class="cap">zoom</span>
-          <div class="zoomctl">
-            <button class="btn" aria-label="Zoom out">&minus;</button>
-            <output class="zoomval">7.4 bars in view</output>
-            <button class="btn" aria-label="Zoom in">+</button>
-            <button class="btn">Fit</button>
+          <span class="cap">loop bars</span>
+          <div class="row" style="gap:var(--ds-3)">
+            <span class="barstep"><button class="btn btn-perform" aria-label="Start bar earlier">&minus;</button><output>17</output><button class="btn btn-perform" aria-label="Start bar later">+</button></span>
+            <span class="t-sm dim">to</span>
+            <span class="barstep"><button class="btn btn-perform" aria-label="End bar earlier">&minus;</button><output>18</output><button class="btn btn-perform" aria-label="End bar later">+</button></span>
           </div>
         </div>
-        <button class="btn btn-primary" aria-pressed="true" style="align-self:flex-end">Follow playhead</button>
+        <div class="col loopmenu" style="gap:var(--ds-1)">
+          <span class="cap">saved loops</span>
+          <button class="btn btn-perform" aria-haspopup="true" aria-expanded="false" style="min-width:180px;justify-content:space-between">Chorus <span class="num dim">17–18 &#9662;</span></button>
+        </div>
+        <button class="btn btn-perform" aria-pressed="true">Metronome</button>
+        <div class="col" style="gap:var(--ds-1)"><span class="cap">count-in</span>
+          <div class="seg"><button>0</button><button aria-selected="true">1 bar</button><button>2 bars</button></div></div>
       </div>
     </div>
 
+    <!-- View switch + the setup controls that belong to the chosen view -->
+    <div class="viewbar">
+      <div class="seg viewseg" role="tablist" aria-label="View">
+        <button role="tab" aria-selected="true">Stems</button>
+        <button role="tab" aria-selected="false">Tabs</button>
+      </div>
+      <div class="grow"></div>
+      <div class="row" style="gap:var(--ds-4);align-items:flex-end">
+        <div class="col" style="gap:var(--ds-1)">
+          <span class="cap">zoom</span>
+          <div class="zoomctl"><button class="btn" aria-label="Zoom out">&minus;</button><output class="zoomval">7.4 bars in view</output><button class="btn" aria-label="Zoom in">+</button><button class="btn">Fit</button></div>
+        </div>
+        <button class="btn btn-primary" aria-pressed="true">Follow playhead</button>
+      </div>
+    </div>
+
+    <!-- ===== Stems content ===== -->
+    <div style="display:flex;flex-direction:column;flex:1;min-height:0">
     <div class="axis">
       <div class="axrow"><div class="axhead cap" style="height:26px">bar</div>
         <div class="ruler">
@@ -125,34 +180,10 @@
       <div class="playhead" style="left:838px"></div>
       <div class="hscroll"><i style="left:38%;width:22%"></i></div>
     </div>
-  </div>
-
-  <div class="rail">
-    <div class="keyrow">
-      <span class="cap">key</span>
-      <span class="chip chip-lg" style="color:var(--ds-text);justify-content:space-between">G minor <b class="num dim">72%</b></span>
-      <span class="chip chip-lg" style="justify-content:space-between">B&#9837; major <b class="num dim3">18%</b></span>
-      <span class="chip chip-lg" style="justify-content:space-between">D minor <b class="num dim3">7%</b></span>
-      <button class="btn" style="margin-top:var(--ds-1)">Open fretboard</button>
     </div>
 
-    <div class="col" style="gap:var(--ds-2)">
-      <div class="row"><span class="cap">loops</span><div class="grow"></div><button class="btn btn-ghost" style="min-height:32px;padding:0 var(--ds-2)">+ Add</button></div>
-      <div class="loopitem" aria-current="true"><span class="grow t-md" style="font-weight:600">Chorus</span><span class="num t-sm dim">17–19</span></div>
-      <div class="loopitem"><span class="grow t-md">Bridge</span><span class="num t-sm dim">41–49</span></div>
-      <div class="loopitem"><span class="grow t-md">Intro riff</span><span class="num t-sm dim">1–5</span></div>
-    </div>
-
-
-    <div class="col" style="gap:var(--ds-3)">
-      <span class="cap">count-in</span>
-      <div class="seg"><button>off</button><button aria-selected="true">1 bar</button><button>2 bars</button></div>
-    </div>
-
-    <hr class="divider">
-    <p class="t-sm dim3" style="margin:0">Mix, tempo, pitch and loops are a recipe in <span class="num">song.json</span>, applied at
-    playback. Stems are never re-separated to reflect a setting, so undo is free.</p>
   </div>
 
 </div>
-</div></body></html>
+</div>
+</body></html>

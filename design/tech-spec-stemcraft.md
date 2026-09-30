@@ -51,8 +51,8 @@ Given, not chosen.
 - **N-02** — Analysis (key, beats, chords) completes in **seconds**, on CPU.
 - **N-03** — Time to first playback after opening a Song: **under ~3 s on LAN**,
   driven by Opus transfer of ~12 MB rather than ~125 MB of WAV (D-04).
-- **N-04** — Tempo range **50–100 %** without pitch change; subjectively clean to
-  ~70 %, usable below. Pitch shift clean within **±2–3 semitones**.
+- **N-04** — Tempo range **50–150 %** without pitch change (amended 2026-09-30; the
+  ceiling was 100 %); subjectively clean from ~70 % up, usable below. Pitch shift clean within **±2–3 semitones**.
 - **N-05** — Loop wrap is **sample-accurate and free of clicks or gaps**, sustained
   over long repetition. This is a hard requirement, not a preference (interview, Q5),
   and it dictates D-06.
@@ -515,7 +515,9 @@ audit requirement exists.
   (`music/patterns.ts`, `music/fingering.ts`) over `analysis.json`'s chords and the
   `play_along` recipe in `song.json` (schema v3). Nothing derived is stored. The
   `EngineController` moves from `SongView` into a `SongScope` layout route that wraps
-  Song view and Play along, so switching between them never stops playback. Notes
+  Song view and Play along, so switching between them never stops playback. Since
+  2026-09-30 the two are one screen: `SongScreen` renders the header, the transport and
+  a Stems/Tabs switch, and the two routes are only the content under it. Notes
   reach the screen through a `TabSource` interface, which a later transcription job
   also implements.
   *Because:* generation is arithmetic over the chord chart, like the scale view

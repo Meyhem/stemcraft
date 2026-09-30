@@ -3,6 +3,8 @@
 .tl{position:relative}
 .tl .lanes{position:relative}
 .tl .stem-lane{height:56px}
+.barstep{display:inline-flex;align-items:center;gap:var(--ds-1)}
+.barstep output{min-width:52px;text-align:center}
 </style></head><body><div class="doc">
 
 <div class="sec">
@@ -107,8 +109,8 @@
       <span class="cap">repetitions</span>
       <span class="t-lg num">12</span>
     </div>
-    <button class="btn btn-perform">Set A</button>
-    <button class="btn btn-perform">Set B</button>
+    <span class="barstep"><button class="btn btn-perform" aria-label="Start bar earlier">&minus;</button><output class="num t-lg">17</output><button class="btn btn-perform" aria-label="Start bar later">+</button></span>
+    <span class="barstep"><button class="btn btn-perform" aria-label="End bar earlier">&minus;</button><output class="num t-lg">24</output><button class="btn btn-perform" aria-label="End bar later">+</button></span>
   </div>
 </div>
 

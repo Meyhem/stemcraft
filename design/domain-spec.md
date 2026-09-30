@@ -199,9 +199,10 @@ Runs after separation, on CPU, in a few seconds.
 ### Song view: play along
 
 - Per-stem mute, solo and volume, over stacked waveforms with the beat grid
-- **Tempo** 50–100% without changing pitch, live during playback; clean down to about 60–70%, usable below
+- **Tempo** 50–150% without changing pitch, live during playback; clean down to about 60–70%, usable below
 - **Pitch shift** in semitones, live, e.g. to match a down-tuned instrument; clean within ±2–3
-- **A–B loop** snapped to bars
+- **Loop** set by bar number (or with the A/B keys at the playhead), snapped to bars, saved by name
+- **Rename** the title and artist in place
 - Count-in and metronome click locked to the beat grid
 - All settings auto-save to song.json
 - A **Play along** button opens the Play along screen for the same song. Playback, position and loop carry over in both directions without stopping.
