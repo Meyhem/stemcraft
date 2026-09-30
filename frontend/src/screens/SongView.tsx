@@ -1,7 +1,6 @@
-// UI spec §6, screen 3 -- the screen where a song is edited (no right rail: count-in
-// and saved loops live in the transport). The engine, the
-// recipe and every transport/mixer/loop handler live in the song session
-// (session/SongSession.tsx, D-18), shared with Play along; this file owns
+// The Stems content of the song screen (UI spec §6, screen 3): one time axis -- ruler,
+// chord row, four stem lanes. The header, the transport and the view switch are
+// SongScreen's; the engine and the recipe are the session's (D-18). This file owns
 // only how the time axis is drawn: zoom, follow, pan and drag-to-zoom.
 import {
   useCallback,
@@ -13,7 +12,6 @@ import {
   type PointerEvent,
   type WheelEvent,
 } from 'react';
-import { Link } from 'react-router-dom';
 
 import {
   DEFAULT_PX_PER_BAR,
@@ -26,53 +24,27 @@ import {
 import { clamp, DRAG_THRESHOLD_PX, scrollLeftAfterZoom, wheelZoom, ZOOM_STEP } from '../music/zoom';
 import { useSongSession } from '../session/SongSession';
 import { ChordStrip } from '../songview/ChordStrip';
-import { TitleEditor } from '../songview/TitleEditor';
 import { StemLane } from '../songview/StemLane';
 import { Timeline } from '../songview/Timeline';
-import { Transport } from '../songview/Transport';
+import { ViewTools } from '../songview/ViewTools';
 import { ZoomTools } from '../songview/ZoomTools';
 import styles from './SongView.module.css';
 
 export function SongView() {
   const {
-    songId,
-    entry,
-    isPending,
-    loadError,
-    fetchedSong,
-    hasStems,
-    analysisError,
-    notAnalyzedYet,
     chords,
     grid,
     song,
     engine,
-    engineError,
-    saveError,
     soloed,
     playing,
     loopArmed,
     seekNonce,
     getPosition,
-    onPlayPause: handlePlayPause,
     onScrub: handleScrub,
-    onNudgeBars: handleNudgeBars,
-    onTempoChange: handleTempoChange,
-    onPitchChange: handlePitchChange,
-    onMetronomeToggle: handleMetronomeToggle,
-    onLoopBars: handleLoopBars,
-    onSetLoopStart: handleSetLoopStart,
-    onSetLoopEnd: handleSetLoopEnd,
-    onLoopArmToggle: handleLoopArmToggle,
     onMuteToggle: handleMuteToggle,
     onSoloToggle: handleSoloToggle,
     onGainChange: handleGainChange,
-    onMuteLane: handleMuteLane,
-    onRecallLoop: handleRecallLoop,
-    onSaveActiveLoop: handleSaveActiveLoop,
-    onDeleteLoop: handleDeleteLoop,
-    onCountInChange: handleCountInChange,
-    onRename,
   } = useSongSession();
 
   // View state, not recipe: how the time axis is drawn never reaches song.json.
@@ -288,204 +260,92 @@ export function SongView() {
     [loopStartBar, loopEndBar],
   );
 
-  if (isPending) return <p className={styles.note}>Loading song&hellip;</p>;
-  if (loadError !== null) {
-    return (
-      <p role="alert" className={styles.alert}>
-        {String(loadError)}
-      </p>
-    );
-  }
-
-  // §9 / U-09: a song.json we could not parse says so in the server's own
-  // words, and offers nothing that would need it.
-  if (entry?.unreadable) {
-    return (
-      <section className={styles.empty}>
-        <h1>{songId}</h1>
-        <p role="alert" className={styles.alert}>
-          {entry.unreadable}
-        </p>
-      </section>
-    );
-  }
-
-  if (!hasStems) {
-    return (
-      <section className={styles.empty}>
-        <h1>{fetchedSong?.title ?? songId}</h1>
-        <p className={styles.note}>
-          This song has not been separated yet &mdash; the Song view needs its four stems.
-        </p>
-        <Link className={styles.link} to="/jobs">
-          Job queue &rarr;
-        </Link>
-      </section>
-    );
-  }
+  // Loading, errors and the no-stems case are SongScreen's to say.
+  if (!engine || !song) return null;
 
   return (
-    <section className={styles.page}>
-      <div className={styles.main}>
-        <header className={styles.header}>
-          <Link className={styles.link} to="/">
-            &larr; Library
-          </Link>
-          <TitleEditor
-            title={song?.title ?? fetchedSong?.title ?? songId}
-            artist={song?.artist ?? fetchedSong?.artist ?? ''}
-            onRename={onRename}
-          />
-          <Link className={styles.link} to={`/songs/${songId}/play`}>
-            Play along
-          </Link>
-          <Link className={styles.link} to={`/songs/${songId}/export`}>
-            Export
-          </Link>
-        </header>
+    <>
+      <ViewTools>
+        <ZoomTools
+          zoomLabel={zoomLabel}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomFit={handleZoomFit}
+          follow={follow}
+          onFollowToggle={handleFollowToggle}
+        />
+      </ViewTools>
 
-        {engineError && (
-          <p role="alert" className={styles.alert}>
-            {engineError}
-          </p>
-        )}
-
-        {/* ApiError's message already carries the server's own detail, so it is
-            shown as it came rather than paraphrased into reassurance. */}
-        {saveError && (
-          <p role="alert" className={styles.alert}>
-            {saveError.message}
-          </p>
-        )}
-
-        {analysisError !== null && !notAnalyzedYet && (
-          <p role="alert" className={styles.alert}>
-            {String(analysisError)}
-          </p>
-        )}
-
-        {!engine && !engineError && <p className={styles.note}>Loading stems&hellip;</p>}
-
-        {engine && song && (
-          <>
-            {/* Playback controls at the top, pinned while the page scrolls: the one
-                surface touched with an instrument in hand, found in the same place
-                every time. */}
-            <div className={styles.transport}>
-              <Transport
-                playing={playing}
-                grid={grid}
-                getPosition={getPosition}
-                seekNonce={seekNonce}
-                tempo={song.playback.tempo}
-                pitchSemitones={song.playback.pitch_semitones}
-                metronome={song.metronome}
-                countInBars={song.count_in_bars}
-                loop={song.active_loop}
-                loopArmed={loopArmed}
-                savedLoops={song.loops}
-                onPlayPause={handlePlayPause}
-                onTempoChange={handleTempoChange}
-                onPitchChange={handlePitchChange}
-                onMetronomeToggle={handleMetronomeToggle}
-                onCountInChange={handleCountInChange}
-                onLoopArmToggle={handleLoopArmToggle}
-                onLoopBars={handleLoopBars}
-                onSetLoopStart={handleSetLoopStart}
-                onSetLoopEnd={handleSetLoopEnd}
-                onRecallLoop={handleRecallLoop}
-                onSaveActiveLoop={handleSaveActiveLoop}
-                onDeleteLoop={handleDeleteLoop}
-                onNudgeBars={handleNudgeBars}
-                onMuteLane={handleMuteLane}
-                chords={chords}
-              />
-            </div>
-
-            <div className={styles.viewBar}>
-              <ZoomTools
-                zoomLabel={zoomLabel}
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onZoomFit={handleZoomFit}
-                follow={follow}
-                onFollowToggle={handleFollowToggle}
-              />
-            </div>
-
-            {/* One time axis: ruler, chords and the four lanes are rows of a
-                single horizontally scrolling canvas, so a chord, its bar line
-                and the waveform under it always move together. */}
+      {/* One time axis: ruler, chords and the four lanes are rows of a
+          single horizontally scrolling canvas, so a chord, its bar line
+          and the waveform under it always move together. */}
+      <div
+        ref={setScroller}
+        data-testid="time-axis-scroller"
+        className={styles.scroller}
+        onWheel={handleAxisWheel}
+        onPointerDown={handleAxisPointerDown}
+        onPointerMove={handleAxisPointerMove}
+        onPointerUp={handleAxisPointerUp}
+        onPointerCancel={handleAxisPointerCancel}
+      >
+        <div
+          data-testid="time-axis"
+          className={styles.axis}
+          style={{ width: `${LANE_HEAD_PX + scale.contentWidth}px` }}
+        >
+          {selection && (
             <div
-              ref={setScroller}
-              data-testid="time-axis-scroller"
-              className={styles.scroller}
-              onWheel={handleAxisWheel}
-              onPointerDown={handleAxisPointerDown}
-              onPointerMove={handleAxisPointerMove}
-              onPointerUp={handleAxisPointerUp}
-              onPointerCancel={handleAxisPointerCancel}
-            >
-              <div
-                data-testid="time-axis"
-                className={styles.axis}
-                style={{ width: `${LANE_HEAD_PX + scale.contentWidth}px` }}
-              >
-                {selection && (
-                  <div
-                    className={styles.selection}
-                    data-testid="zoom-selection"
-                    style={{
-                      left: `${LANE_HEAD_PX + Math.min(selection.from, selection.to)}px`,
-                      width: `${Math.abs(selection.to - selection.from)}px`,
-                    }}
-                  />
-                )}
-                <Timeline
-                  grid={grid}
-                  durationSamples={engine.durationSamples}
-                  scale={scale}
-                  loop={timelineLoop}
-                  loopArmed={loopArmed}
-                  getPosition={getPosition}
-                  playing={playing}
-                  seekNonce={seekNonce}
-                  onScrub={handleScrub}
-                  scroller={scroller}
-                  follow={follow}
-                />
+              className={styles.selection}
+              data-testid="zoom-selection"
+              style={{
+                left: `${LANE_HEAD_PX + Math.min(selection.from, selection.to)}px`,
+                width: `${Math.abs(selection.to - selection.from)}px`,
+              }}
+            />
+          )}
+          <Timeline
+            grid={grid}
+            durationSamples={engine.durationSamples}
+            scale={scale}
+            loop={timelineLoop}
+            loopArmed={loopArmed}
+            getPosition={getPosition}
+            playing={playing}
+            seekNonce={seekNonce}
+            onScrub={handleScrub}
+            scroller={scroller}
+            follow={follow}
+          />
 
-                <ChordStrip
-                  chords={chords}
-                  scale={scale}
-                  compact={zoom === 'fit'}
-                  getPosition={getPosition}
-                  playing={playing}
-                  seekNonce={seekNonce}
-                />
+          <ChordStrip
+            chords={chords}
+            scale={scale}
+            compact={zoom === 'fit'}
+            getPosition={getPosition}
+            playing={playing}
+            seekNonce={seekNonce}
+          />
 
-                <div className={styles.lanes}>
-                  {engine.stemSummaries.map((summary) => (
-                    <StemLane
-                      key={summary.name}
-                      summary={summary}
-                      scroller={scroller}
-                      width={scale.contentWidth}
-                      muted={song.mix[summary.name]?.muted ?? false}
-                      soloed={soloed.has(summary.name)}
-                      gainDb={song.mix[summary.name]?.gain_db ?? 0}
-                      anySoloed={soloed.size > 0}
-                      onMuteToggle={() => handleMuteToggle(summary.name)}
-                      onSoloToggle={() => handleSoloToggle(summary.name)}
-                      onGainChange={(db) => handleGainChange(summary.name, db)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+          <div className={styles.lanes}>
+            {engine.stemSummaries.map((summary) => (
+              <StemLane
+                key={summary.name}
+                summary={summary}
+                scroller={scroller}
+                width={scale.contentWidth}
+                muted={song.mix[summary.name]?.muted ?? false}
+                soloed={soloed.has(summary.name)}
+                gainDb={song.mix[summary.name]?.gain_db ?? 0}
+                anySoloed={soloed.size > 0}
+                onMuteToggle={() => handleMuteToggle(summary.name)}
+                onSoloToggle={() => handleSoloToggle(summary.name)}
+                onGainChange={(db) => handleGainChange(summary.name, db)}
+              />
+            ))}
+          </div>
+        </div>
       </div>
-    </section>
+    </>
   );
 }

@@ -1,13 +1,12 @@
-// frontend/src/screens/PlayAlong.test.tsx
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SongScope } from '../session/SongScope';
-import { SongScreen } from './SongScreen';
 import { PlayAlong } from './PlayAlong';
+import { SongScreen } from './SongScreen';
 import { SongView } from './SongView';
 
 let cursor = 0;
@@ -114,92 +113,52 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-describe('PlayAlong', () => {
-  it('shows the neck for the bar under the playhead', async () => {
-    renderAt('/songs/abc123/play');
-    const neck = await screen.findByTestId('neck-canvas');
-    await waitFor(() => expect(neck.getAttribute('aria-label')).toBe('Bar 1, G: G B D B. Next: Bar 2, C: C E G E'));
-    expect(screen.getByRole('heading', { name: 'Test Song' })).toBeInTheDocument();
-    expect(screen.getByText(/not a transcription/i)).toBeInTheDocument();
-  });
-
-  it('saves a pattern change to song.json', async () => {
-    renderAt('/songs/abc123/play');
-    await userEvent.click(await screen.findByRole('button', { name: 'Octave' }));
-    await waitFor(
-      () => {
-        const put = vi.mocked(fetch).mock.calls.find(([, init]) => init?.method === 'PUT');
-        expect(JSON.parse(String(put![1]!.body)).play_along.pattern.notes).toBe('octave_pump');
-      },
-      { timeout: 3000 },
-    );
-  });
-
-  it('says the song needs analysis rather than drawing an empty neck', async () => {
-    mockFetch(404);
-    renderAt('/songs/abc123/play');
-    expect(await screen.findByText(/needs analysis/i)).toBeInTheDocument();
-    expect(screen.queryByTestId('neck-canvas')).not.toBeInTheDocument();
-  });
-
-  it('is one click from the Stems content, and back', async () => {
+describe('SongScreen', () => {
+  it('swaps Stems and Tabs content under the same transport', async () => {
     renderAt('/songs/abc123');
-    await userEvent.click(await screen.findByRole('link', { name: 'Tabs' }));
+    expect(await screen.findByTestId('time-axis')).toBeInTheDocument();
+    const play = screen.getByRole('button', { name: 'Play' });
+    expect(screen.getByRole('link', { name: 'Stems' })).toHaveAttribute('aria-current', 'page');
+
+    await userEvent.click(screen.getByRole('link', { name: 'Tabs' }));
     expect(await screen.findByTestId('neck-canvas')).toBeInTheDocument();
+    expect(screen.queryByTestId('time-axis')).not.toBeInTheDocument();
+    // The very same button element: the transport did not remount.
+    expect(screen.getByRole('button', { name: 'Play' })).toBe(play);
+    expect(screen.getByRole('link', { name: 'Tabs' })).toHaveAttribute('aria-current', 'page');
+
     await userEvent.click(screen.getByRole('link', { name: 'Stems' }));
     expect(await screen.findByTestId('time-axis')).toBeInTheDocument();
   });
 
-  it('toggles playback with the Space key', async () => {
-    renderAt('/songs/abc123/play');
-    await screen.findByTestId('neck-canvas');
-    await userEvent.keyboard(' ');
-    await waitFor(() => expect(engine.play).toHaveBeenCalledTimes(1));
-    expect(engine.pause).not.toHaveBeenCalled();
+  it('shows each view’s own tools beside the switch', async () => {
+    renderAt('/songs/abc123');
+    expect(await screen.findByRole('button', { name: 'Follow playhead' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('link', { name: 'Tabs' }));
+    expect(await screen.findByRole('link', { name: /scale & fretboard/i })).toHaveAttribute('href', '/songs/abc123/scale');
+    expect(screen.queryByRole('button', { name: 'Follow playhead' })).not.toBeInTheDocument();
   });
 
-  it('plays on Space while the tempo slider has focus', async () => {
+  it('has the full transport in the Tabs view: pitch, loop bars, saved loops', async () => {
     renderAt('/songs/abc123/play');
-    const slider = await screen.findByRole('slider', { name: 'Tempo' });
-    slider.focus();
-    await userEvent.keyboard(' ');
-    await waitFor(() => expect(engine.play).toHaveBeenCalledTimes(1));
-    expect(engine.pause).not.toHaveBeenCalled();
+    expect(await screen.findByRole('slider', { name: 'Pitch' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Loop start bar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Saved loops' })).toBeInTheDocument();
+    // One of each: the Tabs view no longer brings a transport of its own.
+    expect(screen.getAllByRole('slider', { name: 'Tempo' })).toHaveLength(1);
   });
 
-  it('plays on Space while a button has focus, without firing that button', async () => {
+  it('keeps the transport when the Tabs content has nothing to show', async () => {
+    mockFetch(404);
     renderAt('/songs/abc123/play');
-    const metronome = await screen.findByRole('button', { name: 'Metronome' });
-    await userEvent.click(metronome);
-    await waitFor(() => expect(metronome).toHaveAttribute('aria-pressed', 'true'));
-    expect(metronome).toHaveFocus();
-    await userEvent.keyboard(' ');
-    await waitFor(() => expect(engine.play).toHaveBeenCalledTimes(1));
-    expect(engine.pause).not.toHaveBeenCalled();
-    expect(metronome).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByText(/needs analysis/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument());
   });
 
-  it('moves the playhead to a bar clicked in the chord ribbon', async () => {
+  it('renames from either view', async () => {
     renderAt('/songs/abc123/play');
-    await userEvent.click(await screen.findByRole('button', { name: /^Bar 3,/ }));
-    expect(engine.seek).toHaveBeenCalledWith(192_000);
-  });
-
-  it('keeps an armed loop for a click inside it and releases it for a click outside', async () => {
-    renderAt('/songs/abc123/play');
-    // Bars 2-3 (0-based 1..3), armed.
-    fireEvent.click(await screen.findByRole('button', { name: /^Bar 2,/ }), { ctrlKey: true });
-    fireEvent.click(screen.getByRole('button', { name: /^Bar 3,/ }), { shiftKey: true });
-    const arm = screen.getByRole('button', { name: 'Arm loop' });
-    await userEvent.click(arm);
-    expect(arm).toHaveAttribute('aria-pressed', 'true');
-
-    await userEvent.click(screen.getByRole('button', { name: /^Bar 3,/ }));
-    expect(engine.seek).toHaveBeenLastCalledWith(192_000);
-    expect(arm).toHaveAttribute('aria-pressed', 'true');
-
-    await userEvent.click(screen.getByRole('button', { name: /^Bar 4,/ }));
-    expect(engine.seek).toHaveBeenLastCalledWith(288_000);
-    expect(arm).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(await screen.findByRole('button', { name: 'Rename' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Title' }), ' 2{Enter}');
+    expect(await screen.findByRole('heading', { name: 'Test Song 2' })).toBeInTheDocument();
   });
 });

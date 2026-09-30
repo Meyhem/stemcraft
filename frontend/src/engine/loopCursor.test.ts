@@ -251,6 +251,57 @@ test('crossfaded loop never clicks across 2000 repetitions', () => {
   expect(maxAdjacentDelta(outRight)).toBeLessThanOrEqual(threshold);
 });
 
+// N-04 (amended 2026-09-30): tempo runs to 150 %, so the cursor now reads the stems
+// up to 1.5x faster than real time. Every per-frame delta -- the signal's own and the
+// crossfade's slope -- grows by that factor, so the bound does too; anything beyond it
+// is a click at the wrap.
+const FAST_READ_RATE = 1.5;
+
+test('a hard cut still clicks at readRate 1.5 (the detector is live at that rate)', () => {
+  const stems = buildClickStems();
+  const params: MixParams = {
+    gains: [1, 1, 1, 1],
+    readRate: FAST_READ_RATE,
+    loop: { startFrame: CLICK_START, endFrame: CLICK_END },
+    crossfadeFrames: 0,
+    playing: true,
+    lengthFrames: CLICK_END + 2,
+    metronome: null,
+  };
+  const cursor: CursorState = { position: CLICK_START, ended: false };
+  const frameCount = CLICK_REPETITIONS * CLICK_LOOP_LENGTH;
+  const outLeft = new Float32Array(frameCount);
+  const outRight = new Float32Array(frameCount);
+
+  renderBlock(stems, params, cursor, outLeft, outRight);
+
+  expect(maxAdjacentDelta(outLeft)).toBeGreaterThan(computeMaxExpectedDelta(0) * FAST_READ_RATE * 5);
+});
+
+test('crossfaded loop never clicks across 2000 repetitions at readRate 1.5', () => {
+  const stems = buildClickStems();
+  const params: MixParams = {
+    gains: [1, 1, 1, 1],
+    readRate: FAST_READ_RATE,
+    loop: { startFrame: CLICK_START, endFrame: CLICK_END },
+    crossfadeFrames: CLICK_CROSSFADE,
+    playing: true,
+    lengthFrames: CLICK_END + 2,
+    metronome: null,
+  };
+  const cursor: CursorState = { position: CLICK_START, ended: false };
+  // 1.5x reads a loop in two thirds of the frames, so render the same number of loops.
+  const frameCount = Math.ceil((CLICK_REPETITIONS * CLICK_LOOP_LENGTH) / FAST_READ_RATE);
+  const outLeft = new Float32Array(frameCount);
+  const outRight = new Float32Array(frameCount);
+
+  renderBlock(stems, params, cursor, outLeft, outRight);
+
+  const threshold = computeMaxExpectedDelta(CLICK_CROSSFADE) * FAST_READ_RATE;
+  expect(maxAdjacentDelta(outLeft)).toBeLessThanOrEqual(threshold);
+  expect(maxAdjacentDelta(outRight)).toBeLessThanOrEqual(threshold);
+});
+
 // ---------------------------------------------------------------------------
 // 4 & 5. No drift, with integer and non-integer readRate
 // ---------------------------------------------------------------------------

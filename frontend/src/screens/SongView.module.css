@@ -1,45 +1,5 @@
-/* UI spec §6, screen 3: the performing surface on the left -- one scrolling
-   transport on top, then one scrolling time axis (bar ruler, chord row directly
-   beneath it, four full-height stem lanes) -- Tokens only. */
-.page {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  /* The lane height is the readability budget at 1.5 m, so the screen claims
-     the viewport minus AppShell's nav and main padding and hands the slack to
-     the lanes (mockup: .body2 { flex: 1; min-height: 0 }). */
-  min-height: calc(100dvh - var(--ds-9));
-}
-
-/* Tools of the chosen view; the Stems/Tabs switch joins them at the left. */
-.viewBar {
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-end;
-}
-
-.main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-4);
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-4);
-}
-
-.link {
-  color: var(--ds-accent);
-  min-height: var(--ds-hit-setup);
-  display: inline-flex;
-  align-items: center;
-}
-
+/* The Stems content: one horizontally scrolling time axis. The layout around it is
+   SongScreen's. Tokens only. */
 /* The time axis: one horizontal scroll container holding the bar ruler, the
    chord row and the four lanes as rows of one canvas, so they scroll together
    and a chord stays on its bar line and over its audio. Vertically it grows to
@@ -104,48 +64,4 @@
   display: flex;
   flex-direction: column;
   flex: 1 0 auto;
-}
-
-/* The transport sits at the top, above the time axis, and stays pinned there while
-   the page scrolls: it is the one control surface touched with an instrument in hand,
-   so it is always in the same place. Above the axis's sticky head column (z 2). */
-.transport {
-  position: sticky;
-  top: 0;
-  z-index: 4;
-  padding-bottom: var(--ds-2);
-  background: var(--ds-ground);
-}
-
-.note {
-  color: var(--ds-text-2);
-  font-size: var(--ds-t-sm);
-}
-
-.alert {
-  margin: 0;
-  padding: var(--ds-3) var(--ds-4);
-  border: 1px solid var(--ds-error);
-  border-radius: var(--ds-r-panel);
-  background: color-mix(in srgb, var(--ds-error) 12%, transparent);
-  color: var(--ds-text);
-  font-family: var(--ds-mono);
-  font-size: var(--ds-t-sm);
-  white-space: pre-wrap;
-}
-
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--ds-3);
-  padding: var(--ds-6);
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-r-panel);
-}
-
-.empty h1 {
-  margin: 0;
-  font: 600 var(--ds-t-lg) / var(--ds-lh-lg) var(--ds-font);
 }

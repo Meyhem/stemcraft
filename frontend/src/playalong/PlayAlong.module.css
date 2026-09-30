@@ -1,5 +1,5 @@
 /* frontend/src/playalong/PlayAlong.module.css
-   Play along (D-18). Mirrors design/ui/src/pages/screens/play-along.html. */
+   The Tabs content of the song screen (D-18), and the loop-bar steppers the transport shares. */
 .canvas {
   display: block;
   width: 100%;
@@ -98,54 +98,11 @@
   color: var(--ds-text-3);
 }
 
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-4);
-  min-width: 0;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-4);
-}
-
-.titles h1 {
-  margin: 0;
-  font: 600 var(--ds-t-xl) / var(--ds-lh-xl) var(--ds-font);
-}
-
-.sub {
-  margin: 0;
-  color: var(--ds-text-2);
-  font-size: var(--ds-t-sm);
-}
-
 .panel {
   display: flex;
   flex-direction: column;
   gap: var(--ds-4);
   padding: var(--ds-5);
-}
-
-.transport {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--ds-5);
-}
-
-.slider {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-1);
-  min-width: 180px;
-}
-
-.slider output {
-  font: 600 var(--ds-t-sm) / 1 var(--ds-mono);
-  color: var(--ds-text-2);
 }
 
 .now {

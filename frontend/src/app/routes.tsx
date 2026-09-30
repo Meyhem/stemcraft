@@ -8,6 +8,7 @@ import { JobQueue } from '../screens/JobQueue';
 import { Library } from '../screens/Library';
 import { PlayAlong } from '../screens/PlayAlong';
 import { ScaleSheet } from '../screens/ScaleSheet';
+import { SongScreen } from '../screens/SongScreen';
 import { SongView } from '../screens/SongView';
 import { ImportModal } from '../screens/import/ImportModal';
 import type { ImportLinkState } from '../screens/import/importLink';
@@ -60,11 +61,15 @@ export function AppRoutes() {
           {/* D-19: the tool is in the path, the shared selection in the query string. */}
           <Route path="theory" element={<Suspense fallback={null}><Theory /></Suspense>} />
           <Route path="theory/:tool" element={<Suspense fallback={null}><Theory /></Suspense>} />
-          {/* D-18: one session per song, above the screens that play it, so
-              switching between them never stops playback. */}
+          {/* D-18: one session per song, above the content that plays it. SongScreen is
+              the shared header, transport and Stems/Tabs switch; the two child routes
+              are only the content under it, so switching never stops playback and
+              never moves a control. */}
           <Route path="songs/:songId" element={<SongScope />}>
-            <Route index element={<SongView />} />
-            <Route path="play" element={<PlayAlong />} />
+            <Route element={<SongScreen />}>
+              <Route index element={<SongView />} />
+              <Route path="play" element={<PlayAlong />} />
+            </Route>
           </Route>
           <Route path="songs/:songId/scale" element={<ScaleSheet />} />
           <Route path="songs/:songId/export" element={<Export />} />

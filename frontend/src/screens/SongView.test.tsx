@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SongScope } from '../session/SongScope';
+import { SongScreen } from './SongScreen';
 import { SongView } from './SongView';
 
 let cursor = 0;
@@ -107,7 +108,9 @@ function renderSongView() {
       <MemoryRouter initialEntries={['/songs/abc123']}>
         <Routes>
           <Route path="/songs/:songId" element={<SongScope />}>
-            <Route index element={<SongView />} />
+            <Route element={<SongScreen />}>
+              <Route index element={<SongView />} />
+            </Route>
           </Route>
         </Routes>
       </MemoryRouter>

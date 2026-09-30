@@ -1,0 +1,113 @@
+/* UI spec §6, screen 3. A column: header, the pinned transport, the Stems/Tabs switch
+   with the chosen view's tools, then the content, which takes the remaining height. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-4);
+  min-width: 0;
+  /* The lane height is the readability budget at 1.5 m, so the screen claims
+     the viewport minus AppShell's nav and main padding and hands the slack to
+     the content. */
+  min-height: calc(100dvh - var(--ds-9));
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-4);
+}
+
+.link {
+  color: var(--ds-accent);
+  min-height: var(--ds-hit-setup);
+  display: inline-flex;
+  align-items: center;
+}
+
+.export {
+  margin-left: auto;
+}
+
+/* Stays pinned at the top while the page scrolls. Above the axis's sticky head
+   column (z 2). */
+.transport {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  padding-bottom: var(--ds-2);
+  background: var(--ds-ground);
+}
+
+.viewBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ds-4);
+}
+
+/* The segmented control's look (design system .seg), on links. 48 px: it is reached
+   for between takes, more often than setup controls, less than the transport. */
+.switch {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--ds-ground);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-btn);
+}
+
+.switch a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--ds-6);
+  border-radius: 5px;
+  color: var(--ds-text-2);
+  font: 600 var(--ds-t-md) / 1 var(--ds-font);
+  text-decoration: none;
+}
+
+.switch a[aria-current='page'] {
+  background: var(--ds-overlay);
+  color: var(--ds-text);
+}
+
+.tools {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-4);
+}
+
+.note {
+  color: var(--ds-text-2);
+  font-size: var(--ds-t-sm);
+}
+
+.alert {
+  margin: 0;
+  padding: var(--ds-3) var(--ds-4);
+  border: 1px solid var(--ds-error);
+  border-radius: var(--ds-r-panel);
+  background: color-mix(in srgb, var(--ds-error) 12%, transparent);
+  color: var(--ds-text);
+  font-family: var(--ds-mono);
+  font-size: var(--ds-t-sm);
+  white-space: pre-wrap;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-3);
+  padding: var(--ds-6);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+}
+
+.empty h1 {
+  margin: 0;
+  font: 600 var(--ds-t-lg) / var(--ds-lh-lg) var(--ds-font);
+}
