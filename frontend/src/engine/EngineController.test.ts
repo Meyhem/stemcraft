@@ -115,7 +115,7 @@ function makeController(initialContextTime = 0) {
     playingState,
     durationFrames,
   );
-  return { controller, context, cursorNode, clock };
+  return { controller, context, cursorNode, clock, endedBox };
 }
 
 const BAR_STARTS = [0, 480, 960, 1440].map(sampleIndex);
@@ -247,5 +247,65 @@ describe('EngineController.countInAndPlay cancellation', () => {
 
     expect(restoreGains1).toHaveBeenCalledTimes(1);
     expect(restoreGains2).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('EngineController at the end of the stems', () => {
+  it('parks the clock exactly on the end when the stems end', async () => {
+    const { controller, context, cursorNode, endedBox } = makeController(0);
+    await controller.play();
+    context.currentTime = 1;
+    endedBox.fire();
+    expect(controller.getPositionSamples()).toBe(controller.durationSamples);
+    context.currentTime = 5;
+    expect(controller.getPositionSamples()).toBe(controller.durationSamples);
+    expect(cursorNode.parameters.get('playing')!.value).toBe(0);
+  });
+
+  it('play after the end starts from the top instead of sitting on the end', async () => {
+    const { controller, context, cursorNode, endedBox } = makeController(0);
+    await controller.play();
+    endedBox.fire();
+    cursorNode.port.postMessage.mockClear();
+
+    context.currentTime = 10;
+    await controller.play();
+    expect(cursorNode.port.postMessage).toHaveBeenCalledWith({ type: 'seek', position: 0 });
+    expect(controller.getPositionSamples()).toBe(0);
+    context.currentTime = 11;
+    expect(controller.getPositionSamples()).toBe(SAMPLE_RATE);
+  });
+
+  it('a seek after the end is respected by the next play', async () => {
+    const { controller, endedBox } = makeController(0);
+    await controller.play();
+    endedBox.fire();
+    controller.seek(sampleIndex(1234));
+    await controller.play();
+    expect(controller.getPositionSamples()).toBe(1234);
+  });
+
+  it('a count-in after the end counts into the top, not into the end', async () => {
+    const { controller, cursorNode, endedBox } = makeController(0);
+    await controller.play();
+    endedBox.fire();
+    cursorNode.port.postMessage.mockClear();
+
+    const restore = vi.fn();
+    const done = controller.countInAndPlay(controller.durationSamples, 1, BAR_STARTS, restore);
+    await waitForRaf();
+    flushOneFrame();
+    await done;
+    expect(restore).toHaveBeenCalledTimes(1);
+    expect(cursorNode.port.postMessage).toHaveBeenCalledWith({ type: 'seek', position: 0 });
+    expect(cursorNode.port.postMessage).not.toHaveBeenCalledWith({ type: 'seek', position: 10_000_000 });
+  });
+
+  it('never reports a position past the end', async () => {
+    const { controller, context } = makeController(0);
+    controller.seek(sampleIndex(9_990_000));
+    await controller.play();
+    context.currentTime = 10;
+    expect(controller.getPositionSamples()).toBe(10_000_000);
   });
 });

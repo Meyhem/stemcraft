@@ -273,7 +273,6 @@ When it lands, transcription is a second note source for the Play along screen n
 - Batch import of a whole folder
 - Song export/import as a zip, for backup or moving machines
 - Send album-splitter tracks straight into the library as Songs
-- Bug: after a Song ends, pressing play again makes the playhead spasm at the end of the Song
 - Play along: make the bottom bar/chord list clickable, so clicking a bar moves the playhead there
 
 ## Open questions

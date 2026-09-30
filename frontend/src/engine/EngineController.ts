@@ -25,6 +25,11 @@ export class EngineController {
   // without touching gains or resolving twice.
   private countInGeneration = 0;
   private pendingCountIn: { generation: number; restore: () => void } | null = null;
+  // Set when the worklet reports the stems ended, cleared by any seek. The
+  // worklet reports `ended` once per arrival, so a play() that left the cursor
+  // parked there would run forever without a second report: the clock would
+  // extrapolate past the end and every position report would snap it back.
+  private atEnd = false;
 
   private constructor(
     private readonly context: AudioContext,
@@ -51,6 +56,14 @@ export class EngineController {
   ) {
     this.endedBox.fire = () => {
       this.pause();
+      this.atEnd = true;
+      // pause() froze the clock wherever its extrapolation had reached, which is
+      // a few ms either side of the true end. The cursor is exactly on the end.
+      this.clock.resync({
+        contextTime: this.context.currentTime,
+        position: this.durationSamples,
+        samplesPerSecond: 0,
+      });
       this.endedListeners.forEach((cb) => cb());
     };
   }
@@ -194,6 +207,7 @@ export class EngineController {
 
   seek(position: SampleIndex): void {
     this.cancelCountIn();
+    this.atEnd = false;
     this.cursorNode.port.postMessage({ type: 'seek', position: toDeviceDomain(position, this.context.sampleRate) });
     this.clock.resync({ contextTime: this.context.currentTime, position, samplesPerSecond: this.clockRate });
   }
@@ -218,7 +232,11 @@ export class EngineController {
   }
 
   getPositionSamples(): SampleIndex {
-    return this.clock.positionAt(this.context.currentTime);
+    // Clamped: between two worklet reports the clock extrapolates, and in the
+    // last ~100 ms of a song that would run the playhead past the end.
+    const position = this.clock.positionAt(this.context.currentTime);
+    const end = this.durationSamples;
+    return position > end ? end : position;
   }
 
   /**
@@ -228,6 +246,8 @@ export class EngineController {
    */
   async play(): Promise<void> {
     if (this.context.state === 'suspended') await this.context.resume();
+    // Play at the end means "again from the top", like every other player.
+    if (this.atEnd) this.seek(sampleIndex(0));
     // Anchor the clock where the paused cursor stood, then let it run: the
     // position it reports has to start advancing from this instant, not from
     // whenever the worklet last reported.
@@ -284,6 +304,10 @@ export class EngineController {
     restoreGains: () => void,
   ): Promise<void> {
     this.cancelCountIn();
+    // Same rule as play(): at the end, `from` is the top. Without this the
+    // cursor would be sent back to the end and play() would then rewind it,
+    // leaving the stems silenced until the cursor reached `from` again.
+    if (this.atEnd) from = sampleIndex(0);
     if (bars <= 0) {
       this.seek(from);
       await this.play();
