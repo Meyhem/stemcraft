@@ -761,9 +761,9 @@ test('round stats: score only', () => {
   expect(roundStats([result('a', true, 1000), result('b', false, 2000), result('c', true, 3000), result('d', true, 4000)])).toEqual({ correct: 3, answered: 4 });
 });
 
-test('the weakest of a round: wrong first, then slowest, one entry per item', () => {
+test('the weakest of a round: wrong first, one entry per item', () => {
   const weak = weakestOfRound([result('a', true, 9000), result('b', false, 1000), result('b', true, 100), result('c', false, 5000), result('d', true, 300), result('e', true, 8000)]);
-  expect(weak.map((r) => r.item)).toEqual(['c', 'b', 'a']);
+  expect(weak.map((r) => r.item)).toEqual(['b', 'c', 'a']);
   expect(weakestOfRound([result('x', true, 1), result('x', true, 1)])).toHaveLength(1);
 });
 

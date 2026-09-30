@@ -32,13 +32,10 @@ export type TheoryTopic = 'keys' | 'chords' | 'intervals';
 export type Answer = QuizAnswer;
 
 export const WINDOW = 5;
-const SLOW_MS = 6000;
 
-/** 0.6 · wrong rate + 0.4 · slowness (average time over 6 s counts as fully slow) of these answers. */
+/** Share of these answers that were wrong. Answer time is recorded but deliberately not scored: it only adds stress. */
 function score(answers: readonly Answer[]): number {
-  const wrong = answers.filter((a) => !a.correct).length / answers.length;
-  const avgMs = answers.reduce((s, a) => s + a.ms, 0) / answers.length;
-  return 0.6 * wrong + 0.4 * Math.min(Math.max(avgMs / SLOW_MS, 0), 1);
+  return answers.filter((a) => !a.correct).length / answers.length;
 }
 
 /** 0 (strong) … 1 (weak) from the last 5 answers; never asked = 1. */

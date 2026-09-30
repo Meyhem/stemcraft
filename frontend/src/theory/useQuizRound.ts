@@ -150,9 +150,9 @@ export function roundStats(results: readonly Result[]) {
   return { correct, answered: results.length };
 }
 
-/** The 3 weakest items of a round, one entry per item (its worst answer): wrong first, then slowest. */
+/** The 3 weakest items of a round, one entry per item (its worst answer): the wrong ones. */
 export function weakestOfRound(results: readonly Result[]): Result[] {
-  const worse = (a: Result, b: Result) => Number(a.correct) - Number(b.correct) || b.ms - a.ms;
+  const worse = (a: Result, b: Result) => Number(a.correct) - Number(b.correct);
   const worst = new Map<string, Result>();
   for (const r of results) {
     const seen = worst.get(r.item);

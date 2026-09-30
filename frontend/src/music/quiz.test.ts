@@ -37,8 +37,8 @@ describe('weighting', () => {
   test('never asked is weakest; weakness uses only the last five answers', () => {
     expect(weakness([], 'fretboard', 'name-note', 's0f1')).toBe(1);
     const history = [ans('s0f1', false, 9000), ...Array.from({ length: 5 }, () => ans('s0f1', true, 1500))];
-    expect(weakness(history, 'fretboard', 'name-note', 's0f1')).toBeCloseTo(0.1);
-    expect(weakness([ans('s0f1', false, 6000)], 'fretboard', 'name-note', 's0f1')).toBeCloseTo(1);
+    expect(weakness(history, 'fretboard', 'name-note', 's0f1')).toBe(0);
+    expect(weakness([ans('s0f1', false, 6000)], 'fretboard', 'name-note', 's0f1')).toBe(1);
   });
 
   test('answers of another mode do not count', () => {
@@ -734,15 +734,11 @@ describe('property: theory questions for every item', () => {
 describe('property: weighting', () => {
   const at2 = (quiz: 'fretboard' | 'theory', mode: string, item: string, correct: boolean, ms: number): Answer => ({ quiz, mode, item, correct, ms, at });
 
-  test('exact values', () => {
-    // 5 answers, 2 wrong, average 3000 ms: 0.6*0.4 + 0.4*0.5
-    const h = [true, true, false, true, false].map((c, i) => ans('s1f1', c, [3000, 3000, 3000, 3000, 3000][i]!));
-    expect(weakness(h, 'fretboard', 'name-note', 's1f1')).toBeCloseTo(0.44, 12);
-    // slowness saturates at 6000 ms
-    expect(weakness([ans('x', true, 60000)], 'fretboard', 'name-note', 'x')).toBeCloseTo(0.4, 12);
-    expect(weakness([ans('x', true, 0)], 'fretboard', 'name-note', 'x')).toBe(0);
-    // a correct, slow answer is not as weak as a wrong, fast one
-    expect(weakness([ans('x', false, 0)], 'fretboard', 'name-note', 'x')).toBeCloseTo(0.6, 12);
+  test('exact values: the wrong rate, answer time is ignored', () => {
+    const h = [true, true, false, true, false].map((c, i) => ans('s1f1', c, [100, 3000, 60000, 0, 9000][i]!));
+    expect(weakness(h, 'fretboard', 'name-note', 's1f1')).toBeCloseTo(0.4, 12);
+    expect(weakness([ans('x', true, 60000)], 'fretboard', 'name-note', 'x')).toBe(0);
+    expect(weakness([ans('x', false, 0)], 'fretboard', 'name-note', 'x')).toBe(1);
   });
 
   test('only the last five answers of the same quiz, mode and item count', () => {
@@ -769,8 +765,7 @@ describe('property: weighting', () => {
     for (const quiz of quizzes) for (const mode of modes) for (const item of items) {
       const last = history.filter((a) => a.quiz === quiz && a.mode === mode && a.item === item).slice(-5);
       const wrong = last.filter((a) => !a.correct).length;
-      const avg = last.reduce((s, a) => s + a.ms, 0) / last.length;
-      const want = 0.6 * (wrong / last.length) + 0.4 * Math.min(avg / 6000, 1);
+      const want = wrong / last.length;
       expect(weakness(history, quiz, mode, item)).toBeCloseTo(want, 12);
       expect(want).toBeGreaterThanOrEqual(0);
       expect(want).toBeLessThanOrEqual(1);
@@ -909,7 +904,7 @@ describe('property: derived stats', () => {
     expect(heatmap(history, bass4)).toEqual(got);
     for (const cell of cells) {
       const last = history.filter((a) => a.item === cell).slice(-5);
-      const want = 0.6 * (last.filter((a) => !a.correct).length / last.length) + 0.4 * Math.min(last.reduce((s, a) => s + a.ms, 0) / last.length / 6000, 1);
+      const want = last.filter((a) => !a.correct).length / last.length;
       const c = parseCellKey(cell)!;
       expect(got.find((g) => g.string === c.string && g.fret === c.fret)!.weakness).toBeCloseTo(want, 12);
     }

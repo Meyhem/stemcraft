@@ -31,7 +31,7 @@ export function RoundSummary({ results, onRestart }: { results: readonly Result[
           {stats.correct} / {stats.answered} first try
         </h2>
         <p>
-          {allRight ? 'Slowest this round' : 'Weakest this round'}: <b>{weak.map((r) => r.text).join(' · ')}</b>
+          {allRight ? 'Every answer right first try. Some to keep fresh' : 'Weakest this round'}: <b>{weak.map((r) => r.text).join(' · ')}</b>
         </p>
         <div className={styles.row}>
           <Button variant="primary" onClick={() => onRestart()}>

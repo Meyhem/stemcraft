@@ -67,7 +67,7 @@ export function FretboardStats({
           : weakest.length === 0
             ? 'No weak spots right now.'
             : `Weakest: ${weakest.map((h) => cellText(instrument, cellItem(instrument, h))).join(' · ')}. `}
-        {heat.length > 0 && "Shown in red: positions you've missed or been slow on."}
+        {heat.length > 0 && "Shown in red: positions you've missed."}
       </p>
     </Panel>
   );
