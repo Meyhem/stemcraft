@@ -15,14 +15,20 @@ instrument and play along.
 - Tempo (50–150 %, 10 % a press; the arrow keys step 5 %) and pitch (±12 semitones) change without re-separating; stems are never modified
 - Sample-accurate seamless loops on the beat grid, set by bar number in the Loop editor (or with the A/B keys at the playhead), saved by name, with optional count-in and metronome under Practice
 - Beat, key and chord analysis
-- One song screen: a single one-row transport stays put while you switch between Stems (waveforms and the mixer) and Tabs (the play-along neck below); the music never stops. Rename a song's title and artist in place
-- Tabs view for bass: a live neck shows what to play in the current and the next
+- One song screen: a single one-row transport stays put while you switch between Stems (waveforms and the mixer), Tab (the transcribed bass line) and Play along (generated patterns on a neck); the music never stops. Rename a song's title and artist in place
+- Tab view: transcribe the bass stem into tablature (opt-in per song; torchcrepe on the
+  GPU, about half a minute). The notes sit on a tab staff on the same time axis as the
+  stems, where they were played rather than snapped to the grid, with the neck under it
+  showing the current and the next bar. Notes the tracker was unsure of are dimmed and
+  marked `?`, notes moved an octave to fit the neck are marked `↑8`, and both are
+  counted; the tab follows the pitch shift. A starting point, not a checked tab
+- Play along view for bass: a live neck shows what to play in the current and the next
   bar, with a beat lane underneath showing when. The notes are generated from the chord
   chart by a pattern you pick (root, root–5th, root–5th–octave, octave, chord or diatonic triad, 7th; whole
   to eighth notes; optional chromatic, scale or fifth approach into the next bar), in the
   detected key or another candidate, and follow the pitch shift. Click a bar in the chord ribbon
   to jump there; loop by bar numbers or by Ctrl- and Shift-clicking the ribbon
-- Tabs view for guitar: switch Tabs to Guitar and each bar's chord is a shape on a
+- Play along view for guitar: switch to Guitar and each bar's chord is a shape on a
   6-string neck, with the chord degree on every string, and a strum lane showing when
   to hit it. Pick the style (open, barre, power chords, triads), the strum (whole to
   eighths, folk, or push into the next chord), the neck position, and whether 7ths
@@ -53,8 +59,9 @@ instrument and play along.
 ## Screens
 
 ![Song screen — Stems](docs/screenshots/song-view.png)
-![Song screen — Tabs](docs/screenshots/play-along.png)
-![Song screen — Tabs, guitar](docs/screenshots/play-along-guitar.png)
+![Song screen — Tab](docs/screenshots/tab.png)
+![Song screen — Play along](docs/screenshots/play-along.png)
+![Song screen — Play along, guitar](docs/screenshots/play-along-guitar.png)
 ![Album splitter](docs/screenshots/album-splitter.png)
 ![Library](docs/screenshots/library.png)
 ![Add song](docs/screenshots/import.png)
@@ -64,8 +71,8 @@ instrument and play along.
 ![Job queue](docs/screenshots/job-queue.png)
 
 All ten are captures of the running app, made with
-`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> play-along=/songs/<id>/play play-along-guitar=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" "theory-shapes=/theory/scale-positions?root=A&scale=minor-pentatonic" theory-quiz=/theory/fretboard-quiz album-splitter=/splitter/<id> job-queue=/jobs`
-(API and dev server running; it loads the pages, and for the Tabs view it presses Space to play a few bars and pause again; for the guitar capture, switch that song's Tabs to Guitar first, and back to Bass after). The design system these follow —
+`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> tab=/songs/<id>/tab play-along=/songs/<id>/play play-along-guitar=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" "theory-shapes=/theory/scale-positions?root=A&scale=minor-pentatonic" theory-quiz=/theory/fretboard-quiz album-splitter=/splitter/<id> job-queue=/jobs`
+(API and dev server running; it loads the pages, and for the Tab and Play along views it presses Space to play a few bars and pause again; the Tab capture needs the song's tab extracted first; for the guitar capture, switch that song's Play along to Guitar first, and back to Bass after). The design system these follow —
 tokens, components and screen mockups — is in [design/ui](design/ui) (build it with
 `python3 design/ui/build.py`), with its rules in [design/ui-spec.md](design/ui-spec.md).
 

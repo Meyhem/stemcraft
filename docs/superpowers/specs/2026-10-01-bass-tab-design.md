@@ -30,10 +30,10 @@ standard EADG, automatic extraction on import.
   triangular dither, and both its Viterbi and weighted-argmax paths go through it. Two
   runs gave identical periodicity but f0 about 9 cents apart. The job therefore decodes
   the network's per-bin probabilities itself, with no dither (below).
-- During the first, mis-parameterised spike the GPU reset (`NV_ERR_GPU_IN_FULLCHIP_RESET`)
-  and needed a reboot. After the reboot, repeated CPU and CUDA runs at batch 64 and 512
-  logged nothing. The cause is unexplained. The job uses batch 512, never 2048 (the
-  batch that preceded the reset). The risk is recorded as R-07.
+- The GPU fell off the bus twice that day (Xid 79). The kernel log puts the first at
+  10:54, seven minutes before the first spike, and the second at 12:44 while the GPU was
+  idle, so neither was caused by transcription. Repeated CPU and CUDA runs at batch 64
+  and 512 in between logged nothing. The job uses batch 512. Recorded as R-07.
 
 ## Data: `transcription.json` (worker-owned)
 

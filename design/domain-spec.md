@@ -228,7 +228,7 @@ A separate practice screen for playing *with* the song rather than editing it. I
 
 ### Play along: guitar chords and strums
 
-The same Tabs view, switched to **Guitar** (per song). Design:
+The same Play along view, switched to **Guitar** (per song). Design:
 `docs/superpowers/specs/2026-10-01-guitar-tabs-design.md`.
 
 - **Live neck:** a 12-fret 6-string neck in standard tuning. This bar's chord shape is
@@ -270,21 +270,23 @@ One long file becomes many tagged MP3s. All metadata is typed by the user — no
 - **Stats:** passed and failed counts, average duration per job kind and device
 - **Crash recovery:** a running job holds a lease; if the worker dies, the restarted worker picks the job up again
 
-## Tabs (bonus)
+## Tab: the bass line, transcribed (bonus)
 
-Opt-in per Song, bass first. The output is an editable starting point, not a finished tab.
+The song screen's third view, beside Stems and Play along. Opt-in per Song, bass only, read-only. The output is a starting point, not a checked tab. Design: `docs/superpowers/specs/2026-10-01-bass-tab-design.md`.
 
-1. Bass stem → torchcrepe (monophonic pitch) → notes quantized to the beat grid → MIDI
-2. MIDI → fretboard positions by shortest path over playable string/fret choices, costed by hand movement and stretch
-3. Render in the browser with alphaTab; export `.gp5` (PyGuitarPro) or MusicXML (music21)
+- **Extract:** a button on the Tab view queues a job that transcribes the bass stem (torchcrepe). Its steps show live; a failure shows the real error with Retry; playback keeps going throughout. Re-extract replaces the tab when it finishes.
+- **The tab staff:** four strings on the same time axis as Stems (ruler, chords, loop, playhead, zoom, follow). A note is a fret number placed where it was played, with a tail for how long it rings. Notes are not snapped to the beat grid.
+- **The neck** under it shows the current bar's notes in play order and the next bar's, as in Play along.
+- **Honest about doubt:** a note the tracker was unsure of is dimmed and marked `?`; a note moved an octave to fit the neck is ringed and marked `↑8`/`↓8`. Both are counted under the tab. Nothing is hidden or corrected.
+- **Pitch shift** transposes the tab to what is heard, re-fingering it.
+- A song whose bass stem has no pitched notes says so instead of drawing an empty staff.
 
-Guitar comes later via basic-pitch. Clean single-note lines transcribe well; distorted chords, bends and palm mutes don't.
-
-When it lands, transcription is a second note source for the Play along screen next to the generated patterns. The neck and beat lane show it unchanged.
+Clean single-note lines transcribe well; distorted notes, slides and very fast runs less so.
 
 ## Backlog
 
 - Guitar transcription (the generated shapes and strums cover practising over the chords)
+- Tab export (`.gp5`, MusicXML)
 - Tab editor: hand-edit the bass and guitar tabs (fix or write notes, frets, strums) instead of only using the generated ones
 
 ## Open questions

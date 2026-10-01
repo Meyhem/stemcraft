@@ -575,13 +575,34 @@ audit requirement exists.
   *Reversibility:* two-way. The `song.json` fields are additive (v3 → v4).
   Design: `docs/superpowers/specs/2026-10-01-guitar-tabs-design.md`.
 
+- **D-21 — Bass Tab is a transcription job and a third view.** A `transcribe` job runs
+  torchcrepe ("full") on `stems/bass.wav` and writes `transcription.json` (worker-owned,
+  note times as sample indices at 48 kHz, pitch as recorded, a confidence per note). The
+  decode is our own -- Viterbi over CREPE's bins and a weighted mean in cents -- because
+  torchcrepe's decoders dither the pitch randomly, which would break re-derivation (§6);
+  with TF32 off and cuDNN deterministic, two GPU runs are bit-identical. The song
+  screen's switch becomes Stems / Tab / Play along (the generated patterns keep `/play`).
+  Tab draws the notes as a tab staff on the Stems time axis (`TimeAxis`) with the Play
+  along neck under it; fingering, the pitch shift and octave fits are derived in the
+  browser (`music/bassTab.ts`), a note source beside `TabSource` rather than one of its
+  implementations, because its input is the transcription, not the chord chart. Opt-in
+  per song (Extract, Re-extract); read-only; `has_transcription` sits beside the song's
+  state rather than in it. Unsure and octave-shifted notes are drawn and counted, never
+  hidden (U-16).
+  *Because:* a separated bass stem is clean and monophonic, which is where pitch
+  tracking is reliable (R-06), and the existing neck, transport and loop make a
+  transcription practisable at once.
+  *Rejected:* pYIN (octave errors on low bass); basic-pitch (polyphonic, another
+  runtime); torchcrepe's own decoders (non-deterministic); quantising notes to the beat
+  grid (U-16); a second `TabSource` (its input is the chord chart).
+  *Reversibility:* two-way. The file, route and job kind are additive.
+  Design: `docs/superpowers/specs/2026-10-01-bass-tab-design.md`.
+
 ## 12. Deferred decisions
 
-- **Tabs / transcription pipeline** (bass → torchcrepe → MIDI → fretboard → alphaTab,
-  `.gp5`/MusicXML export). Opt-in per Song and explicitly a bonus. *Seam:* it is
-  simply another job kind writing another file into the Song folder; no existing
-  contract changes to add it. In the browser it becomes a second `TabSource` for the
-  Play along screen (D-18).
+- **Tab editing and export** (alphaTab, `.gp5` via PyGuitarPro, MusicXML) **and guitar
+  transcription.** *Seam:* `transcription.json` is the input; an export is another job
+  kind, and guitar another `source` in the same file.
 - **Job history pruning.** Retained indefinitely for now. *Seam:* a `DELETE` on
   `jobs.sqlite` by `finished_at`; nothing depends on old rows but the stats view.
 - **Mel-Band Roformer for vocals.** *Seam:* model selection is job payload, so a
@@ -618,6 +639,14 @@ audit requirement exists.
 - **R-06 — Transcription may simply not be good enough** to be worth shipping.
   *Mitigation:* keep it opt-in, framed as an editable starting point (per domain
   spec). It is deferred (§12) precisely so this can be discovered cheaply.
+  *Update (D-21):* shipped for bass, opt-in and read-only, with unsure notes marked.
+- **R-07 — The GPU falls off the bus (Xid 79).** On 2026-10-01 the RTX 5080 dropped off
+  PCIe twice (10:54 and 12:44) on driver 580.178.04, with no AER errors and none on the
+  four boots before. Neither coincided with a job: the first was logged against
+  `nvidia-modeset`, the second while the GPU was idle; a reboot recovered both. Xid 79
+  usually means power delivery, the slot, or the driver, not workload size. *Effect:*
+  every CUDA call fails until a reboot; the worker then boots on CPU, loudly (N-08).
+  *Watch:* `journalctl -k | grep Xid`; if it recurs, reseat power, and try another driver.
 
 ## 14. Open questions
 
