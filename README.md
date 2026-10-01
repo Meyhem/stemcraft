@@ -3,58 +3,17 @@
 Self-hosted, single-user web app that splits songs into stems so you can mute your own
 instrument and play along.
 
-- Add a song from a file or a link (YouTube and direct media) in one dialog; any format
-  ffmpeg can decode is accepted. The dialog then follows the import, separation and
-  analysis live, step by step
-- GPU stem separation into vocals, drums, bass and other
-- Live mixer: mute, solo and volume per stem
-- A thin glow along the navbar pulses with each stem you can hear while a song plays
-- While anything loads, a small version of that glow pounds to a 120 bpm groove beside a label, page-wide for a whole screen or inline for one part of it (a still frame under reduced motion). The same strip is the splash screen while the app downloads; if the app cannot start, the splash shows the real reason instead
-- Stems view time axis: the wheel zooms at the pointer, dragging across the lanes zooms to
-  that range, Shift+wheel or the scrollbar pans, and a click on the ruler seeks
-- Tempo (50–150 %, 10 % a press; the arrow keys step 5 %) and pitch (±12 semitones) change without re-separating; stems are never modified
-- Sample-accurate seamless loops on the beat grid, set by bar number in the Loop editor (or with the A/B keys at the playhead), saved by name, with optional count-in and metronome under Practice
-- Beat, key and chord analysis
-- One song screen: a single one-row transport stays put while you switch between Stems (waveforms and the mixer), Tab (the transcribed bass line) and Play along (generated patterns on a neck); the music never stops. Rename a song's title and artist in place
-- Tab view: transcribe the bass stem into tablature (opt-in per song; torchcrepe on the
-  GPU, about half a minute). The notes sit on a tab staff on the same time axis as the
-  stems, where they were played rather than snapped to the grid, with the neck under it
-  showing the current and the next bar. Notes the tracker was unsure of are dimmed and
-  marked `?`, notes moved an octave to fit the neck are marked `↑8`, and both are
-  counted; the tab follows the pitch shift. A starting point, not a checked tab
-- Play along view for bass: a live neck shows what to play in the current and the next
-  bar, with a beat lane underneath showing when. The notes are generated from the chord
-  chart by a pattern you pick (root, root–5th, root–5th–octave, octave, chord or diatonic triad, 7th; whole
-  to eighth notes; optional chromatic, scale or fifth approach into the next bar), in the
-  detected key or another candidate, and follow the pitch shift. Click a bar in the chord ribbon
-  to jump there; loop by bar numbers or by Ctrl- and Shift-clicking the ribbon
-- Play along view for guitar: switch to Guitar and each bar's chord is a shape on a
-  6-string neck, with the chord degree on every string, and a strum lane showing when
-  to hit it. Pick the style (open, barre, power chords, triads), the strum (whole to
-  eighths, folk, or push into the next chord), the neck position, and whether 7ths
-  and 6ths are simplified to triads. Shapes are chosen across the song to keep the hand
-  still, follow the pitch shift, and every substitution is labelled
-- Theory tab for 4- and 5-string bass and 6-string guitar in any tuning, left-handed too:
-  scale, chord and note finders, name a chord from notes you tap, scale positions
-  (pentatonic boxes, 3-notes-per-string, CAGED, position boxes), triads and inversions,
-  arpeggios, guitar voicings and bass arpeggio shapes, chords in a key, a circle of
-  fifths, 15 progressions in any key and scales that fit a chord. Pick an analysed song
-  and one of its key candidates to load its key and chords: they show as chips in the
-  chord tools, and Progressions charts the song with numerals, borrowed chords labelled.
-  Two relaxed quizzes for casual practice, with no scores, rounds, streaks or clocks: a
-  fretboard quiz (name the note, find the note, find the interval, spell the chord) and a
-  theory quiz (keys, chords, intervals). A wrong answer is explained and the question
-  stays; things you found tricky quietly come back a little more often. What you have
-  practised is kept in `data/theory.json`, and Start fresh forgets it
-- Album splitter: a table of your albums with an Add album button that opens the upload dialog; cut a full album rip into tagged MP3s. Silence detection proposes cuts;
-  on a full-length waveform you play, zoom with the wheel or by dragging across a range,
-  drag, add and delete cuts, or type exact start and end times to the millisecond, then
-  download a zip or add the tracks to the library as Songs
-- Export the current mix
-- Job queue screen: a compact table, one line per job (state, kind, device, when it started or was queued, duration, progress), and
-  each row expands to its named steps, live, with a duration each and a failure's real traceback
-  under the step that failed
-- Failures and CPU fallbacks are shown in the UI with the real error message
+- **Import** — add songs from a file or a link (YouTube and direct media)
+- **Stem separation** — GPU split into vocals, drums, bass and other
+- **Play along** — live mixer (mute, solo, volume), tempo and pitch change, seamless
+  loops on the beat grid, count-in and metronome
+- **Analysis** — beat, key and chord detection
+- **Tablature generator** — transcribe the bass stem into tab
+- **Play-along patterns** — generated bass lines and guitar chord shapes from the chord chart
+- **Theory tools** — scales, chords, positions and relaxed quizzes for bass and guitar
+- **Album splitting** — cut a full album rip into tagged tracks
+- **Export** — download the current mix
+- **Job queue** — live progress, with real error messages on failure
 
 ## Screens
 
