@@ -6,7 +6,7 @@
 import type { Analysis, Song } from '../api/client';
 import { placeBars, type PlacedBar } from './fingering';
 import type { Grid } from './grid';
-import { planBar, resolveKey, spell, type ResolvedKey } from './patterns';
+import { planBar, resolveKey, tonesText, type ResolvedKey } from './patterns';
 
 /** The armed loop, 0-based bars, end exclusive (as stored in song.json). */
 export interface LoopBars {
@@ -21,12 +21,13 @@ export interface TabSourceInput {
   loop: LoopBars | null;
 }
 
-export type TabResult =
-  | { ok: true; key: ResolvedKey; bars: PlacedBar[]; nextOf(bar: number): number | null }
+/** A source's bars: PlacedBar for the bass patterns, GuitarBar for guitar (D-20). */
+export type TabResult<Bar> =
+  | { ok: true; key: ResolvedKey; bars: Bar[]; nextOf(bar: number): number | null }
   | { ok: false; error: string };
 
-export interface TabSource {
-  barsFor(input: TabSourceInput): TabResult;
+export interface TabSource<Bar> {
+  barsFor(input: TabSourceInput): TabResult<Bar>;
 }
 
 /** One label per bar, indexed by bar number. A bar the analysis skipped is "N", never a shift. */
@@ -37,14 +38,14 @@ export function chordLabels(analysis: Analysis): string[] {
   return labels;
 }
 
-function nextBarOf(count: number, loop: LoopBars | null) {
+export function nextBarOf(count: number, loop: LoopBars | null) {
   return (bar: number): number | null => {
     if (loop && bar === loop.endBar - 1 && loop.startBar < count) return loop.startBar;
     return bar + 1 < count ? bar + 1 : null;
   };
 }
 
-export const patternSource: TabSource = {
+export const patternSource: TabSource<PlacedBar> = {
   barsFor({ song, analysis, grid, loop }) {
     const transpose = song.playback.pitch_semitones;
     const key = resolveKey(song.play_along.key, analysis.key_candidates, transpose);
@@ -76,10 +77,7 @@ export function chordText(bar: PlacedBar, key: ResolvedKey): string {
   if (plan.empty === 'no_chord') return 'no chord';
   if (plan.empty === 'unclassified') return 'unclassified';
   if (plan.empty === 'unparsed') return `unreadable chord "${plan.label}"`;
-  const tones = plan.tones!;
-  const suffix = tones.quality === 'maj' ? '' : tones.quality === 'min' ? 'm' : tones.quality;
-  const bass = tones.bassPc !== tones.rootPc ? `/${spell(tones.bassPc, key)}` : '';
-  return `${spell(tones.rootPc, key)}${suffix}${bass}`;
+  return tonesText(plan.tones!, key);
 }
 
 /** Index of the note sounding `beatsInto` beats into the bar, or -1. */
@@ -92,4 +90,27 @@ export function describeBar(bar: PlacedBar | undefined, key: ResolvedKey): strin
   if (!bar) return 'past the end of the chord chart';
   const head = `Bar ${bar.plan.bar + 1}, ${chordText(bar, key)}`;
   return bar.notes.length > 0 ? `${head}: ${bar.notes.map((n) => n.name).join(' ')}` : head;
+}
+
+/** What the readout and the ribbon need from a bar, whichever instrument made it. */
+export interface BarSummary {
+  bar: number;
+  /** The chord as played, or what the bar is instead ("no chord"). */
+  text: string;
+  /** The ribbon cell: the chord as heard, "–" for no chord, "?" for unreadable. */
+  cell: string;
+  /** Under the cell: what Simplify reduced it to ("→ Em"), else null. */
+  sub: string | null;
+  /** Every substitution and reason for this bar, for the readout chip; "" if none. */
+  note: string;
+}
+
+export function bassSummaries(bars: readonly PlacedBar[], key: ResolvedKey): BarSummary[] {
+  return bars.map((b) => ({
+    bar: b.plan.bar,
+    text: chordText(b, key),
+    cell: b.plan.empty ? (b.plan.empty === 'no_chord' ? '–' : '?') : chordText(b, key),
+    sub: null,
+    note: b.plan.substitution ?? b.plan.reason ?? '',
+  }));
 }

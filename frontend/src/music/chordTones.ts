@@ -104,3 +104,10 @@ export function parseChord(label: string, transpose: number): ParsedChord {
     tones: { rootPc: root, bassPc: mod12(root + bassOffset), ...shape, quality },
   };
 }
+
+/** The same root and bass with another quality's intervals (Simplify, D-20). */
+export function withQuality(tones: ChordTones, quality: string): ChordTones {
+  const shape = SHAPES[quality];
+  if (!shape) throw new Error(`unknown chord quality "${quality}"`);
+  return { ...tones, ...shape, quality };
+}

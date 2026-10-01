@@ -66,7 +66,7 @@ describe('patternSource', () => {
 
   it("approaches the loop start from the loop's last bar", () => {
     const chromatic = song({
-      play_along: { key: null, pattern: { notes: 'triad_chord', rhythm: 'quarter', approach: 'chromatic' } },
+      play_along: { ...DEFAULT_PLAY_ALONG, pattern: { notes: 'triad_chord', rhythm: 'quarter', approach: 'chromatic' } },
     });
     const { bars, nextOf } = ok(
       patternSource.barsFor({ song: chromatic, analysis, grid, loop: { startBar: 0, endBar: 2 } }),

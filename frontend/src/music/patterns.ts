@@ -38,6 +38,13 @@ export function spell(pc: number, key: ResolvedKey): string {
   return noteName(pc, key.tonicPc, key.mode).replace('#', '♯').replace(/^([A-G])b$/, '$1♭');
 }
 
+/** A chord as heard, e.g. "F♯m", "Emin7", "C/E": the root and slash note spelled for the key. */
+export function tonesText(tones: ChordTones, key: ResolvedKey): string {
+  const suffix = tones.quality === 'maj' ? '' : tones.quality === 'min' ? 'm' : tones.quality;
+  const bass = tones.bassPc !== tones.rootPc ? `/${spell(tones.bassPc, key)}` : '';
+  return `${spell(tones.rootPc, key)}${suffix}${bass}`;
+}
+
 export function keyName(key: ResolvedKey): string {
   return `${spell(key.tonicPc, key)} ${key.mode}`;
 }
