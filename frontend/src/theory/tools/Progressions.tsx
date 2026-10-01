@@ -12,7 +12,7 @@ import { numeralInKey } from '../../music/harmony';
 import { progressionChords, PROGRESSIONS } from '../../music/progressions';
 import { chordInfo, pcOf, pretty, rootName, type KeyMode } from '../../music/spell';
 import { neckFrets } from '../../music/tuning';
-import { Button } from '../../ui';
+import { Button, Loader } from '../../ui';
 import { ChipRow, HelpBox, NoteChips, NotePicker, ToolHeader } from '../controls';
 import { noteDots } from '../neckDots';
 import { useSelection } from '../selection';
@@ -102,7 +102,8 @@ export function Progressions() {
           <b>{pretty(root)} {mode}</b>
         </span>
       </div>
-      {problem && (
+      {problem && song.state === 'loading' && <Loader label={problem.text} />}
+      {problem && song.state !== 'loading' && (
         <p className={problem.alert ? styles.errorText : styles.dimText} role={problem.alert ? 'alert' : 'status'}>
           {problem.text}
         </p>

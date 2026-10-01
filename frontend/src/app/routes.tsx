@@ -12,6 +12,7 @@ import { SongView } from '../screens/SongView';
 import { ImportModal } from '../screens/import/ImportModal';
 import type { ImportLinkState } from '../screens/import/importLink';
 import { SongScope } from '../session/SongScope';
+import { Loader } from '../ui';
 import { AppShell } from './AppShell';
 
 // D-19: the Theory tab and tonal load only when the tab is opened, keeping the
@@ -58,8 +59,8 @@ export function AppRoutes() {
           <Route path="splitter/:albumId" element={<AlbumSplitter />} />
           <Route path="jobs" element={<JobQueue />} />
           {/* D-19: the tool is in the path, the shared selection in the query string. */}
-          <Route path="theory" element={<Suspense fallback={null}><Theory /></Suspense>} />
-          <Route path="theory/:tool" element={<Suspense fallback={null}><Theory /></Suspense>} />
+          <Route path="theory" element={<Suspense fallback={<Loader size="page" label="Loading theory…" />}><Theory /></Suspense>} />
+          <Route path="theory/:tool" element={<Suspense fallback={<Loader size="page" label="Loading theory…" />}><Theory /></Suspense>} />
           {/* D-18: one session per song, above the content that plays it. SongScreen is
               the shared header, transport and Stems/Tabs switch; the two child routes
               are only the content under it, so switching never stops playback and

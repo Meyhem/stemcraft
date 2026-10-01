@@ -159,6 +159,22 @@ hit-target tiers rather than one.
   the worklet (render-thread messages for an ornament, against R-01).
   *Reversibility:* two-way, trivially.
 
+- **U-15 — Everything that loads shows the pulse bar's loader: four stem glows
+  pounding to a made-up groove, always beside a text label.** One `Loader` component,
+  two sizes: `page` stands in for a whole screen's content (song, album, export,
+  library, jobs, theory); `inline` sits where one component is still coming (stems,
+  album list, exports, waveform, a song's chords). A 3px strip like U-14's, 220 px or
+  48 px wide, its levels a fixed 120 bpm pattern (drums every beat, bass on 1 and 3).
+  *Because:* a wait looks like the app it belongs to, and a stranger learns the
+  four hues as "the stems" before they see a lane. This is a second, bounded exception
+  to U-01's "only where a stem is named": the loader stands for the song's stems, it
+  is `aria-hidden`, and the label carries the meaning (`role="status"`).
+  `prefers-reduced-motion` paints one still frame rather than hiding it, because a
+  loader that disappears looks like a page that has finished loading.
+  *Rejected:* a generic ring spinner in accent (says nothing about the app); a
+  four-bar equaliser (a second visual language for the same stems).
+  *Reversibility:* two-way, trivially.
+
 ## 4. Tokens
 
 Defined in `design/ui/src/tokens.css`. Summary:
@@ -198,6 +214,7 @@ other), a permanent text label, and a fixed lane position; hue is an accelerator
 | Transport bar | performance | one row, identical over Stems and Tabs: play; bar number and chord (now → next) in mono; **tempo** (50–150 %, buttons step 10 %, ↑/↓ keys 5 %) and **pitch** (±12 st) as performance-tier steppers, values muted at their default; a loop split button (body arms the loop and shows its bars; the chevron opens the loop editor: start/end bar steppers and saved loops); and **Practice** (a popover: metronome, count-in). Nothing set once per session sits on the bar itself |
 | View switch | setup (48 px) | Stems / Tabs, two links styled as a segmented control; the chosen view's own tools sit to its right |
 | Banner | — | warn and error; carries the verbatim trace (U-09) |
+| Loader | — | U-15. `page` or `inline`; the label is always shown and is what a screen reader hears |
 | Progress bar, job row | setup | estimate derives from the job's recorded device and N-01 |
 | Table | setup | the only place 13 px is permitted |
 | Empty state | — | |

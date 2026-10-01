@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 
-import { ButtonLink } from '../ui';
+import { ButtonLink, Loader } from '../ui';
 import { useSongSession } from '../session/SongSession';
 import { TitleEditor } from '../songview/TitleEditor';
 import { Transport } from '../songview/Transport';
@@ -38,7 +38,7 @@ export function SongScreen() {
   // As state, so the views' ViewTools re-render once the slot element exists.
   const [toolsSlot, setToolsSlot] = useState<HTMLDivElement | null>(null);
 
-  if (isPending) return <p className={styles.note}>Loading song&hellip;</p>;
+  if (isPending) return <Loader size="page" label="Loading song…" />;
   if (loadError !== null) {
     return (
       <p role="alert" className={styles.alert}>
@@ -107,7 +107,7 @@ export function SongScreen() {
           {String(analysisError)}
         </p>
       )}
-      {!engine && !engineError && <p className={styles.note}>Loading stems&hellip;</p>}
+      {!engine && !engineError && <Loader label="Loading stems…" />}
 
       {/* Pinned while the page scrolls: the one surface touched with an instrument in
           hand, found in the same place whichever content is showing. */}

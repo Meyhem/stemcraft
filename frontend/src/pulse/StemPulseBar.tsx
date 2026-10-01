@@ -13,10 +13,10 @@ import { createPortal } from 'react-dom';
 import { PulseSlotContext } from '../app/pulseSlot';
 import { STEM_ORDER } from '../engine/types';
 import { useSongSession } from '../session/SongSession';
-import { resolveColor } from '../ui/resolveColor';
 import { blobsFor } from './blobs';
 import { follow, levelAt } from './levels';
-import { paintBlobs, parseHex, type Rgb } from './paint';
+import { paintBlobs } from './paint';
+import { resolveStemColors } from './stemColors';
 import styles from './StemPulseBar.module.css';
 
 const BAR_PX = 3;
@@ -38,18 +38,9 @@ export function StemPulseBar() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // A canvas cannot read var(--ds-*); resolved once per run (U-02).
-    const colors: Rgb[] = [];
-    for (const name of STEM_ORDER) {
-      const resolved = resolveColor(`var(--ds-${name})`);
-      const rgb = parseHex(resolved);
-      if (!rgb) {
-        // N-08: say why there is no bar rather than painting a wrong colour.
-        console.error(`StemPulseBar: --ds-${name} resolved to "${resolved}", expected #RRGGBB`);
-        return;
-      }
-      colors.push(rgb);
-    }
+    // Resolved once per run.
+    const colors = resolveStemColors('StemPulseBar');
+    if (!colors) return;
 
     const levels = STEM_ORDER.map(() => 0);
     const weights = STEM_ORDER.map(() => 0);

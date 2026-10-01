@@ -50,6 +50,7 @@ import {
   Chip,
   DropZone,
   EmptyState,
+  Loader,
   Panel,
   ProgressBar,
   TextField,
@@ -201,6 +202,7 @@ function AlbumPicker() {
       {albums.isError && (
         <Banner tone="error" title="The albums could not be listed" trace={String(albums.error)} />
       )}
+      {albums.isPending && <Loader label="Loading albums…" />}
       {albums.data?.length === 0 && <EmptyState title="No albums yet." />}
       {del.isError && (
         <Banner tone="error" title="The album could not be deleted" trace={String(del.error)} />
@@ -495,7 +497,7 @@ function AlbumEditor({ albumId }: { albumId: string }) {
   }
 
   if (albumQuery.isPending || (albumQuery.data?.album !== null && album === null)) {
-    return <p className={styles.note}>Loading album…</p>;
+    return <Loader size="page" label="Loading album…" />;
   }
 
   if (!album) {
@@ -606,7 +608,7 @@ function AlbumEditor({ albumId }: { albumId: string }) {
           onScrub={scrubTo}
         />
       ) : (
-        <p className={styles.note}>{reason ?? 'Waiting for the waveform…'}</p>
+        reason ? <p className={styles.note}>{reason}</p> : <Loader label="Waiting for the waveform…" />
       )}
 
       <div className={styles.actions}>

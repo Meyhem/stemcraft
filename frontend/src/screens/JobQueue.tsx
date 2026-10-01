@@ -5,7 +5,7 @@
 import { useSearchParams } from 'react-router-dom';
 
 import { useCancelJob, useEnqueueProbe, useJobs, useSongJobs } from '../api/queries';
-import { Banner, Button, EmptyState, TextLink } from '../ui';
+import { Banner, Button, EmptyState, Loader, TextLink } from '../ui';
 import { JobRow } from './JobRow';
 import styles from './JobQueue.module.css';
 
@@ -34,6 +34,8 @@ export function JobQueue() {
       {jobs.isError && (
         <Banner tone="error" title="The queue could not be listed" trace={String(jobs.error)} />
       )}
+
+      {jobs.isPending && <Loader size="page" label="Loading jobs…" />}
 
       {jobs.data?.length === 0 && <EmptyState title="No jobs yet." />}
 

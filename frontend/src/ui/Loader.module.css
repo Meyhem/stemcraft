@@ -1,0 +1,24 @@
+/* U-15. The bar is painted per frame by Loader.tsx, so no CSS motion here. */
+.loader {
+  display: flex;
+  align-items: center;
+  color: var(--ds-text-2);
+  font-size: var(--ds-t-sm);
+  line-height: var(--ds-lh-sm);
+}
+
+.inline {
+  gap: var(--ds-3);
+}
+
+.page {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--ds-4);
+  padding: var(--ds-9) var(--ds-5);
+}
+
+.bar {
+  display: block;
+  flex: none;
+}

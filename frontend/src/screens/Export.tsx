@@ -14,7 +14,7 @@ import { exportUrl } from '../api/client';
 import { queryKeys, useExports, useJobs, useQueueExport, useSong } from '../api/queries';
 import { STEM_ORDER, type StemName } from '../engine/types';
 import { proposeExportName } from './exportName';
-import { Banner, Button, ButtonLink, ProgressBar, TextField, TextLink } from '../ui';
+import { Banner, Button, ButtonLink, Loader, ProgressBar, TextField, TextLink } from '../ui';
 import styles from './Export.module.css';
 
 function formatBytes(bytes: number): string {
@@ -94,7 +94,7 @@ export function Export() {
   // wrongly) before that data -- and the proposed name -- actually exist. A
   // song that failed to parse (song === null, §9/U-09) has no mix to wait for.
   if (songQuery.isPending || (song !== null && picked === null)) {
-    return <p className={styles.note}>Loading export…</p>;
+    return <Loader size="page" label="Loading export…" />;
   }
 
   return (
@@ -238,6 +238,7 @@ export function Export() {
       {exportsQuery.isError && (
         <Banner tone="error" title="The exports could not be listed" trace={String(exportsQuery.error)} />
       )}
+      {exportsQuery.isPending && <Loader label="Loading exports…" />}
       {exportsQuery.data?.length === 0 && <p className={styles.note}>Nothing exported yet.</p>}
       <ul className={styles.exports}>
         {(exportsQuery.data ?? []).map((item) => (
