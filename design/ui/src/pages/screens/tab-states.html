@@ -1,0 +1,144 @@
+<!-- @dsCard group="Screens" name="Song screen — Tab · states" subtitle="Before there is a tab: extract, the live steps, the real error, and a tab with no notes" viewport="1440x2350" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Song screen — Tab · states — Stemcraft</title><style>/* @inject */
+
+.steps{display:flex;flex-direction:column;gap:var(--ds-3);text-align:left}
+.step{display:grid;grid-template-columns:24px 1fr auto;column-gap:var(--ds-3);align-items:start;font-size:var(--ds-t-sm)}
+.step .mark{width:24px;height:24px;border-radius:50%;border:2px solid var(--ds-border-strong);display:flex;align-items:center;justify-content:center;font:700 13px/1 var(--ds-mono);color:var(--ds-text-3)}
+.step .lbl{padding-top:1px;min-width:0}
+.step .det{color:var(--ds-text-3);font-weight:400;margin-left:var(--ds-2)}
+.step .dur{padding-top:1px;font-family:var(--ds-mono);font-variant-numeric:tabular-nums;color:var(--ds-text-3)}
+.step .extra{grid-column:2 / 4;margin-top:var(--ds-2)}
+.step.done .mark{background:var(--ds-ok);border-color:var(--ds-ok);color:var(--ds-ground)}
+.step.now .mark{border-color:var(--ds-accent);color:var(--ds-accent)}
+.step.fail .mark{background:var(--ds-error);border-color:var(--ds-error);color:var(--ds-on-error)}
+.step.done .lbl{color:var(--ds-text-2)} .step.now .lbl{color:var(--ds-text);font-weight:600}
+.step.todo .lbl{color:var(--ds-text-3)}
+.step.fail .lbl{color:var(--ds-error);font-weight:600}
+.step.now .dur{color:var(--ds-accent)}
+
+.viewbar{display:flex;align-items:flex-end;gap:var(--ds-5);min-height:56px}
+.viewseg > button{min-height:48px;padding:0 var(--ds-6);font-size:var(--ds-t-md)}
+.state{display:flex;flex-direction:column;gap:var(--ds-4)}
+.state .card{min-height:360px;display:flex;flex-direction:column;justify-content:center}
+.wait{width:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:var(--ds-5);padding:var(--ds-7) var(--ds-5)}
+.wait.wide{max-width:960px}
+.wait .trace{overflow-x:auto;white-space:pre}
+.wait .step > *,.wait .extra,.wait .banner-body{min-width:0}
+.wait .bar{margin-top:calc(-1 * var(--ds-2))}
+
+</style></head><body><div class="doc">
+
+<h1>Song screen &mdash; Tab: the states before a tab exists</h1>
+<p class="note">Everything below the view switch. The header and the transport above it are unchanged, and <b>playback never stops</b>
+for any of this: the song keeps playing while the worker transcribes. Extraction is opt-in per song (domain spec, Tabs). The
+Stems and Play along views are untouched by every state here.</p>
+
+<!-- 1 -->
+<div class="sec state">
+  <h2>1 &middot; No tab yet</h2>
+  <div class="viewbar">
+    <div class="seg viewseg" role="tablist" aria-label="View"><button role="tab">Stems</button><button role="tab" aria-selected="true">Tab</button><button role="tab">Play along</button></div>
+  </div>
+  <div class="card">
+    <div class="empty">
+      <div class="glyph"><svg viewBox="0 0 24 24" width="64" height="64" fill="var(--ds-text-2)"><path d="M3 6h18v1.5H3zm0 4h18v1.5H3zm0 4h18v1.5H3zm0 4h18v1.5H3z"/><rect x="6" y="4.5" width="4" height="4.5" rx="1"/><rect x="13" y="12.5" width="4" height="4.5" rx="1"/></svg></div>
+      <div class="t-lg" style="color:var(--ds-text)">No tab for this song yet</div>
+      <div class="t-md" style="max-width:56ch">Transcribe the bass stem into tab. It takes about half a minute on the GPU, and playback keeps going while it runs.</div>
+      <button class="btn btn-primary btn-perform" style="margin-top:var(--ds-2)">Extract bass tab</button>
+      <div class="t-sm dim3">A starting point, not a checked tab. Unsure notes are marked, never hidden.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 2 -->
+<div class="sec state">
+  <h2>2 &middot; No tab yet, and the bass stem is near-silent (U-10)</h2>
+  <div class="card">
+    <div class="empty">
+      <div class="banner banner-warn" style="text-align:left;max-width:640px">
+        <span class="bicon"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></span>
+        <div class="banner-body"><p class="banner-title" style="color:var(--ds-warn)">The bass stem is near-silent</p>
+        <p class="t-sm dim" style="margin:0">Separation found almost no bass in this song, so there may be little or nothing to transcribe. You can still try.</p></div>
+      </div>
+      <div class="t-lg" style="color:var(--ds-text)">No tab for this song yet</div>
+      <button class="btn btn-primary btn-perform">Extract bass tab</button>
+    </div>
+  </div>
+</div>
+
+<!-- 3 -->
+<div class="sec state">
+  <h2>3 &middot; Extracting &mdash; the job's own steps, live (D-17)</h2>
+  <div class="card">
+    <div class="wait">
+      <div class="row" style="justify-content:space-between">
+        <span class="t-lg" style="color:var(--ds-text)">Extracting the bass tab</span>
+        <span class="chip chip-run"><span class="dot"></span>running &middot; cuda</span>
+      </div>
+      <div class="steps">
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Load bass stem</span><span class="dur">0.3 s</span></div>
+        <div class="step now"><span class="mark">2</span><span class="lbl">Track pitch<span class="det num">0:58 of 3:41</span></span><span class="dur">26%</span>
+          <div class="extra"><div class="bar"><i style="width:26%"></i></div></div></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Find notes</span><span class="dur"></span></div>
+        <div class="step todo"><span class="mark">4</span><span class="lbl">Write tab</span><span class="dur"></span></div>
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <span class="t-sm dim">Leaving this screen does not stop it.</span>
+        <a class="text-link t-sm" href="#">Open job queue &rarr;</a>
+      </div>
+    </div>
+  </div>
+  <p class="note">If another job is ahead of it, the chip reads <b>queued &middot; 1 ahead</b> and every step is pending, numbered, as
+  in the Import modal. Re-extracting with a tab already showing keeps the old tab on screen; only the provenance banner
+  changes, to <span class="chip chip-run" style="vertical-align:middle"><span class="dot"></span>re-extracting &middot; track pitch 26%</span>, until the new file replaces it.</p>
+</div>
+
+<!-- 4 -->
+<div class="sec state">
+  <h2>4 &middot; Failed &mdash; the real error, verbatim (U-09, N-08)</h2>
+  <div class="card">
+    <div class="wait wide">
+      <div class="steps">
+        <div class="step done"><span class="mark">&#10003;</span><span class="lbl">Load bass stem</span><span class="dur">0.3 s</span></div>
+        <div class="step fail"><span class="mark">!</span><span class="lbl">Track pitch</span><span class="dur">4.1 s</span>
+          <div class="extra">
+            <div class="banner banner-error">
+              <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 5h2v7h-2zm0 9h2v2h-2z"/></svg></span>
+              <div class="banner-body grow">
+                <p class="banner-title" style="color:var(--ds-error)">transcribe failed &mdash; torchcrepe</p>
+                <p class="t-sm dim" style="margin:0">Nothing was written, and the stems are untouched. Retrying re-runs the whole job.</p>
+                <div class="trace">Traceback (most recent call last):
+  File "stemcraft_worker/kinds/transcribe_song.py", line 61, in run
+    f0, periodicity = track(audio, device=ctx.device)
+  File "stemcraft_worker/analysis/bass/track.py", line 38, in track
+    return torchcrepe.predict(x, 16000, hop, fmin, fmax, model="full", batch_size=2048, device=device, return_periodicity=True)
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.25 GiB. GPU 0 has a total capacity of 15.47 GiB of which 1.02 GiB is free.</div>
+                <div class="row" style="margin-top:var(--ds-3)">
+                  <button class="btn">Retry</button>
+                  <button class="btn btn-ghost">Copy traceback</button>
+                  <a class="text-link t-sm" href="#">Open in job queue &rarr;</a>
+                </div>
+              </div>
+            </div>
+          </div></div>
+        <div class="step todo"><span class="mark">3</span><span class="lbl">Find notes</span><span class="dur"></span></div>
+        <div class="step todo"><span class="mark">4</span><span class="lbl">Write tab</span><span class="dur"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5 -->
+<div class="sec state">
+  <h2>5 &middot; Finished, but no notes &mdash; said, not drawn as an empty staff</h2>
+  <div class="card">
+    <div class="empty">
+      <div class="t-lg" style="color:var(--ds-text)">No notes found in the bass stem</div>
+      <div class="t-md" style="max-width:60ch">The tracker heard nothing pitched above its confidence floor across the whole song.
+      Extracting again gives the same result: the bass stem is the only input, and it never changes.</div>
+      <div class="t-sm dim3 num">torchcrepe on cuda &middot; 1 Oct 14:32 &middot; 0 notes</div>
+    </div>
+  </div>
+</div>
+
+</div></body></html>

@@ -1,5 +1,5 @@
-<!-- @dsCard group="Screens" name="Song screen — Tabs" subtitle="Bass: the same transport over the play-along neck, beat lane and chord ribbon" viewport="1440x1250" -->
-<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Song screen — Tabs — Stemcraft</title><style>/* @inject */
+<!-- @dsCard group="Screens" name="Song screen — Play along" subtitle="Bass: the same transport over the play-along neck, beat lane and chord ribbon" viewport="1440x1250" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Song screen — Play along — Stemcraft</title><style>/* @inject */
 
 .body2{display:flex;flex-direction:column;flex:1;min-height:0}
 .stage{display:flex;flex-direction:column;min-width:0;flex:1}
@@ -88,7 +88,8 @@
     <div class="viewbar">
       <div class="seg viewseg" role="tablist" aria-label="View">
         <button role="tab" aria-selected="false">Stems</button>
-        <button role="tab" aria-selected="true">Tabs</button>
+        <button role="tab" aria-selected="false">Tab</button>
+        <button role="tab" aria-selected="true">Play along</button>
       </div>
       <div class="grow"></div>
       <div class="row">
@@ -96,7 +97,7 @@
       </div>
     </div>
 
-    <!-- ===== Tabs content ===== -->
+    <!-- ===== Play along content ===== -->
     <div class="tabs-body">
       <div class="panel panel-pad pattern">
         <div class="col" style="gap:var(--ds-1)"><span class="cap">instrument</span>

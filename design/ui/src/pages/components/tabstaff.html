@@ -1,0 +1,65 @@
+<!-- @dsCard group="Components" name="Tab staff" subtitle="The transcribed bass line on a time axis: note kinds, rhythm as played, zoom (D-21, U-16)" viewport="1100x1500" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Tab staff — Stemcraft</title><style>/* @inject */
+.staffbox{display:grid;grid-template-columns:200px 1fr;border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden;background:var(--ds-ground)}
+.staffbox .head{background:var(--ds-surface);border-right:1px solid var(--ds-border)}
+.staffbox .lane{overflow:hidden;position:relative}
+.kinds{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--ds-3)}
+.kind{display:flex;flex-direction:column;gap:var(--ds-2);font-size:var(--ds-t-sm);color:var(--ds-text-2)}
+.kind b{color:var(--ds-text);font-weight:600}
+.kind .sw{background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-input);overflow:hidden}
+</style></head><body><div class="doc">
+
+<div class="sec"><h1>Tab staff</h1>
+<p class="note">The Tab screen's main content: the bass line the worker transcribed, as tablature on the <b>same time axis as the
+Stems view</b>, with its ruler, chord row, loop region, playhead and one zoom-and-pan model (U-11, U-12). Four lines, highest
+string on top, as on every neck (U-13). A note is a <b>fret chip whose left edge is its onset</b>, with a tail to where it stops
+ringing. The chip is never snapped to the beat grid: transcription is not quantised, so the drawing is not either, and a note
+that sits a little late looks a little late. The staff is painted on a viewport-sized canvas in the app, slaved to the engine
+clock like every other painter (D-07).</p></div>
+
+<div class="sec">
+  <h2>Note kinds (U-16)</h2>
+  <div class="kinds">
+    <div class="kind"><div class="sw"><!--@tabstaff w=240 ppb=240 start=0 notes=0:1:1.5:1:5--></div>
+      <span><b>Transcribed</b> &middot; bass hue (the stem it came from, U-01), fret in mono on the chip.</span></div>
+    <div class="kind"><div class="sw"><!--@tabstaff w=240 ppb=240 start=0 notes=0:1:1.5:1:5:now--></div>
+      <span><b>Sounding now</b> &middot; accent, with a halo. "Act on this" is accent on every neck (U-13).</span></div>
+    <div class="kind"><div class="sw"><!--@tabstaff w=240 ppb=240 start=0 notes=0:1:1.5:1:5:u--></div>
+      <span><b>Unsure</b> &middot; the tracker's confidence was below the floor. Same hue at 40 %, and a <b>?</b> on the fret, so it
+      reads without colour.</span></div>
+    <div class="kind"><div class="sw"><!--@tabstaff w=240 ppb=240 start=0 notes=0:1:1.5:2:5:o--></div>
+      <span><b>Substituted</b> &middot; warn ring and what changed: <b>&uarr;8</b> raised an octave because, after the pitch shift, it
+      fell below the open E.</span></div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>Rhythm as played &middot; 4 bars at 280 px per bar</h2>
+  <div class="staffbox">
+    <div class="head"><!--@tabstaff part=head--></div>
+    <div class="lane"><!--@tabstaff w=860 ppb=280 start=0.5 notes=0:2:1.5:2:1,0:3.5:.5:2:0,1:0:1.5:2:6,1:1.5:.5:2:6,1:2:1:1:5,1:3:.5:1:3,1:3.5:.5:2:5,2:0:1.5:3:3,2:1.58:.42:3:3,2:2:1:2:5:now,2:3:.5:2:1:u,2:3.5:.5:3:5,3:0:1:2:5,3:1:.5:2:5--></div>
+  </div>
+  <p class="note">Bar lines bright, beat lines faint, as on the Stems lanes. In the third bar the repeated G lands a little after the
+  "and" of 2, so it is drawn there. Overlapping notes stay on their own strings; two notes on one string at once cannot happen,
+  because the transcription is monophonic.</p>
+</div>
+
+<div class="sec">
+  <h2>Zoomed out &middot; 8 bars at 120 px per bar</h2>
+  <div class="staffbox">
+    <div class="head"><!--@tabstaff part=head--></div>
+    <div class="lane"><!--@tabstaff w=860 ppb=120 start=0 notes=0:0:1.5:3:3,0:1.5:.5:3:3,0:2:1:2:5,0:3:1:2:1,1:0:1.5:2:5,1:2:1:1:7,1:3:1:1:3,2:0:2:2:6,2:2:2:1:5,3:0:1.5:3:3,3:1.5:.5:3:3,3:2:2:2:5,4:0:1.5:3:3,4:2:1:2:5,4:3:1:2:1,5:0:2:2:5,5:2:2:1:3,6:0:4:2:6,7:0:1.5:3:3,7:2:2:2:5--></div>
+  </div>
+  <p class="note">The chip keeps its size and only the gaps shrink, so zoomed out a fast run touches and overlaps, the later
+  note drawn on top. That is enough to find your place; zoom in to read the frets. Zoom stays continuous from Fit to the
+  axis maximum, as on every time axis (U-12): no separate floor for the staff.</p>
+</div>
+
+<div class="sec">
+  <h2>What the staff never does</h2>
+  <p class="note">It never hides an unsure note, never snaps one to the grid, and never moves a note to another string to
+  "fix" it. Every change from what was heard is drawn as a substitution with its reason (N-08). It never plays audio
+  (D-07), and it is not editable in this version.</p>
+</div>
+
+</div></body></html>

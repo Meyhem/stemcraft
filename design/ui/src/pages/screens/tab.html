@@ -1,0 +1,203 @@
+<!-- @dsCard group="Screens" name="Song screen — Tab" subtitle="The transcribed bass line: a tab staff on the shared time axis, the neck under it" viewport="1440x1180" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Song screen — Tab — Stemcraft</title><style>/* @inject */
+
+.body2{display:flex;flex-direction:column;flex:1;min-height:0}
+.stage{display:flex;flex-direction:column;min-width:0;flex:1}
+.axis{position:relative;display:flex;flex-direction:column;flex:none;margin:0 var(--ds-4);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
+.axrow{display:grid;grid-template-columns:200px 1fr;flex:none}
+.axhead{display:flex;align-items:center;justify-content:flex-end;padding-right:var(--ds-4);background:var(--ds-surface);border-bottom:1px solid var(--ds-border);border-right:1px solid var(--ds-border)}
+.axhead.staffhead{padding:0;align-items:stretch;border-bottom:0}
+.chords{display:flex;height:44px;background:var(--ds-surface);position:relative;border-bottom:1px solid var(--ds-border)}
+.chords .c{position:absolute;top:0;bottom:0;display:flex;align-items:center;padding-left:var(--ds-2);border-left:1px solid var(--ds-border);font:600 var(--ds-t-md)/1 var(--ds-font)}
+.chords .c.now{background:rgba(79,163,255,.12);color:var(--ds-text)}
+.staff{background:var(--ds-ground);overflow:hidden}
+.hscroll{height:10px;position:relative;border-top:1px solid var(--ds-border);background:var(--ds-ground)}
+.hscroll i{position:absolute;top:2px;height:6px;border-radius:3px;background:var(--ds-border-strong)}
+.fb{background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);padding:var(--ds-4) var(--ds-3) var(--ds-3)}
+.fb svg{width:100%;height:auto;display:block}
+.fb text{font-family:var(--ds-font)}
+.fb .fnum{font:500 13px var(--ds-mono);fill:var(--ds-text-3)}
+.fb .sname{font-weight:600;font-size:17px;fill:var(--ds-text-3)}
+.fb .dotn{font-weight:700;font-size:15px;fill:var(--ds-ground)}
+.fb .doto{font-weight:700;font-size:10px;fill:var(--ds-ground)}
+.fb .dotu{font-weight:700;font-size:15px;fill:var(--ds-text)}
+.fb .dotuo{font-weight:700;font-size:10px;fill:var(--ds-text)}
+.fb .oct{font:700 13px var(--ds-mono);fill:var(--ds-warn)}
+.legend{display:flex;gap:var(--ds-5);flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;width:18px;height:18px;border-radius:50%;vertical-align:-4px;margin-right:var(--ds-2)}
+.legend i.chipk{width:26px;border-radius:6px}
+.stage > .tpanel{margin:var(--ds-4) var(--ds-4) 0}
+.viewbar{display:flex;align-items:flex-end;gap:var(--ds-5);margin:var(--ds-4);min-height:56px}
+.viewseg > button{min-height:48px;padding:0 var(--ds-6);font-size:var(--ds-t-md)}
+.tabs-body{margin:var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-4)}
+.titlebtn{display:flex;align-items:center;gap:var(--ds-3);background:transparent;border:1px solid transparent;border-radius:var(--ds-r-btn);padding:var(--ds-1) var(--ds-3);margin-left:calc(-1 * var(--ds-3));color:inherit;cursor:text;text-align:left;font:inherit}
+.titlebtn:hover,.titlebtn:focus-visible{border-color:var(--ds-border-strong);background:var(--ds-raised)}
+.titlebtn svg{width:16px;height:16px;fill:var(--ds-text-3);flex:none}
+.titlebtn:hover svg{fill:var(--ds-text)}
+
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <button class="iconbtn" aria-label="Back to library"><svg viewBox="0 0 24 24"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg></button>
+  <button class="titlebtn" title="Rename">
+    <span class="col" style="gap:0;min-width:0">
+      <span class="t-md" style="font-weight:600;white-space:nowrap">Tightrope</span>
+      <span class="t-sm dim" style="white-space:nowrap">Walk the Moon</span>
+    </span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+  </button>
+  <div class="grow"></div>
+  <button class="btn btn-primary">Export</button>
+</div>
+
+<div class="body2">
+  <div class="stage">
+
+    <!-- ONE transport, identical in all three views, pinned while the content scrolls -->
+    <div class="tpanel">
+      <div class="trow">
+        <button class="iconbtn iconbtn-perform iconbtn-play" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>
+        <div class="readout"><span class="cap">bar</span><span class="big">17</span></div>
+        <div class="readout"><span class="cap">chord</span><span class="chord">Gm <span class="dim3">&rarr; Dm</span></span></div>
+        <div class="grow"></div>
+        <div class="readout"><span class="cap">tempo</span><div class="stepper stepper-perform"><button aria-label="Tempo down">&minus;</button><output>80%</output><button aria-label="Tempo up">+</button></div></div>
+        <div class="readout"><span class="cap">pitch</span><div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output>&minus;2 st</output><button aria-label="Pitch up">+</button></div></div>
+        <div class="splitbtn">
+          <button class="btn btn-perform" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>Loop <span class="num">17&ndash;18</span></button>
+          <button class="btn btn-perform" aria-pressed="true" aria-label="Edit loop" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button>
+        </div>
+        <button class="btn btn-perform" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>Practice</button>
+      </div>
+    </div>
+
+    <!-- View switch: three links. Tab is the transcription, Play along the generated patterns. -->
+    <div class="viewbar">
+      <div class="seg viewseg" role="tablist" aria-label="View">
+        <button role="tab" aria-selected="false">Stems</button>
+        <button role="tab" aria-selected="true">Tab</button>
+        <button role="tab" aria-selected="false">Play along</button>
+      </div>
+      <span class="chip">bass &middot; pitch &minus;2 st &middot; frets follow what you hear</span>
+      <div class="grow"></div>
+      <div class="row" style="gap:var(--ds-4);align-items:flex-end">
+        <div class="col" style="gap:var(--ds-1)">
+          <span class="cap">zoom</span>
+          <div class="zoomctl"><button class="btn" aria-label="Zoom out">&minus;</button><output class="zoomval">4.3 bars in view</output><button class="btn" aria-label="Zoom in">+</button><button class="btn">Fit</button></div>
+        </div>
+        <button class="btn btn-primary" aria-pressed="true">Follow playhead</button>
+      </div>
+    </div>
+
+    <!-- ===== Tab content: the same time axis as Stems (U-11, U-12), a tab staff instead of lanes ===== -->
+    <div class="axis">
+      <div class="axrow"><div class="axhead cap" style="height:26px">bar</div>
+        <div class="ruler">
+          <span style="left:140px">16</span><span style="left:420px">17</span><span style="left:700px">18</span><span style="left:980px">19</span>
+        </div>
+      </div>
+      <div class="axrow"><div class="axhead cap">chords</div>
+        <div class="chords">
+          <div class="c" style="left:0;width:140px;color:var(--ds-text-3)"></div>
+          <div class="c" style="left:140px;width:280px;color:var(--ds-text-2)">E&#9837;</div>
+          <div class="c now" style="left:420px;width:280px">Gm</div>
+          <div class="c" style="left:700px;width:280px;color:var(--ds-text-2)">Dm</div>
+          <div class="c" style="left:980px;width:226px;color:var(--ds-text-2)">E&#9837;</div>
+        </div>
+      </div>
+      <div class="axrow">
+        <div class="axhead staffhead"><!--@tabstaff part=head--></div>
+        <div class="staff"><!--@tabstaff w=1206 ppb=280 start=15.5 notes=15:2:1.5:2:1,15:3.5:.5:2:0,16:0:1.5:2:6,16:1.5:.5:2:6,16:2:1:1:5,16:3:.5:1:3,16:3.5:.5:2:5,17:0:1.5:3:3,17:1.5:.5:3:3,17:2:1:2:5:now,17:3:.5:2:1:u,17:3.5:.5:3:5,18:0:1:2:5,18:1:.5:2:5,18:1.5:.5:1:3,18:2:1:1:7,18:3:1:2:5:o,19:0:1.5:2:6,19:1.5:.5:2:6,19:2:1:1:5,19:3.06:.94:3:6:u--></div>
+      </div>
+      <div class="loopregion" data-a="17" data-b="19" style="left:620px;width:560px"></div>
+      <div class="playhead" style="left:788px"></div>
+      <div class="hscroll"><i style="left:41%;width:7%"></i></div>
+    </div>
+
+    <div class="tabs-body">
+      <div class="panel panel-pad col" style="gap:var(--ds-4)">
+    <!-- The Play along neck painter, fed by the transcription: this bar's notes numbered in play order, the next bar's dashed -->
+    <div class="fb">
+<svg viewBox="0 0 1360 234" role="img" aria-label="Bass neck: bar 17, G at E string fret 3 twice, D at A string fret 5 sounding now, B-flat at A string fret 1 unsure, A at E string fret 5; next bar D, F, A, D">
+<rect x="48" y="18" width="1294" height="182" rx="4" fill="var(--ds-surface)"/>
+<text x="101.9" y="16" text-anchor="middle" class="fnum">1</text>
+<text x="209.8" y="16" text-anchor="middle" class="fnum">2</text>
+<text x="317.6" y="16" text-anchor="middle" class="fnum">3</text>
+<text x="425.4" y="16" text-anchor="middle" class="fnum">4</text>
+<text x="533.2" y="16" text-anchor="middle" class="fnum">5</text>
+<text x="641.1" y="16" text-anchor="middle" class="fnum">6</text>
+<text x="748.9" y="16" text-anchor="middle" class="fnum">7</text>
+<text x="856.8" y="16" text-anchor="middle" class="fnum">8</text>
+<text x="964.6" y="16" text-anchor="middle" class="fnum">9</text>
+<text x="1072.4" y="16" text-anchor="middle" class="fnum">10</text>
+<text x="1180.2" y="16" text-anchor="middle" class="fnum">11</text>
+<text x="1288.1" y="16" text-anchor="middle" class="fnum">12</text>
+<line x1="48.0" x2="48.0" y1="18" y2="200" stroke="var(--ds-text)" stroke-width="6"/>
+<line x1="155.8" x2="155.8" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="263.7" x2="263.7" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="371.5" x2="371.5" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="479.3" x2="479.3" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="587.2" x2="587.2" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="695.0" x2="695.0" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="802.8" x2="802.8" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="910.7" x2="910.7" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="1018.5" x2="1018.5" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="1126.3" x2="1126.3" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="1234.2" x2="1234.2" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="1342.0" x2="1342.0" y1="18" y2="200" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="48" x2="1342" y1="178" y2="178" stroke="var(--ds-text-3)" stroke-width="3.2"/>
+<text x="8" y="184" class="sname">E</text>
+<line x1="48" x2="1342" y1="132" y2="132" stroke="var(--ds-text-3)" stroke-width="2.6"/>
+<text x="8" y="138" class="sname">A</text>
+<line x1="48" x2="1342" y1="86" y2="86" stroke="var(--ds-text-3)" stroke-width="2.0"/>
+<text x="8" y="92" class="sname">D</text>
+<line x1="48" x2="1342" y1="40" y2="40" stroke="var(--ds-text-3)" stroke-width="1.4"/>
+<text x="8" y="46" class="sname">G</text>
+<circle cx="317.6" cy="218" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="533.2" cy="218" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="748.9" cy="218" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="964.6" cy="218" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="1278.1" cy="218" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="1298.1" cy="218" r="5" fill="var(--ds-border-strong)"/>
+<!-- next bar (18 · Dm): D A5 is already lit; F D3, A D7 dashed -->
+<circle cx="317.6" cy="86" r="18" fill="none" stroke="var(--ds-text-2)" stroke-width="2" stroke-dasharray="5 4"/>
+<circle cx="748.9" cy="86" r="18" fill="none" stroke="var(--ds-text-2)" stroke-width="2" stroke-dasharray="5 4"/>
+<!-- this bar (17 · Gm) -->
+<circle cx="317.6" cy="178" r="21" fill="var(--ds-bass)"/>
+<text x="317.6" y="177" text-anchor="middle" class="dotn">G</text>
+<text x="317.6" y="191" text-anchor="middle" class="doto">1&middot;2</text>
+<circle cx="533.2" cy="132" r="30" fill="var(--ds-accent)" opacity=".22"/>
+<circle cx="533.2" cy="132" r="21" fill="var(--ds-accent)"/>
+<text x="533.2" y="131" text-anchor="middle" class="dotn">D</text>
+<text x="533.2" y="145" text-anchor="middle" class="doto">3</text>
+<circle cx="101.9" cy="132" r="21" fill="var(--ds-bass)" opacity=".4"/>
+<text x="101.9" y="131" text-anchor="middle" class="dotu">B&#9837;</text>
+<text x="101.9" y="145" text-anchor="middle" class="dotuo">4</text>
+<circle cx="119" cy="114" r="10" fill="var(--ds-raised)" stroke="var(--ds-text-2)" stroke-width="1.5"/>
+<text x="119" y="119" text-anchor="middle" class="dotuo" style="font-size:13px">?</text>
+<circle cx="533.2" cy="178" r="21" fill="var(--ds-bass)"/>
+<text x="533.2" y="177" text-anchor="middle" class="dotn">A</text>
+<text x="533.2" y="191" text-anchor="middle" class="doto">5</text>
+</svg>
+    </div>
+    <div class="legend t-sm dim">
+      <span><i class="chipk" style="background:var(--ds-bass)"></i>transcribed note &middot; its tail is how long it rings</span>
+      <span><i class="chipk" style="background:var(--ds-accent)"></i>sounding now</span>
+      <span><i class="chipk" style="background:var(--ds-bass);opacity:.4"></i><b class="num" style="color:var(--ds-text)">?</b> unsure &middot; the tracker's confidence was low</span>
+      <span><i class="chipk" style="background:var(--ds-bass);box-shadow:0 0 0 3px var(--ds-warn)"></i><b class="num" style="color:var(--ds-warn)">&uarr;8</b> raised an octave &middot; below the open E after the pitch shift</span>
+      <span><i style="border:2px dashed var(--ds-text-2)"></i>next bar</span>
+    </div>
+      </div>
+
+      <!-- Provenance: what this is, where it came from, how much of it is unsure. Re-extract lives here, not in the toolbar: it is rare. -->
+      <div class="banner" style="border-color:var(--ds-border);color:var(--ds-text-2)">
+        <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg></span>
+        <div class="banner-body grow"><p class="banner-title">Transcribed from the bass stem: a starting point, not a checked tab</p>
+        <p class="t-sm dim" style="margin:0">torchcrepe on cuda &middot; 1 Oct 14:32 &middot; <span class="num">412</span> notes, <span class="num">23</span> unsure, <span class="num">3</span> raised an octave. Rhythm is drawn as played, not snapped to the beat grid.</p></div>
+        <button class="btn btn-ghost">Re-extract</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+</body></html>

@@ -179,6 +179,21 @@ hit-target tiers rather than one.
   four-bar equaliser (a second visual language for the same stems).
   *Reversibility:* two-way, trivially.
 
+- **U-16 — A transcribed note is drawn as heard, with its doubt showing.** On the Tab
+  staff and its neck a note sits where it was played, never snapped to the beat grid. A
+  note below the confidence floor keeps its place and hue at 40 % and gains a `?`; a note
+  the fingering had to change (raised an octave below the open E after a pitch shift) keeps
+  the bass hue inside a warn ring and says what changed (`↑8`). The provenance banner counts
+  both. Nothing is hidden, moved to another string or corrected silently.
+  *Because:* N-08, and the domain spec's "transcription is a bonus, not a promise". A player
+  who knows which notes are guesses can trust the rest; one who finds a wrong note that
+  looked certain trusts none of it. The `?` and `↑8` carry the meaning without colour (U-01).
+  *Rejected:* hiding unsure notes (a gap reads as a rest, which is wrong in a different
+  way); quantising to the grid (the record is not quantised, and a snapped note can land
+  on the wrong beat of a fill); a separate colour for unsure (spends a hue on doubt that
+  opacity and a glyph already say).
+  *Reversibility:* two-way.
+
 ## 4. Tokens
 
 Defined in `design/ui/src/tokens.css`. Summary:
@@ -215,8 +230,9 @@ other), a permanent text label, and a fixed lane position; hue is an accelerator
 | Zoom controls | setup | `−` / readout of what is in view / `+` / `Fit`, identical on the Stems view tools and the splitter toolbar (U-12) |
 | Cut marker | — | Album splitter. One 2 px amber line plus a numbered tag (cut N ends track N). A press within 8 px grabs it; the tag grabs exactly that cut; overlapping cuts resolve by drag direction. Selected: line turns accent, tag gets the focus ring |
 | Cut list | setup | per track: ▶ (play from its first sample), title, **Start** and **End** typed as `m:ss.mmm`, length, the exact filename the split will write, and × (remove the cut after it). A time that crosses a neighbour is refused with the allowed range — never clamped |
-| Transport bar | performance | one row, identical over Stems and Tabs: play; bar number and chord (now → next) in mono; **tempo** (50–150 %, buttons step 10 %, ↑/↓ keys 5 %) and **pitch** (±12 st) as performance-tier steppers, values muted at their default; a loop split button (body arms the loop and shows its bars; the chevron opens the loop editor: start/end bar steppers and saved loops); and **Practice** (a popover: metronome, count-in). Nothing set once per session sits on the bar itself |
-| View switch | setup (48 px) | Stems / Tabs, two links styled as a segmented control; the chosen view's own tools sit to its right |
+| Transport bar | performance | one row, identical over Stems, Tab and Play along: play; bar number and chord (now → next) in mono; **tempo** (50–150 %, buttons step 10 %, ↑/↓ keys 5 %) and **pitch** (±12 st) as performance-tier steppers, values muted at their default; a loop split button (body arms the loop and shows its bars; the chevron opens the loop editor: start/end bar steppers and saved loops); and **Practice** (a popover: metronome, count-in). Nothing set once per session sits on the bar itself |
+| View switch | setup (48 px) | Stems / Tab / Play along, three links styled as a segmented control; the chosen view's own tools sit to its right |
+| Tab staff | — | U-16. The Tab view's transcribed bass line on the shared time axis (ruler, chord row, loop region, playhead, U-11/U-12): four lines, highest string on top; a note is a mono fret chip whose left edge is its onset, with a tail to its end, never snapped to the grid. Kinds: transcribed (bass hue), sounding now (accent), unsure (40 % and `?`), substituted (warn ring and the change, e.g. `↑8`). Painted on a viewport-sized canvas, slaved to the engine clock (D-07). Reference: `components/tabstaff.html` |
 | Banner | — | warn and error; carries the verbatim trace (U-09) |
 | Loader | — | U-15. `page` or `inline`; the label is always shown and is what a screen reader hears |
 | Progress bar, job row | setup | estimate derives from the job's recorded device and N-01 |
@@ -259,17 +275,24 @@ assuming it can vary.
 3. **Song screen** — the hard screen, and the only one a song is played on. Top to
    bottom: a header (back to library, title and artist with in-place **Rename**, Export);
    the transport, pinned (play, bar, chord → next, tempo 50–150 % with a tick at 100 %,
-   pitch, loop, loop bars, saved loops, metronome, count-in); a **Stems / Tabs** switch
+   pitch, loop, loop bars, saved loops, metronome, count-in); a **Stems / Tab / Play along** switch
    with the chosen view's tools beside it; then the content. **Stems** is one
    horizontally scrolling time axis holding the seek ruler, the chord row aligned to
    bars, and four full-height stem lanes with beat and downbeat grid, loop region and
    playhead; the 200 px lane heads stay put while it scrolls; its tools are zoom and
-   Follow playhead (U-12). **Tabs** is the play-along content: a Bass | Guitar switch, key and
+   Follow playhead (U-12). **Tab** is the transcribed bass line (D-21): the tab staff on the same time axis as Stems, the
+   Play along neck under it showing the current bar's notes in play order and the next bar dashed, and a
+   provenance banner (model, device, when, note count, how many unsure or substituted, **Re-extract**).
+   Its tools are zoom and Follow playhead, as on Stems. Before a tab exists it is an empty state with
+   **Extract bass tab**; while the job runs it shows the job's own steps (D-17); a failure shows the
+   step that failed with the verbatim traceback and **Retry** (U-09); a finished job with no notes says
+   so rather than drawing an empty staff (mockups: `screens/tab.html`, `screens/tab-states.html`).
+   **Play along** is the generated pattern content: a Bass | Guitar switch, key and
    pattern pickers (bass: notes, rhythm, approach; guitar: style, strum, position, simplify),
    the neck (4-string notes, or a 6-string chord shape in the other-stem colour), the beat
    lane (or strum lane) and the chord ribbon (guitar mockup:
    `design/ui/src/pages/screens/play-along-guitar.html`); its tool is the Scale & fretboard link.
-   There is no right rail: key candidates live only in the Tabs key picker. Switching
+   There is no right rail: key candidates live only in the Play along key picker. Switching
    content never stops playback and never moves a control (D-18). Every value auto-saves
    to `song.json`; zoom and scroll are view state and never do. Mockup:
    `docs/superpowers/specs/2026-09-30-unified-song-screen-mockup.html`.
@@ -316,7 +339,7 @@ assuming it can vary.
 Performance controls all have keys, because reaching for a mouse mid-song is what the
 layout is trying to avoid. `Space` play/pause · `L` arm loop · `A`/`B` set the loop's
 start / end to the current bar (the transport's bar steppers set them by number) · `M` metronome · `1`–`4` mute stem by lane position · `↑`/`↓` tempo
-±5 % · `←`/`→` jump one bar. All of these work in both Stems and Tabs.
+±5 % · `←`/`→` jump one bar. All of these work in every view.
 
 Album splitter, on a selected cut (click its number): `←`/`→` nudge 0.1 s, with `Shift`
 1 s · `Home`/`End` jump to the limits its neighbours allow · `Delete` or `Backspace`
@@ -328,7 +351,8 @@ from the summary.
 
 ## 8. Deferred
 
-- **Transcribed tabs (alphaTab).** Deferred with the pipeline itself (§12, R-06).
+- **Tab editing and export (alphaTab, `.gp5`, MusicXML), and guitar transcription.** The Tab view
+  is read-only and bass-only (D-21).
 - **Light theme.** No need identified; the app is used in a practice room.
 
 ## 9. Open questions

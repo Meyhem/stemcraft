@@ -296,6 +296,95 @@ def _circle_args(argstr):
     return circle(kw.get("key", "C"), int(kw.get("size", 300)))
 
 
+# ---------- @tabstaff: the Tab screen's transcribed bass line (D-21) ----------
+# A 4-line staff on the shared time axis: highest string on top, as on every neck
+# (U-13). A note is a fret chip whose left edge is its onset, with a tail to where it
+# ends; transcription is not quantised, so neither is the drawing. Kinds (U-16):
+#   n    transcribed note, bass hue
+#   now  sounding at the playhead, accent
+#   u    unsure (low confidence): same hue at 40 %, fret number gets a "?"
+#   o    substituted (here: raised an octave, below the open E): warn ring + "↑8"
+TAB_STRINGS = ["G", "D", "A", "E"]
+
+
+def _tab_notes(spec):
+    """'17:0:1.5:3:3,17:2:1:2:5:now' -> [(bar, onset, dur, string, fret, kind)]"""
+    out = []
+    for p in filter(None, spec.split(",")):
+        f = p.split(":")
+        kind = f[5] if len(f) > 5 else "n"
+        out.append((int(f[0]), float(f[1]), float(f[2]), int(f[3]), int(f[4]), kind))
+    return out
+
+
+def tabstaff(w=1200, ppb=280, start=1.0, bpb=4, notes="", part="lane", sh=40):
+    top = 30
+    h = top * 2 + sh * (len(TAB_STRINGS) - 1)
+    if part == "head":
+        o = [f'<svg width="200" height="{h}" viewBox="0 0 200 {h}" aria-hidden="true" style="display:block">']
+        for si, name in enumerate(TAB_STRINGS):
+            o.append(f'<text x="184" y="{top+sh*si+6}" text-anchor="end" font-size="17" font-weight="600" '
+                     f'fill="var(--ds-text-3)" font-family="ui-sans-serif,sans-serif">{name}</text>')
+        o.append("</svg>")
+        return "".join(o)
+
+    def bx(bar, beat=0.0):
+        return (bar + beat / bpb - start) * ppb
+
+    o = [f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" role="img" '
+         f'aria-label="Bass tab, {len(TAB_STRINGS)} strings" style="display:block">']
+    first = int(math.floor(start))
+    last = int(math.ceil(start + w / ppb))
+    for bar in range(first, last + 1):
+        for beat in range(bpb):
+            x = bx(bar, beat)
+            if 0 <= x <= w:
+                col, wd = ("var(--ds-border-strong)", 2) if beat == 0 else ("var(--ds-border)", 1)
+                o.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{top-14}" y2="{top+sh*3+14}" '
+                         f'stroke="{col}" stroke-width="{wd}"/>')
+    for si in range(len(TAB_STRINGS)):
+        y = top + sh * si
+        o.append(f'<line x1="0" x2="{w}" y1="{y}" y2="{y}" stroke="var(--ds-text-3)" '
+                 f'stroke-width="{1.4+si*0.6:.1f}"/>')
+    for bar, onset, dur, si, fret, kind in _tab_notes(notes):
+        x, end, y = bx(bar, onset), bx(bar, onset + dur), top + sh * si
+        label = f"{fret}?" if kind == "u" else str(fret)
+        cw = max(30, 14 + 11 * len(label))
+        fill, txt, op = "var(--ds-bass)", "var(--ds-ground)", 1
+        if kind == "now":
+            fill, txt = "var(--ds-accent)", "var(--ds-on-accent)"
+        if kind == "u":
+            op, txt = .4, "var(--ds-text)"
+        if end > x + cw:
+            o.append(f'<line x1="{x+cw:.1f}" x2="{end-3:.1f}" y1="{y}" y2="{y}" stroke="{fill}" '
+                     f'stroke-width="6" stroke-linecap="round" opacity="{.55*op:.2f}"/>')
+        if kind == "now":
+            o.append(f'<rect x="{x-6:.1f}" y="{y-20}" width="{cw+12}" height="40" rx="10" '
+                     f'fill="var(--ds-accent)" opacity=".22"/>')
+        ring = ' stroke="var(--ds-warn)" stroke-width="3"' if kind == "o" else ""
+        o.append(f'<rect x="{x:.1f}" y="{y-14}" width="{cw}" height="28" rx="7" fill="{fill}" '
+                 f'opacity="{op}"/>')
+        if ring:
+            o.append(f'<rect x="{x:.1f}" y="{y-14}" width="{cw}" height="28" rx="7" fill="none"{ring}/>')
+            o.append(f'<text x="{x+cw/2:.1f}" y="{y-19}" text-anchor="middle" font-size="13" font-weight="700" '
+                     f'fill="var(--ds-warn)" font-family="ui-monospace,monospace">↑8</text>')
+        o.append(f'<text x="{x+cw/2:.1f}" y="{y+6}" text-anchor="middle" font-size="17" font-weight="700" '
+                 f'fill="{txt}" font-family="ui-monospace,monospace">{label}</text>')
+    o.append("</svg>")
+    return "".join(o)
+
+
+def _tabstaff_args(argstr):
+    kw = dict(tok.split("=", 1) for tok in argstr.split())
+    for k in ("w", "ppb", "bpb", "sh"):
+        if k in kw:
+            kw[k] = int(kw[k])
+    if "start" in kw:
+        kw["start"] = float(kw["start"])
+    return tabstaff(**kw)
+
+
+TABSTAFF = re.compile(r"<!--@tabstaff\s+(.*?)-->")
 NECK = re.compile(r"<!--@neck\s+(.*?)-->")
 CIRCLE = re.compile(r"<!--@circle\s+(.*?)-->")
 
@@ -308,6 +397,7 @@ def expand(t):
                                     float(m[5]) if m[5] else 0.55), t)
     t = FRET.sub(lambda m: fretboard(m[1], m[2], m[3], int(m[4]) if m[4] else 12), t)
     t = NECK.sub(lambda m: _neck_args(m[1]), t)
+    t = TABSTAFF.sub(lambda m: _tabstaff_args(m[1]), t)
     t = CIRCLE.sub(lambda m: _circle_args(m[1]), t)
     return t
 
