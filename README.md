@@ -34,7 +34,7 @@ instrument and play along.
   theory quiz (keys, chords, intervals). A wrong answer is explained and the question
   stays; things you found tricky quietly come back a little more often. What you have
   practised is kept in `data/theory.json`, and Start fresh forgets it
-- Album splitter: cut a full album rip into tagged MP3s. Silence detection proposes cuts;
+- Album splitter: a table of your albums with an Add album button that opens the upload dialog; cut a full album rip into tagged MP3s. Silence detection proposes cuts;
   on a full-length waveform you play, zoom with the wheel or by dragging across a range,
   drag, add and delete cuts, or type exact start and end times to the millisecond, then
   download a zip or add the tracks to the library as Songs

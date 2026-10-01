@@ -14,7 +14,7 @@
 //  * §2 -- the API owns album.json and the worker cannot write it, so the
 //    measured length reaches album.json only by a PUT from here. See
 //    `useStampedLength` below.
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -38,8 +38,8 @@ import {
   useQueueSplit,
   useSendTrackToLibrary,
   useUpdateAlbum,
-  useUploadAlbum,
 } from '../api/queries';
+import { AlbumUploadModal } from './AlbumUploadModal';
 import { trackSpans } from '../splitter/spans';
 import { TrackTable } from '../splitter/TrackTable';
 import { WaveformMarkers } from '../splitter/WaveformMarkers';
@@ -48,10 +48,8 @@ import {
   Button,
   ButtonLink,
   Chip,
-  DropZone,
   EmptyState,
   Loader,
-  Panel,
   ProgressBar,
   TextField,
   TextLink,
@@ -125,26 +123,8 @@ export function AlbumSplitter() {
 function AlbumPicker() {
   const navigate = useNavigate();
   const albums = useAlbums();
-  const upload = useUploadAlbum();
   const del = useDeleteAlbum();
-
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
-
-  // Import.tsx's form idiom: FormData built here, optional fields omitted
-  // rather than sent blank, and the server's own error shown verbatim (N-08).
-  function handleUpload(event: FormEvent) {
-    event.preventDefault();
-    if (!file) return;
-    const form = new FormData();
-    form.set('file', file);
-    if (title) form.set('title', title);
-    if (artist) form.set('artist', artist);
-    upload.mutate(form, {
-      onSuccess: (created) => navigate(`/splitter/${created.album.id}`),
-    });
-  }
+  const [adding, setAdding] = useState(false);
 
   function handleDelete(entry: AlbumEntry) {
     const label = entry.album?.title ?? entry.dir;
@@ -154,51 +134,24 @@ function AlbumPicker() {
 
   return (
     <section className={`${styles.screen} ${styles.wide}`}>
-      <h1>Album splitter</h1>
+      <div className={styles.header}>
+        <h1>Album splitter</h1>
+        <Button variant="primary" onClick={() => setAdding(true)}>
+          Add album
+        </Button>
+      </div>
       <p className={`${styles.note} ${styles.readable}`}>
         One long file in — an album side, a live set, a tape transfer — and a set of tagged MP3s
         out. Upload it, move the boundaries where you want them, name the tracks, then render.
       </p>
 
-      <Panel className={`${styles.form} ${styles.readable}`}>
-        <form className={styles.inner} onSubmit={handleUpload}>
-          <h2>Upload an album</h2>
-          <DropZone
-            id="album-file"
-            label="Audio or video file"
-            file={file}
-            onFile={setFile}
-            hint="One long file; anything ffmpeg can decode."
-          />
-          <TextField
-            id="album-upload-title"
-            label="Album title"
-            placeholder="From the file name, if left blank"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-          />
-          <TextField
-            id="album-upload-artist"
-            label="Artist"
-            value={artist}
-            onChange={(event) => setArtist(event.target.value)}
-          />
-          <Button
-            className={styles.submit}
-            type="submit"
-            variant="primary"
-            disabled={!file || upload.isPending}
-          >
-            {upload.isPending ? 'Uploading…' : 'Upload album'}
-          </Button>
-          {/* N-08: the server's real message, not a generic failure notice. */}
-          {upload.isError && (
-            <Banner tone="error" title="Upload failed" trace={String(upload.error)} />
-          )}
-        </form>
-      </Panel>
+      {adding && (
+        <AlbumUploadModal
+          onClose={() => setAdding(false)}
+          onCreated={(albumId) => navigate(`/splitter/${albumId}`)}
+        />
+      )}
 
-      <h2>Albums</h2>
       {albums.isError && (
         <Banner tone="error" title="The albums could not be listed" trace={String(albums.error)} />
       )}
