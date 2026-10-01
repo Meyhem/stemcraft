@@ -12,12 +12,14 @@
 //
 // Follow-playhead lives here, in the playhead's own rAF painter: the painter
 // already knows the playhead's x every frame, so it is the one place that can
-// page the view without a React render per frame.
+// move the view without a React render per frame. While playing the view glides
+// continuously with the playhead (glideScrollLeft) -- no page turns, no jumps.
 import { useCallback, useLayoutEffect, useRef, type MouseEvent } from 'react';
 
 import { barStart, type Grid } from '../music/grid';
 import {
   followScrollLeft,
+  glideScrollLeft,
   LANE_HEAD_PX,
   recentreScrollLeft,
   rulerLabelEvery,
@@ -69,12 +71,14 @@ export function Timeline({
 
   // Writes to a ref and the scroller, never to state: this runs 60 times a second.
   //
-  // Follow pages the view while playing, and while paused only when the playhead itself
-  // moved -- first paint, or a seek (a new seekNonce). This painter also re-runs on every
+  // Follow glides the view while playing, and while paused pages it only when the playhead
+  // itself moved -- first paint, or a seek (a new seekNonce). This painter also re-runs on every
   // zoom; paging then would drag an at-the-pointer or drag-to-range zoom straight back
   // to a paused playhead, so no anchored zoom could ever land.
   const pagedFor = useRef<number | null>(null);
   const followWas = useRef(false);
+  // The glide's own float scrollLeft and the time of its last frame; null when not gliding.
+  const glide = useRef<{ left: number; at: number } | null>(null);
   const paint = useCallback(
     (position: SampleIndex) => {
       const x = xOf(scale, position);
@@ -83,8 +87,23 @@ export function Timeline({
       const moved = pagedFor.current !== seekNonce || (follow && !followWas.current);
       pagedFor.current = seekNonce;
       followWas.current = follow;
-      if (follow && scroller && (playing || moved)) {
-        const next = followScrollLeft(x, scroller.scrollLeft, scroller.clientWidth - LANE_HEAD_PX, playing);
+      if (!(follow && scroller && playing)) glide.current = null;
+      if (follow && scroller && playing) {
+        const now = performance.now();
+        const last = glide.current;
+        // Something else moved the view (a zoom re-centring): glide on from there.
+        const from = last && Math.abs(scroller.scrollLeft - last.left) <= 1 ? last.left : scroller.scrollLeft;
+        const left = glideScrollLeft(
+          x,
+          from,
+          scroller.clientWidth - LANE_HEAD_PX,
+          scale.contentWidth,
+          last ? now - last.at : 16,
+        );
+        glide.current = { left, at: now };
+        scroller.scrollLeft = left;
+      } else if (follow && scroller && moved) {
+        const next = followScrollLeft(x, scroller.scrollLeft, scroller.clientWidth - LANE_HEAD_PX, false);
         if (next !== null) scroller.scrollLeft = next;
       }
     },

@@ -4,6 +4,8 @@ import { sampleIndex } from '../engine/types';
 import { buildGrid } from './grid';
 import {
   followScrollLeft,
+  FOLLOW_GLIDE_MS,
+  glideScrollLeft,
   recentreScrollLeft,
   rulerLabelEvery,
   sampleAtX,
@@ -124,6 +126,36 @@ describe('followScrollLeft', () => {
 
   it('does nothing with no measured viewport', () => {
     expect(followScrollLeft(5000, 0, 0, true)).toBeNull();
+  });
+});
+
+describe('glideScrollLeft', () => {
+  // A 900 px view over 10 000 px of content: the target for x is x - 300.
+  it('eases toward holding the playhead at a third of the view, without snapping', () => {
+    const next = glideScrollLeft(5300, 0, 900, 10_000, 16);
+    expect(next).toBeGreaterThan(0);
+    expect(next).toBeLessThan(5000);
+  });
+
+  it('covers 1 - 1/e of the distance in one time constant, whatever the frame rate', () => {
+    expect(glideScrollLeft(1300, 0, 900, 10_000, FOLLOW_GLIDE_MS)).toBeCloseTo(1000 * (1 - Math.exp(-1)));
+    let left = 0;
+    for (let i = 0; i < 10; i++) left = glideScrollLeft(1300, left, 900, 10_000, FOLLOW_GLIDE_MS / 10);
+    expect(left).toBeCloseTo(1000 * (1 - Math.exp(-1)));
+  });
+
+  it('settles exactly on the target', () => {
+    expect(glideScrollLeft(1300, 999.995, 900, 10_000, 16)).toBe(1000);
+  });
+
+  it('never targets before the start or past the end of the content', () => {
+    expect(glideScrollLeft(100, 50, 900, 10_000, 10_000)).toBe(0);
+    expect(glideScrollLeft(9_990, 9_000, 900, 10_000, 10_000)).toBe(9_100);
+  });
+
+  it('does nothing with no measured viewport or no elapsed time', () => {
+    expect(glideScrollLeft(5000, 42, 0, 10_000, 16)).toBe(42);
+    expect(glideScrollLeft(5000, 42, 900, 10_000, 0)).toBe(42);
   });
 });
 

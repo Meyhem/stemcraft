@@ -133,10 +133,12 @@ export function recentreScrollLeft(x: number, visibleWidth: number): number {
 /**
  * Follow-playhead paging. Returns the new scrollLeft, or null to leave the view
  * alone. While playing, the playhead may travel to 2/3 of the view before the
- * view pages to put it back at 1/3 -- a page turn, not a continuous crawl,
- * because text that slides every frame cannot be read from a music stand.
+ * view pages to put it back at 1/3 -- a page turn, not a continuous crawl.
  * While paused only an off-screen playhead moves the view: clicking the ruler
  * near the right edge must not yank the bar the user just clicked away.
+ *
+ * The Song view uses this only while paused; while playing it glides
+ * (glideScrollLeft). The album splitter still pages.
  */
 export function followScrollLeft(
   x: number,
@@ -149,4 +151,31 @@ export function followScrollLeft(
   if (x >= scrollLeft && x <= edge) return null;
   const next = recentreScrollLeft(x, visibleWidth);
   return next === scrollLeft ? null : next;
+}
+
+/** Time constant of the follow glide: how quickly the view catches the playhead. */
+export const FOLLOW_GLIDE_MS = 150;
+
+/**
+ * Continuous follow-playhead while playing: one frame of the view easing toward
+ * the scrollLeft that holds the playhead at a third of the view. Exponential in
+ * elapsed time, so it is frame-rate independent and never jumps -- a seek or a
+ * loop wrap glides there over a few hundred ms instead of snapping, and steady
+ * playback scrolls at the playhead's own speed (trailing it by speed x the time
+ * constant, a constant offset). `current` is kept by the caller as a float:
+ * scrollLeft rounds, and rounding every frame would stutter.
+ */
+export function glideScrollLeft(
+  x: number,
+  current: number,
+  visibleWidth: number,
+  contentWidth: number,
+  elapsedMs: number,
+): number {
+  if (visibleWidth <= 0) return current;
+  const max = Math.max(0, contentWidth - visibleWidth);
+  const target = Math.min(max, Math.max(0, x - visibleWidth / 3));
+  const k = 1 - Math.exp(-Math.max(0, elapsedMs) / FOLLOW_GLIDE_MS);
+  const next = current + (target - current) * k;
+  return Math.abs(target - next) < 0.01 ? target : next;
 }

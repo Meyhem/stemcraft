@@ -119,7 +119,9 @@ hit-target tiers rather than one.
   slice, so zooming in costs nothing extra.
   *Because:* the splitter and the Song view are the same problem — find a moment in a long
   timeline — and a user who learns one should already know the other.
-  *Follow:* a manual zoom or pan while playing switches Follow off, visibly. While paused,
+  *Follow:* while playing, the Song view scrolls continuously with the playhead, holding
+  it near a third of the view and easing (never jumping) after a seek or a loop wrap; the
+  splitter still turns pages. A manual zoom or pan while playing switches Follow off, visibly. While paused,
   Follow moves the view only when the playhead itself moves (a seek, or switching Follow
   on), never because the zoom changed — or an anchored zoom would snap straight back.
   *Reversibility:* two-way.

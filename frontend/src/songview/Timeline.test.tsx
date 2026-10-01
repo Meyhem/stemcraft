@@ -177,6 +177,14 @@ describe('Timeline', () => {
       expect(scroller.scrollLeft).toBe(292); // x 392, to a third of the 300 px view
     });
 
+    it('while playing, glides toward the playhead instead of jumping', () => {
+      const scroller = fakeScroller(500, 0);
+      renderTimeline({ getPosition: () => sampleIndex(96_000 * 7), scroller, follow: true, playing: true });
+      // Target 292 (x 392 at a third of 300 px); the first frame only starts the glide.
+      expect(scroller.scrollLeft).toBeGreaterThan(0);
+      expect(scroller.scrollLeft).toBeLessThan(292);
+    });
+
     it('leaves the view alone when follow is off', () => {
       const scroller = fakeScroller(500, 0);
       renderTimeline({ getPosition: () => sampleIndex(96_000 * 7), scroller, follow: false });
