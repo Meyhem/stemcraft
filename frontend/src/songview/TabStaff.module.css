@@ -1,0 +1,33 @@
+/* The Tab staff row (UI spec §5, D-21): one row of the shared time axis, like a stem
+   lane. Heights are STAFF_H in tabStaffPainter.ts. Tokens only. */
+.row {
+  display: flex;
+  flex: 1 0 auto;
+}
+
+.head {
+  height: 180px;
+}
+
+.string {
+  position: absolute;
+  right: var(--ds-4);
+  font: 600 var(--ds-t-md) / 20px var(--ds-font);
+  color: var(--ds-text-3);
+}
+
+.lane {
+  position: relative;
+  flex: none;
+  height: 180px;
+  background: var(--ds-ground);
+}
+
+/* The visible slice: sticks just right of the 200 px head and repaints on scroll. */
+.canvas {
+  position: sticky;
+  left: 200px;
+  display: block;
+  height: 180px;
+  pointer-events: none;
+}

@@ -2,11 +2,28 @@
 // geometry and what gets drawn are testable against a recording context.
 // Mirrors the mockup (design/ui/src/pages/screens/play-along.html): this bar's
 // notes filled and numbered, the one to play now lit with a halo, approach
-// notes ringed, the next bar's notes as dashed hollow rings.
-import { MAX_FRET, type PlacedBar } from '../music/fingering';
+// notes ringed, the next bar's notes as dashed hollow rings. The Tab view (D-21) feeds
+// it a transcription's bars, whose unsure notes are dimmed and badged "?" and whose
+// octave-shifted notes take the warn ring (U-16).
+import { MAX_FRET, type Position } from '../music/fingering';
 import type { PlayAlongColors } from './colors';
 
 export const NECK_H = 214;
+
+/** What the neck draws. PlacedBar satisfies it; so does a transcription's bar (D-21). */
+export interface NeckNote {
+  name: string;
+  position: Position;
+  approach?: boolean;
+  /** U-16: drawn at 40 % with a "?" badge. */
+  unsure?: boolean;
+  /** U-16: moved by octaves to fit the neck; drawn with the warn ring. */
+  octave?: number;
+}
+
+export interface NeckBar {
+  notes: readonly NeckNote[];
+}
 const TOP = 40;
 const STRING_GAP = 44;
 const STRINGS = 'EADG';
@@ -48,8 +65,8 @@ export function paintNeck(
   ctx: CanvasRenderingContext2D,
   width: number,
   colors: PlayAlongColors,
-  current: PlacedBar | null,
-  next: PlacedBar | null,
+  current: NeckBar | null,
+  next: NeckBar | null,
   hot: number,
 ): void {
   const g = neckGeometry(width);
@@ -109,15 +126,30 @@ export function paintNeck(
 
   if (!current) return;
   // One dot per position, numbered with every beat it is played on ("2·4").
-  const byPosition = new Map<string, { index: number[]; approach: boolean; name: string; string: number; fret: number }>();
+  // Unsure only if every play at that position is; shifted if any is.
+  const byPosition = new Map<
+    string,
+    { index: number[]; approach: boolean; unsure: boolean; shifted: boolean; name: string; string: number; fret: number }
+  >();
   current.notes.forEach((n, i) => {
     const k = `${n.position.string}:${n.position.fret}`;
     const entry = byPosition.get(k);
+    const shifted = (n.octave ?? 0) !== 0;
     if (entry) {
       entry.index.push(i);
-      entry.approach ||= n.approach;
+      entry.approach ||= n.approach === true;
+      entry.unsure &&= n.unsure === true;
+      entry.shifted ||= shifted;
     } else {
-      byPosition.set(k, { index: [i], approach: n.approach, name: n.name, string: n.position.string, fret: n.position.fret });
+      byPosition.set(k, {
+        index: [i],
+        approach: n.approach === true,
+        unsure: n.unsure === true,
+        shifted,
+        name: n.name,
+        string: n.position.string,
+        fret: n.position.fret,
+      });
     }
   });
 
@@ -133,18 +165,34 @@ export function paintNeck(
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+    const dim = d.unsure && !isHot;
+    ctx.globalAlpha = dim ? 0.4 : 1;
     ctx.fillStyle = isHot ? colors.hot : colors.note;
     dot(ctx, x, y, r);
     ctx.fill();
-    if (d.approach) {
+    ctx.globalAlpha = 1;
+    if (d.approach || d.shifted) {
       ctx.strokeStyle = colors.approach;
       ctx.lineWidth = 3;
       ctx.stroke();
     }
-    ctx.fillStyle = colors.onNote;
+    ctx.fillStyle = dim ? colors.text : colors.onNote;
     ctx.font = `700 ${Math.max(9, 15 * scale)}px system-ui, sans-serif`;
     ctx.fillText(d.name, x, y - scale);
     ctx.font = `700 ${Math.max(7, 10 * scale)}px system-ui, sans-serif`;
     ctx.fillText(d.index.map((i) => i + 1).join('·'), x, y + 13 * scale);
+    if (d.unsure) {
+      const bx = x + r * 0.8;
+      const by = y - r * 0.8;
+      ctx.fillStyle = colors.raised;
+      dot(ctx, bx, by, 10 * scale);
+      ctx.fill();
+      ctx.strokeStyle = colors.next;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = colors.text;
+      ctx.font = `700 ${Math.max(8, 13 * scale)}px system-ui, sans-serif`;
+      ctx.fillText('?', bx, by + 4.5 * scale);
+    }
   }
 }

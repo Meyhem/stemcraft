@@ -86,3 +86,17 @@ describe('paintNeck', () => {
     expect(narrow.calls.arc).toContain(g.fretW * 0.48);
   });
 });
+
+describe('neck marks for a transcription (U-16)', () => {
+  it('badges an unsure note with a question mark', () => {
+    const { ctx, calls } = recordingContext();
+    paintNeck(ctx, 1000, colors, { notes: [{ ...note('B♭', 1, 1, 0), unsure: true }] }, null, -1);
+    expect(calls.fillText.some(([t]) => t === '?')).toBe(true);
+  });
+
+  it('draws no badge on a sure note', () => {
+    const { ctx, calls } = recordingContext();
+    paintNeck(ctx, 1000, colors, { notes: [note('G', 0, 3, 0)] }, null, -1);
+    expect(calls.fillText.some(([t]) => t === '?')).toBe(false);
+  });
+});
