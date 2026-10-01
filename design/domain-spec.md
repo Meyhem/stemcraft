@@ -285,6 +285,7 @@ When it lands, transcription is a second note source for the Play along screen n
 ## Backlog
 
 - Guitar transcription (the generated shapes and strums cover practising over the chords)
+- Tab editor: hand-edit the bass and guitar tabs (fix or write notes, frets, strums) instead of only using the generated ones
 
 ## Open questions
 
