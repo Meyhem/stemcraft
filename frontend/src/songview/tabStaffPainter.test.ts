@@ -38,6 +38,46 @@ const note = (start: number, fret: number, extra: Partial<TabNote> = {}): TabNot
 });
 const scale = { pxPerSample: 0.01, pxPerBar: 960, contentWidth: 10000 };
 
+describe('dense passages (still one readable chip per note)', () => {
+  const paint = (notes: TabNote[]) => {
+    const r = recording();
+    paintStaff(r.ctx, { width: 800, scrollLeft: 0, scale, notes, hot: -1, bars: [], beats: [], colors });
+    return r.texts;
+  };
+
+  it('draws every fret number even when notes are closer than a full chip', () => {
+    // 1600 samples apart = 16 px at this scale: half a full chip.
+    const texts = paint([note(0, 3), note(1600, 3), note(3200, 5), note(4800, 3)]);
+    expect(texts.filter(([s]) => /^\d+$/.test(s)).map(([s]) => s)).toEqual(['3', '3', '5', '3']);
+  });
+
+  it('centres each label inside its own narrowed chip, left to right', () => {
+    const xs = paint([note(0, 3), note(1600, 3), note(3200, 3)]).map(([, x]) => x);
+    // 16 px apart: each chip is 14 px (a 2 px gap before the next), label at its centre.
+    expect(xs[0]).toBe(7);
+    expect(xs[1]).toBe(23);
+    expect(xs[2]).toBe(47); // the last has the room it needs: a full 30 px chip
+  });
+
+  it("drops the unsure '?' before the fret when a chip is narrowed, but keeps the fret", () => {
+    const texts = paint([note(0, 12, { unsure: true }), note(2000, 3)]);
+    expect(texts.map(([s]) => s)).toContain('12');
+  });
+
+  it('keeps the full label where there is room', () => {
+    const texts = paint([note(0, 3, { unsure: true }), note(9600, 3)]);
+    expect(texts.map(([s]) => s)).toContain('3?');
+  });
+
+  it('notes on different strings do not narrow each other', () => {
+    const r = recording();
+    const a = note(0, 3);
+    const b = { ...note(1000, 5), position: { string: 2, fret: 5 } };
+    paintStaff(r.ctx, { width: 800, scrollLeft: 0, scale, notes: [a, b], hot: -1, bars: [], beats: [], colors });
+    expect(r.texts.find(([s]) => s === '3')![1]).toBe(15); // full 30 px chip, centred
+  });
+});
+
 describe('tab staff painter', () => {
   it('draws the low E at the bottom', () => {
     expect(staffStringY(0)).toBeGreaterThan(staffStringY(3));

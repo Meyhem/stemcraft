@@ -304,7 +304,15 @@ def _circle_args(argstr):
 #   now  sounding at the playhead, accent
 #   u    unsure (low confidence): same hue at 40 %, fret number gets a "?"
 #   o    substituted (here: raised an octave, below the open E): warn ring + "↑8"
+# Dense notes (as tabStaffPainter.ts): a chip narrows to the room before the next note on
+# its string, its label steps down 17 -> 13 -> 11 px (the "?" goes first), and a thin
+# ground-coloured edge keeps touching chips apart.
 TAB_STRINGS = ["G", "D", "A", "E"]
+TAB_SIZES = (17, 13, 11)
+
+
+def _tab_fit(text, width):
+    return next((s for s in TAB_SIZES if len(text) * s * 0.6 + 4 <= width), None)
 
 
 def _tab_notes(spec):
@@ -346,10 +354,20 @@ def tabstaff(w=1200, ppb=280, start=1.0, bpb=4, notes="", part="lane", sh=40):
         y = top + sh * si
         o.append(f'<line x1="0" x2="{w}" y1="{y}" y2="{y}" stroke="var(--ds-text-3)" '
                  f'stroke-width="{1.4+si*0.6:.1f}"/>')
-    for bar, onset, dur, si, fret, kind in _tab_notes(notes):
+    parsed = _tab_notes(notes)
+    nxt, seen = [None] * len(parsed), {}
+    for i in range(len(parsed) - 1, -1, -1):
+        nxt[i] = seen.get(parsed[i][3])
+        seen[parsed[i][3]] = bx(parsed[i][0], parsed[i][1])
+    for i, (bar, onset, dur, si, fret, kind) in enumerate(parsed):
         x, end, y = bx(bar, onset), bx(bar, onset + dur), top + sh * si
-        label = f"{fret}?" if kind == "u" else str(fret)
-        cw = max(30, 14 + 11 * len(label))
+        full = f"{fret}?" if kind == "u" else str(fret)
+        room = float("inf") if nxt[i] is None else nxt[i] - x - 2
+        cw = max(14, min(max(30, 14 + 11 * len(full)), room))
+        size = _tab_fit(full, cw)
+        label = full if size else str(fret)
+        size = size or _tab_fit(label, cw) or 11
+        rx = min(7, cw / 3)
         fill, txt, op = "var(--ds-bass)", "var(--ds-ground)", 1
         if kind == "now":
             fill, txt = "var(--ds-accent)", "var(--ds-on-accent)"
@@ -362,13 +380,15 @@ def tabstaff(w=1200, ppb=280, start=1.0, bpb=4, notes="", part="lane", sh=40):
             o.append(f'<rect x="{x-6:.1f}" y="{y-20}" width="{cw+12}" height="40" rx="10" '
                      f'fill="var(--ds-accent)" opacity=".22"/>')
         ring = ' stroke="var(--ds-warn)" stroke-width="3"' if kind == "o" else ""
-        o.append(f'<rect x="{x:.1f}" y="{y-14}" width="{cw}" height="28" rx="7" fill="{fill}" '
+        o.append(f'<rect x="{x:.1f}" y="{y-14}" width="{cw:.1f}" height="28" rx="{rx:.1f}" fill="{fill}" '
                  f'opacity="{op}"/>')
+        o.append(f'<rect x="{x:.1f}" y="{y-14}" width="{cw:.1f}" height="28" rx="{rx:.1f}" fill="none" '
+                 f'stroke="var(--ds-ground)" stroke-width="1.5"/>')
         if ring:
-            o.append(f'<rect x="{x:.1f}" y="{y-14}" width="{cw}" height="28" rx="7" fill="none"{ring}/>')
+            o.append(f'<rect x="{x:.1f}" y="{y-14}" width="{cw:.1f}" height="28" rx="{rx:.1f}" fill="none"{ring}/>')
             o.append(f'<text x="{x+cw/2:.1f}" y="{y-19}" text-anchor="middle" font-size="13" font-weight="700" '
                      f'fill="var(--ds-warn)" font-family="ui-monospace,monospace">↑8</text>')
-        o.append(f'<text x="{x+cw/2:.1f}" y="{y+6}" text-anchor="middle" font-size="17" font-weight="700" '
+        o.append(f'<text x="{x+cw/2:.1f}" y="{y+size*0.35:.1f}" text-anchor="middle" font-size="{size}" font-weight="700" '
                  f'fill="{txt}" font-family="ui-monospace,monospace">{label}</text>')
     o.append("</svg>")
     return "".join(o)

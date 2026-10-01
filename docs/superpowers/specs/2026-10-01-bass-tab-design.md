@@ -47,7 +47,8 @@ re-derivation from `stems/bass.wav`, which never changes (invariant 3).
   "model": "crepe-full",
   "device": "cuda",
   "params": {"fmin_hz": 32.0, "fmax_hz": 400.0, "hop_samples": 480,
-             "voiced_min": 0.5, "gate_db": -45.0, "jump_semitones": 0.6, "min_note_samples": 2880},
+             "voiced_min": 0.5, "gate_db": -45.0, "jump_semitones": 0.6, "min_note_samples": 2880,
+             "min_repeat_samples": 4320},
   "notes": [
     {"start": 108000, "end": 117600, "midi": 31, "cents": -6.5, "confidence": 0.84}
   ]
@@ -92,7 +93,9 @@ Declared steps (D-17): `load` "Load bass stem" (0.05), `track` "Track pitch" (0.
   - A note is a run of voiced frames.
   - The run splits on a pitch jump: three consecutive frames more than 0.6 semitones
     from the running median.
-  - It also splits on an onset from librosa onset detection on the stem (repeated notes).
+  - It also splits on an onset from librosa onset detection on the stem (repeated notes),
+    but only once the note has lasted 90 ms. A second onset peak just after the attack is
+    the same pluck (on Fortunate Son it cut 48 eighths into 60 ms + 160 ms pairs).
   - A fragment shorter than 60 ms merges into the previous note when it is adjacent and
     of the same pitch. Otherwise it is dropped.
   - Pitch is the rounded median. `cents` is the residual. Confidence is the mean

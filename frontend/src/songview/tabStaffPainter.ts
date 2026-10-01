@@ -3,6 +3,11 @@
 // four strings, highest on top; a note is a mono fret chip whose left edge is its
 // onset, with a tail to where it stops, never snapped to the grid. Only the visible
 // slice [scrollLeft, scrollLeft + width) is painted.
+//
+// Dense passages stay legible: a chip narrows to the room before the next note on its
+// string (never past it), its fret number steps down in size to fit, and every chip has
+// a thin ground-coloured edge, so touching notes still read as separate attacks. The
+// unsure "?" is the first thing to go when room runs out; the 40 % fill still says it.
 import type { TabNote } from '../music/bassTab';
 import { showBeatLines, type TimeScale } from '../music/timeScale';
 import type { PlayAlongColors } from '../playalong/colors';
@@ -22,6 +27,29 @@ export function chipLabel(note: TabNote): string {
 }
 
 const chipWidth = (label: string) => Math.max(30, 14 + 11 * label.length);
+/** The narrowest chip: a one- or two-digit fret at the smallest size still reads. */
+const MIN_CHIP = 14;
+/** Space kept between a narrowed chip and the next note's onset. */
+const CHIP_GAP = 2;
+/** Font sizes a label may step down through, and the width of one mono glyph at each. */
+const LABEL_SIZES = [17, 13, 11] as const;
+const SMALLEST = 11;
+const glyph = (size: number) => size * 0.6;
+
+/** The largest size at which `text` fits a chip `width` wide, or null. */
+function fitSize(text: string, width: number): number | null {
+  for (const size of LABEL_SIZES) if (text.length * glyph(size) + 4 <= width) return size;
+  return null;
+}
+
+/** What to print on a chip `width` wide: the full label, else the bare fret, smaller. */
+function fitLabel(note: TabNote, width: number): { text: string; size: number } {
+  const full = chipLabel(note);
+  const fullSize = fitSize(full, width);
+  if (fullSize !== null) return { text: full, size: fullSize };
+  const fret = String(note.position.fret);
+  return { text: fret, size: fitSize(fret, width) ?? SMALLEST };
+}
 const octaveLabel = (octave: number) => `${octave > 0 ? '↑' : '↓'}${8 * Math.abs(octave)}`;
 
 export interface StaffView {
@@ -73,13 +101,23 @@ export function paintStaff(ctx: CanvasRenderingContext2D, view: StaffView): void
     ctx.stroke();
   }
 
+  // Where the next note on the same string starts: a chip never reaches past it.
+  const nextOnString: number[] = new Array(notes.length);
+  const seen = [Infinity, Infinity, Infinity, Infinity];
+  for (let i = notes.length - 1; i >= 0; i--) {
+    const s = notes[i]!.position.string;
+    nextOnString[i] = seen[s]!;
+    seen[s] = notes[i]!.start;
+  }
+
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   notes.forEach((note, i) => {
-    const label = chipLabel(note);
-    const cw = chipWidth(label);
     const left = x(note.start);
     const end = x(note.end);
+    const room = nextOnString[i] === Infinity ? Infinity : x(nextOnString[i]!) - left - CHIP_GAP;
+    const cw = Math.max(MIN_CHIP, Math.min(chipWidth(chipLabel(note)), room));
+    const label = fitLabel(note, cw);
     if (left > width || Math.max(left + cw, end) < 0) return;
     const y = staffStringY(note.position.string);
     const isHot = i === hot;
@@ -107,9 +145,13 @@ export function paintStaff(ctx: CanvasRenderingContext2D, view: StaffView): void
     ctx.globalAlpha = alpha;
     ctx.fillStyle = fill;
     ctx.beginPath();
-    ctx.roundRect(left, y - CHIP_H / 2, cw, CHIP_H, 7);
+    ctx.roundRect(left, y - CHIP_H / 2, cw, CHIP_H, Math.min(7, cw / 3));
     ctx.fill();
     ctx.globalAlpha = 1;
+    // The edge that keeps touching chips apart.
+    ctx.strokeStyle = colors.ground;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
     if (note.octave !== 0) {
       // A substitution says what it changed (U-16, N-08).
       ctx.strokeStyle = colors.approach;
@@ -120,7 +162,7 @@ export function paintStaff(ctx: CanvasRenderingContext2D, view: StaffView): void
       ctx.fillText(octaveLabel(note.octave), left + cw / 2, y - 19);
     }
     ctx.fillStyle = note.unsure && !isHot ? colors.text : colors.onNote;
-    ctx.font = '700 17px ui-monospace, monospace';
-    ctx.fillText(label, left + cw / 2, y + 6);
+    ctx.font = `700 ${label.size}px ui-monospace, monospace`;
+    ctx.fillText(label.text, left + cw / 2, y + label.size * 0.35);
   });
 }
