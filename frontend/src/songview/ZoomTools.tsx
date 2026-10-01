@@ -1,6 +1,6 @@
 // How the Stems time axis is drawn: zoom and follow. View state, set up with both
-// hands free, so setup tier (40 px). It sits beside the Stems/Tabs switch because it
-// means nothing in the Tabs view. The wheel and drag-to-zoom on the axis reach the
+// hands free, so setup tier (40 px). It sits beside the view switch in Stems and Tab,
+// the two views with a time axis (TimeAxis). The wheel and drag-to-zoom on the axis reach the
 // same zoom (U-12).
 import { Button } from '../ui';
 import styles from './ZoomTools.module.css';

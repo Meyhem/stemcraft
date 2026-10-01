@@ -164,7 +164,7 @@ describe('PlayAlong', () => {
 
   it('is one click from the Stems content, and back', async () => {
     renderAt('/songs/abc123');
-    await userEvent.click(await screen.findByRole('link', { name: 'Tabs' }));
+    await userEvent.click(await screen.findByRole('link', { name: 'Play along' }));
     expect(await screen.findByTestId('neck-canvas')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('link', { name: 'Stems' }));
     expect(await screen.findByTestId('time-axis')).toBeInTheDocument();

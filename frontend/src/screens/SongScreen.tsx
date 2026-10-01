@@ -1,8 +1,8 @@
 // The song screen (UI spec §6, screen 3): one header, one transport, and under them
-// the content the player switches between -- Stems (the time axis and mixer) or Tabs
-// (the play-along neck). The session and the engine live one route up, in SongScope
-// (D-18), so switching content never stops the music; this layout only makes sure the
-// controls do not move either.
+// the content the player switches between -- Stems (the time axis and mixer), Tab (the
+// transcribed bass line, D-21) or Play along (the generated patterns, D-18). The session
+// and the engine live one route up, in SongScope (D-18), so switching content never
+// stops the music; this layout only makes sure the controls do not move either.
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 
@@ -152,7 +152,8 @@ export function SongScreen() {
           <NavLink end to={`/songs/${songId}`}>
             Stems
           </NavLink>
-          <NavLink to={`/songs/${songId}/play`}>Tabs</NavLink>
+          <NavLink to={`/songs/${songId}/tab`}>Tab</NavLink>
+          <NavLink to={`/songs/${songId}/play`}>Play along</NavLink>
         </nav>
         <div className={styles.tools} ref={setToolsSlot} />
       </div>

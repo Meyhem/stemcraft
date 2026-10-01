@@ -9,6 +9,7 @@ import { Library } from '../screens/Library';
 import { PlayAlong } from '../screens/PlayAlong';
 import { SongScreen } from '../screens/SongScreen';
 import { SongView } from '../screens/SongView';
+import { TabView } from '../screens/TabView';
 import { ImportModal } from '../screens/import/ImportModal';
 import type { ImportLinkState } from '../screens/import/importLink';
 import { SongScope } from '../session/SongScope';
@@ -62,12 +63,14 @@ export function AppRoutes() {
           <Route path="theory" element={<Suspense fallback={<Loader size="page" label="Loading theory…" />}><Theory /></Suspense>} />
           <Route path="theory/:tool" element={<Suspense fallback={<Loader size="page" label="Loading theory…" />}><Theory /></Suspense>} />
           {/* D-18: one session per song, above the content that plays it. SongScreen is
-              the shared header, transport and Stems/Tabs switch; the two child routes
-              are only the content under it, so switching never stops playback and
-              never moves a control. */}
+              the shared header, transport and Stems / Tab / Play along switch; the child
+              routes are only the content under it, so switching never stops playback and
+              never moves a control. Tab is the transcription (D-21), Play along the
+              generated patterns (D-18, D-20). */}
           <Route path="songs/:songId" element={<SongScope />}>
             <Route element={<SongScreen />}>
               <Route index element={<SongView />} />
+              <Route path="tab" element={<TabView />} />
               <Route path="play" element={<PlayAlong />} />
             </Route>
           </Route>

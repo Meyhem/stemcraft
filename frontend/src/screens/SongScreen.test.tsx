@@ -125,12 +125,12 @@ describe('SongScreen', () => {
     const play = screen.getByRole('button', { name: 'Play' });
     expect(screen.getByRole('link', { name: 'Stems' })).toHaveAttribute('aria-current', 'page');
 
-    await userEvent.click(screen.getByRole('link', { name: 'Tabs' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Play along' }));
     expect(await screen.findByTestId('neck-canvas')).toBeInTheDocument();
     expect(screen.queryByTestId('time-axis')).not.toBeInTheDocument();
     // The very same button element: the transport did not remount.
     expect(screen.getByRole('button', { name: 'Play' })).toBe(play);
-    expect(screen.getByRole('link', { name: 'Tabs' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Play along' })).toHaveAttribute('aria-current', 'page');
 
     await userEvent.click(screen.getByRole('link', { name: 'Stems' }));
     expect(await screen.findByTestId('time-axis')).toBeInTheDocument();
@@ -153,7 +153,7 @@ describe('SongScreen', () => {
   it('shows each view’s own tools beside the switch', async () => {
     renderAt('/songs/abc123');
     expect(await screen.findByRole('button', { name: 'Follow playhead' })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('link', { name: 'Tabs' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Play along' }));
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Follow playhead' })).not.toBeInTheDocument());
   });
 

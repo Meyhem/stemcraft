@@ -1,5 +1,5 @@
 // frontend/src/screens/PlayAlong.tsx
-// The Tabs content of the song screen (D-18, D-20): where Stems shows the
+// The Play along content of the song screen (D-18, D-20): where Stems shows the
 // audio, this shows what to play in this bar and the next, generated from the
 // chord chart. For bass, a neck of notes and a beat lane (patternSource); for
 // guitar, a neck with the chord shape and a strum lane (guitarSource). It
@@ -55,7 +55,7 @@ export function PlayAlong() {
   if (notAnalyzedYet) {
     return (
       <EmptyState title="This song needs analysis">
-        Tabs are built from the chord chart and the beat grid, which appear after analysis.
+        Play along is built from the chord chart and the beat grid, which appear after analysis.
       </EmptyState>
     );
   }

@@ -25,9 +25,10 @@ test('stem hues appear only where a stem is named (U-01)', () => {
   // A lit/pressed/selected control is chrome and takes --ds-accent. The muted stem hues
   // identify a stem, so the only stylesheets allowed to paint with one are the
   // fretboard's and the Theory tab's (its neck and its root chip, U-13), whose root-note
-  // dots are the instrument being named. (StemLane sets its
+  // dots are the instrument being named, and the Tab view's legend, whose swatches key
+  // the bass-hued notes transcribed from the bass stem (D-21, U-16). (StemLane sets its
   // --lane-hue from the stem's own token in TSX, which is the stem being named too.)
-  const ALLOWED = ['Fretboard.module.css', 'TheoryNeck.module.css', 'Theory.module.css'];
+  const ALLOWED = ['Fretboard.module.css', 'TheoryNeck.module.css', 'Theory.module.css', 'TabView.module.css'];
   const stemHue = /--ds-(vocals|drums|bass|other)\b/;
   const offenders = Object.entries(modules)
     .filter(([path]) => !ALLOWED.some((name) => path.endsWith(name)))
