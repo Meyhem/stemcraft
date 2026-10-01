@@ -9,7 +9,7 @@ instrument and play along.
 - GPU stem separation into vocals, drums, bass and other
 - Live mixer: mute, solo and volume per stem
 - A thin glow along the navbar pulses with each stem you can hear while a song plays
-- While anything loads, a small version of that glow pounds to a 120 bpm groove beside a label, page-wide for a whole screen or inline for one part of it (a still frame under reduced motion)
+- While anything loads, a small version of that glow pounds to a 120 bpm groove beside a label, page-wide for a whole screen or inline for one part of it (a still frame under reduced motion). The same strip is the splash screen while the app downloads
 - Stems view time axis: the wheel zooms at the pointer, dragging across the lanes zooms to
   that range, Shift+wheel or the scrollbar pans, and a click on the ruler seeks
 - Tempo (50–150 %, 10 % a press; the arrow keys step 5 %) and pitch (±12 semitones) change without re-separating; stems are never modified

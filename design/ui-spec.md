@@ -171,6 +171,9 @@ hit-target tiers rather than one.
   is `aria-hidden`, and the label carries the meaning (`role="status"`).
   `prefers-reduced-motion` paints one still frame rather than hiding it, because a
   loader that disappears looks like a page that has finished loading.
+  The splash in `frontend/index.html`, shown while the bundle downloads, is the `page`
+  loader in plain HTML and CSS (no JS has run yet), with the stem hues written out as
+  literals that a test holds to `tokens.css`; React replaces it on first render.
   *Rejected:* a generic ring spinner in accent (says nothing about the app); a
   four-bar equaliser (a second visual language for the same stems).
   *Reversibility:* two-way, trivially.

@@ -5,9 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Stemcraft</title>
+    <!-- U-15: the splash. Shown while the bundle downloads, so it is plain HTML and CSS
+         with the token values written out (tokens.css has not loaded yet; a test holds
+         them to it). React replaces #root's children on first render, which removes it. -->
+    <style>
+      html { background: #0B0C0E; }
+      #splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+        color: #9BA3AE; font: 15px/22px ui-sans-serif, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif; }
+      #splash .bar { position: relative; width: 220px; height: 3px; overflow: hidden; isolation: isolate; }
+      #splash .bar i { position: absolute; inset: 0; mix-blend-mode: screen; }
+      #splash .bar i::before, #splash .bar i::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 50%;
+        background: linear-gradient(90deg, transparent, var(--c), transparent); animation: splash-drift 3.1s ease-in-out infinite alternate; }
+      #splash .bar i::after { width: 35%; }
+      #splash .lv { --c: #E0A458; animation: splash-swell 5.7s ease-in-out infinite alternate; }
+      #splash .ld { --c: #D9605F; animation: splash-hit .5s ease-out infinite; }
+      #splash .lb { --c: #4FC3B0; animation: splash-hit 1s ease-out infinite; }
+      #splash .lo { --c: #8E85E0; animation: splash-hit .5s ease-out -.25s infinite; }
+      #splash .lv::before { animation-duration: 5.3s; animation-delay: -.5s; } #splash .lv::after { animation-duration: 6.1s; animation-delay: -4s; }
+      #splash .ld::before { animation-duration: 3.7s; animation-delay: -2.9s; } #splash .ld::after { animation-duration: 4.9s; animation-delay: -1s; }
+      #splash .lb::before { animation-duration: 4.1s; animation-delay: -3.3s; } #splash .lb::after { animation-duration: 5.7s; animation-delay: -2.2s; }
+      #splash .lo::before { animation-duration: 3.3s; animation-delay: -1.6s; } #splash .lo::after { animation-duration: 4.5s; animation-delay: -3.7s; }
+      @keyframes splash-drift { from { left: -25%; } to { left: 75%; } }
+      @keyframes splash-hit { 0% { opacity: .8; } 60%, 100% { opacity: .2; } }
+      @keyframes splash-swell { from { opacity: .3; } to { opacity: .7; } }
+      @media (prefers-reduced-motion: reduce) { #splash .bar i, #splash .bar i::before, #splash .bar i::after { animation: none; opacity: .7; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="splash" role="status">
+        <span class="bar" aria-hidden="true"><i class="lv"></i><i class="ld"></i><i class="lb"></i><i class="lo"></i></span>
+        <span>Starting Stemcraft…</span>
+      </div>
+    </div>
+    <noscript>Stemcraft needs JavaScript.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
