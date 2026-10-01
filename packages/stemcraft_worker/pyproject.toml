@@ -20,6 +20,9 @@ dependencies = [
     # Phase 5 (chords, vendored BTC): CQT feature extraction, same tool BTC's own
     # upstream code uses.
     "librosa>=0.10",
+    # D-21: bass transcription. Resolves against the cu128 torch pinned at the
+    # root (verified 2026-10-01: adds only torchcrepe and resampy).
+    "torchcrepe>=0.0.24",
     # Phase 5 (Q-02 deviation, key detection): pinned to an exact dev build, not a
     # range -- it is the *only* essentia release with a manylinux/cp312 Linux wheel.
     # Every later dev build (up to today's 2.1b6.dev1438) only ships macOS and

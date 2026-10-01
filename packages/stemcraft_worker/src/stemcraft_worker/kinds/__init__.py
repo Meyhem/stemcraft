@@ -8,4 +8,5 @@ from . import (  # noqa: F401
     probe,
     separate_song,
     split_album,
+    transcribe_song,
 )
