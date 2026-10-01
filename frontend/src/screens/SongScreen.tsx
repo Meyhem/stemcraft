@@ -107,7 +107,7 @@ export function SongScreen() {
           {String(analysisError)}
         </p>
       )}
-      {!engine && !engineError && <Loader label="Loading stems…" />}
+      {!engine && !engineError && <Loader size="page" label="Loading stems…" />}
 
       {/* Pinned while the page scrolls: the one surface touched with an instrument in
           hand, found in the same place whichever content is showing. */}
