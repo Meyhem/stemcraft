@@ -35,7 +35,7 @@ shown on the neck in time with the music.
   `.gp5` export can come later from the same `BarNotes`.
 - **Per-loop or per-bar patterns.** One pattern per song. Per-loop overrides were
   considered and dropped.
-- **Other tunings, 5-string, guitar.** The neck is EADG standard. Pitch shift is
+- **Other tunings, 5-string.** (Guitar: since 2026-10-01, D-20 and `2026-10-01-guitar-tabs-design.md`.) The neck is EADG standard. Pitch shift is
   handled by transposing (below), not by a tuning setting.
 - **Mix controls on the Play along screen.** Mute, solo and gain stay in Song view.
 

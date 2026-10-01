@@ -264,8 +264,11 @@ assuming it can vary.
    horizontally scrolling time axis holding the seek ruler, the chord row aligned to
    bars, and four full-height stem lanes with beat and downbeat grid, loop region and
    playhead; the 200 px lane heads stay put while it scrolls; its tools are zoom and
-   Follow playhead (U-12). **Tabs** is the play-along content: key and pattern pickers,
-   the neck, the beat lane and the chord ribbon; its tool is the Scale & fretboard link.
+   Follow playhead (U-12). **Tabs** is the play-along content: a Bass | Guitar switch, key and
+   pattern pickers (bass: notes, rhythm, approach; guitar: style, strum, position, simplify),
+   the neck (4-string notes, or a 6-string chord shape in the other-stem colour), the beat
+   lane (or strum lane) and the chord ribbon (guitar mockup:
+   `design/ui/src/pages/screens/play-along-guitar.html`); its tool is the Scale & fretboard link.
    There is no right rail: key candidates live only in the Tabs key picker. Switching
    content never stops playback and never moves a control (D-18). Every value auto-saves
    to `song.json`; zoom and scroll are view state and never do. Mockup:

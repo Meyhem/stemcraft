@@ -531,6 +531,7 @@ audit requirement exists.
   activities); per-loop pattern overrides (dropped for simplicity).
   *Reversibility:* two-way. The `song.json` field is additive (v2 → v3).
   Design: `docs/superpowers/specs/2026-09-29-play-along-design.md`.
+  *Amended 2026-10-01 by D-20:* guitar is no longer a non-goal; the pitch-shift-instead-of-tunings stance stands.
 
 - **D-19 — The Music Theory tab is a browser-side lookup on tonal.js; `theory.json` is API-owned.**
   A top-level Theory tab (`/theory/:tool`) with a rail of 13 tools (scale, chord and
@@ -553,6 +554,26 @@ audit requirement exists.
   beside the engine needs its own design).
   *Reversibility:* two-way. The file and endpoints are additive, and `tonal` sits behind `music/`.
   Design: `docs/superpowers/specs/2026-09-29-music-theory-design.md`.
+
+- **D-20 — Guitar Tabs are generated chord shapes and strums, beside the bass patterns.**
+  The Tabs view gets a Bass | Guitar switch. In guitar mode each bar's detected chord
+  is drawn as a shape on a 6-string, 12-fret neck in standard tuning, with a strum lane
+  under it, all generated in the browser (`music/guitarChords.ts`, `guitarShapes.ts`,
+  `strums.ts`, `guitarSource.ts`) behind the same `TabSource` seam as the bass
+  patterns. The recipe is `play_along.instrument` and `play_along.guitar` (style, strum,
+  position, simplify) in `song.json` v4; nothing derived is stored. A Viterbi pass picks
+  one shape per bar to keep the hand still. Every fallback (a style with no shape, a
+  position window with none, a simplified chord, a push into nothing) is drawn as a
+  substitution (N-08).
+  *Because:* the voicing search already existed (D-19), and rhythm guitar over a chord
+  chart is what a guitarist practises against. Guitar stays in the `other` stem and
+  cannot be separated; the screen says so.
+  *Rejected:* picked arpeggios (duplicates the bass mode); generalising the bass
+  pipeline to chords (bends `BarNotes` and risks the working bass fingering); embedding
+  the Theory Chord finder (not slaved to the playback clock); sharing the Theory
+  instrument (reverses D-19); guitar tunings (pitch shift covers them, as for bass).
+  *Reversibility:* two-way. The `song.json` fields are additive (v3 → v4).
+  Design: `docs/superpowers/specs/2026-10-01-guitar-tabs-design.md`.
 
 ## 12. Deferred decisions
 

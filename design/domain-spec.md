@@ -224,7 +224,23 @@ A separate practice screen for playing *with* the song rather than editing it. I
 - **Chord ribbon:** click a bar to move the playhead there
 - **Looping by bar numbers:** start and end bar steppers, or Ctrl-click (start) and shift-click (end) the chord ribbon. It is the same loop as Song view's.
 - **Honest about the chords:** a bar with no chord or an unclassified chord shows an empty neck saying so. When a pattern can't apply (e.g. a diatonic triad on a borrowed chord), the substitute is drawn and labelled; nothing is silently guessed.
-- Guitar, other tunings and a tab or Guitar Pro export are later work
+- Other tunings and a tab or Guitar Pro export are later work
+
+### Play along: guitar chords and strums
+
+The same Tabs view, switched to **Guitar** (per song). Design:
+`docs/superpowers/specs/2026-10-01-guitar-tabs-design.md`.
+
+- **Live neck:** a 12-fret 6-string neck in standard tuning. This bar's chord shape is
+  drawn with the chord degree on each string, open strings as rings and muted ones as ✕;
+  the next bar's shape is hollow. The shape lights on every stroke.
+- **Strum lane:** the current and next bar as down and up strokes on the eighth notes, with a cursor sweeping in time.
+- **Style:** open chords, barre chords (E and A shapes), power chords or triads on the top strings
+- **Strum:** whole, half, quarters, eighths, folk, or push (the last up-stroke plays the next chord an eighth early, also into the loop start)
+- **Position:** auto, low (frets 0–5) or mid (5–9); shapes are chosen across the song to keep the hand still
+- **Simplify:** 7ths and 6ths reduced to triads
+- **Honest about the shapes:** a chord a style can't play falls back to another style, a chord outside the position window is drawn where it can be, and each says so. A chord no style can play shows an empty neck saying so.
+- **Guitar can't be separated:** it is in the *other* stem with keys and synths, so turn *other* down rather than muting it. The screen says so.
 
 ### Export
 
@@ -268,7 +284,7 @@ When it lands, transcription is a second note source for the Play along screen n
 
 ## Backlog
 
-- Guitar tabs
+- Guitar transcription (the generated shapes and strums cover practising over the chords)
 
 ## Open questions
 

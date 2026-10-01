@@ -22,6 +22,12 @@ instrument and play along.
   to eighth notes; optional chromatic, scale or fifth approach into the next bar), in the
   detected key or another candidate, and follow the pitch shift. Click a bar in the chord ribbon
   to jump there; loop by bar numbers or by Ctrl- and Shift-clicking the ribbon
+- Tabs view for guitar: switch Tabs to Guitar and each bar's chord is a shape on a
+  6-string neck, with the chord degree on every string, and a strum lane showing when
+  to hit it. Pick the style (open, barre, power chords, triads), the strum (whole to
+  eighths, folk, or push into the next chord), the neck position, and whether 7ths
+  and 6ths are simplified to triads. Shapes are chosen across the song to keep the hand
+  still, follow the pitch shift, and every substitution is labelled
 - Theory tab for 4- and 5-string bass and 6-string guitar in any tuning, left-handed too:
   scale, chord and note finders, name a chord from notes you tap, scale positions
   (pentatonic boxes, 3-notes-per-string, CAGED, position boxes), triads and inversions,
@@ -48,6 +54,7 @@ instrument and play along.
 
 ![Song screen — Stems](docs/screenshots/song-view.png)
 ![Song screen — Tabs](docs/screenshots/play-along.png)
+![Song screen — Tabs, guitar](docs/screenshots/play-along-guitar.png)
 ![Album splitter](docs/screenshots/album-splitter.png)
 ![Library](docs/screenshots/library.png)
 ![Add song](docs/screenshots/import.png)
@@ -56,9 +63,9 @@ instrument and play along.
 ![Theory: fretboard quiz](docs/screenshots/theory-quiz.png)
 ![Job queue](docs/screenshots/job-queue.png)
 
-All nine are captures of the running app, made with
-`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> play-along=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" "theory-shapes=/theory/scale-positions?root=A&scale=minor-pentatonic" theory-quiz=/theory/fretboard-quiz album-splitter=/splitter/<id> job-queue=/jobs`
-(API and dev server running; it loads the pages, and for the Tabs view it presses Space to play a few bars and pause again). The design system these follow —
+All ten are captures of the running app, made with
+`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> play-along=/songs/<id>/play play-along-guitar=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" "theory-shapes=/theory/scale-positions?root=A&scale=minor-pentatonic" theory-quiz=/theory/fretboard-quiz album-splitter=/splitter/<id> job-queue=/jobs`
+(API and dev server running; it loads the pages, and for the Tabs view it presses Space to play a few bars and pause again; for the guitar capture, switch that song's Tabs to Guitar first, and back to Bass after). The design system these follow —
 tokens, components and screen mockups — is in [design/ui](design/ui) (build it with
 `python3 design/ui/build.py`), with its rules in [design/ui-spec.md](design/ui-spec.md).
 
