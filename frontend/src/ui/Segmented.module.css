@@ -35,3 +35,10 @@
   background: var(--ds-accent);
   color: var(--ds-on-accent);
 }
+
+.item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.item:disabled:hover { color: var(--ds-text-2); }

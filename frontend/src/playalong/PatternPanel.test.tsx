@@ -44,4 +44,39 @@ describe('PatternPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: /E major/ }));
     expect(onChange).toHaveBeenLastCalledWith({ ...DEFAULT_PLAY_ALONG, key: { tonic: 'D', mode: 'major' } });
   });
+
+  it('swaps the bass rows for the guitar rows, and keeps each instrument\'s settings', async () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <PatternPanel candidates={candidates} value={DEFAULT_PLAY_ALONG} onChange={onChange} pitchSemitones={0} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Guitar' }));
+    const guitar = onChange.mock.lastCall![0];
+    expect(guitar).toEqual({ ...DEFAULT_PLAY_ALONG, instrument: 'guitar' });
+
+    rerender(<PatternPanel candidates={candidates} value={guitar} onChange={onChange} pitchSemitones={0} />);
+    expect(screen.queryByRole('group', { name: 'Notes' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Style' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Barre' }));
+    expect(onChange).toHaveBeenLastCalledWith({ ...guitar, guitar: { ...guitar.guitar, style: 'barre' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Push' }));
+    expect(onChange.mock.lastCall![0].guitar.strum).toBe('push');
+    await userEvent.click(screen.getByRole('checkbox', { name: /triads/ }));
+    expect(onChange.mock.lastCall![0].guitar.simplify).toBe(true);
+    // The bass pattern rides along untouched.
+    expect(onChange.mock.lastCall![0].pattern).toEqual(DEFAULT_PLAY_ALONG.pattern);
+  });
+
+  it('greys Position out for open chords and says why, keeping its value', () => {
+    const guitar = { ...DEFAULT_PLAY_ALONG, instrument: 'guitar' as const, guitar: { ...DEFAULT_PLAY_ALONG.guitar, position: 'mid' as const } };
+    const { rerender } = render(<PatternPanel candidates={candidates} value={guitar} onChange={vi.fn()} pitchSemitones={0} />);
+    expect(screen.getByRole('button', { name: 'Mid' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Mid' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('open shapes sit at frets 0–4')).toBeInTheDocument();
+    const barre = { ...guitar, guitar: { ...guitar.guitar, style: 'barre' as const } };
+    rerender(<PatternPanel candidates={candidates} value={barre} onChange={vi.fn()} pitchSemitones={0} />);
+    expect(screen.getByRole('button', { name: 'Mid' })).toBeEnabled();
+    expect(screen.queryByText('open shapes sit at frets 0–4')).not.toBeInTheDocument();
+  });
 });
+

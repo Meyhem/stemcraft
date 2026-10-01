@@ -33,3 +33,12 @@ test('the options are type=button so a segmented control inside a form cannot su
     expect(button).toHaveAttribute('type', 'button');
   }
 });
+
+test('a disabled group shows its value but ignores clicks', async () => {
+  const onChange = vi.fn();
+  render(<Segmented label="Instrument" value="bass" options={OPTIONS} onChange={onChange} disabled />);
+  expect(screen.getByRole('button', { name: /bass/i })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: /guitar/i })).toBeDisabled();
+  await userEvent.click(screen.getByRole('button', { name: /guitar/i }));
+  expect(onChange).not.toHaveBeenCalled();
+});

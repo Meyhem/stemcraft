@@ -14,6 +14,8 @@ export interface SegmentedProps<T extends string> {
   options: readonly SegmentedOption<T>[];
   onChange: (value: T) => void;
   className?: string;
+  /** Greys the whole group out and ignores clicks; the value is still shown. */
+  disabled?: boolean;
 }
 
 export function Segmented<T extends string>({
@@ -22,6 +24,7 @@ export function Segmented<T extends string>({
   options,
   onChange,
   className,
+  disabled = false,
 }: SegmentedProps<T>) {
   return (
     <div className={[styles.seg, className].filter(Boolean).join(' ')} role="group" aria-label={label}>
@@ -31,6 +34,7 @@ export function Segmented<T extends string>({
           type="button"
           className={styles.item}
           aria-pressed={option.value === value}
+          disabled={disabled}
           onClick={() => onChange(option.value)}
         >
           {option.label}
