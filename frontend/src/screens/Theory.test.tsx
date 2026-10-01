@@ -12,7 +12,7 @@ const songEntry = (id: string, title: string, hasAnalysis: boolean, lastPlayed: 
   song: { id, title, last_played_at: lastPlayed },
   state: hasAnalysis ? 'analyzed' : 'separated',
   unreadable: null,
-  files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: hasAnalysis },
+  files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: hasAnalysis, has_transcription: false },
 });
 
 const analysis = {

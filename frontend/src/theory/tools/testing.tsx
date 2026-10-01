@@ -24,7 +24,7 @@ export function renderTool(
       if (url === '/api/theory') return new Response(JSON.stringify(theory));
       if (url === '/api/songs') {
         const songs = options.analysis
-          ? [{ dir: 'x', song: { id: '01SONG', title: options.songTitle ?? 'Tightrope', last_played_at: null }, state: 'analyzed', unreadable: null, files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: true } }]
+          ? [{ dir: 'x', song: { id: '01SONG', title: options.songTitle ?? 'Tightrope', last_played_at: null }, state: 'analyzed', unreadable: null, files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: true, has_transcription: false } }]
           : [];
         return new Response(JSON.stringify({ songs }));
       }

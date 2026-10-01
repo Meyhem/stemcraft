@@ -22,6 +22,7 @@ import {
   type StepDecl,
   type Song,
   type SongEntry,
+  type Transcription,
 } from './client';
 import { sendTrackToLibrary } from '../splitter/toLibrary';
 
@@ -98,6 +99,23 @@ export function useAnalysis(songId: string | undefined) {
     queryKey: ['analysis', songId],
     queryFn: () => api.get<Analysis>(`/api/songs/${songId}/analysis`),
     enabled: Boolean(songId),
+  });
+}
+
+export function useTranscription(songId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['transcription', songId],
+    queryFn: () => api.get<Transcription>(`/api/songs/${songId}/transcription`),
+    enabled: Boolean(songId) && enabled,
+  });
+}
+
+/** D-21: enqueue (or re-run) the bass transcription. The job stream does the rest. */
+export function useStartTranscription(songId: string | undefined) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ job_id: number }>(`/api/songs/${songId}/transcribe`),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['jobs'] }),
   });
 }
 

@@ -24,7 +24,7 @@ const entry = {
   song,
   state: 'imported',
   unreadable: null,
-  files: { has_audio: true, has_peaks: true, has_stems: false, has_analysis: false },
+  files: { has_audio: true, has_peaks: true, has_stems: false, has_analysis: false, has_transcription: false },
 };
 
 afterEach(() => {

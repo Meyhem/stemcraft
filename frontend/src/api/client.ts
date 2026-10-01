@@ -256,6 +256,8 @@ export interface SongEntry {
     has_peaks: boolean;
     has_stems: boolean;
     has_analysis: boolean;
+    /** D-21: transcription.json exists. An extra beside the lifecycle, never a state. */
+    has_transcription: boolean;
   } | null;
 }
 
@@ -284,6 +286,28 @@ export interface ChordSegment {
   start_sample: number;
   end_sample: number;
   chord: string;
+}
+
+// Mirrors stemcraft_lib/transcription.py (D-21) plus the API's derived written_at.
+export interface TranscribedNote {
+  /** Sample index at 48 kHz; end exclusive. */
+  start: number;
+  end: number;
+  /** As recorded: the pitch shift is applied in the browser. */
+  midi: number;
+  cents: number;
+  confidence: number;
+}
+
+export interface Transcription {
+  schema_version: number;
+  source: 'bass';
+  model: string;
+  device: string;
+  params: Record<string, number>;
+  notes: TranscribedNote[];
+  /** When the worker wrote the file (its mtime), ISO 8601. */
+  written_at: string;
 }
 
 export interface Analysis {

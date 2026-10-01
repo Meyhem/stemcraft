@@ -38,7 +38,7 @@ const songEntry = {
   dir: 'abc123-test',
   state: 'separated',
   unreadable: null,
-  files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: false },
+  files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: false, has_transcription: false },
   song: {
     schema_version: 4,
     id: 'abc123',

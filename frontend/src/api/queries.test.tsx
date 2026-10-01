@@ -36,7 +36,7 @@ const songEntry = (s: Song): SongEntry =>
     song: s,
     state: 'analyzed',
     unreadable: null,
-    files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: true },
+    files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: true, has_transcription: false },
   }) as SongEntry;
 
 describe('songMedia', () => {
