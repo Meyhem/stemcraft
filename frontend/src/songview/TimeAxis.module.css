@@ -57,3 +57,8 @@
   border-inline: 1px solid var(--ds-accent);
   pointer-events: none;
 }
+
+/* A fixed-height row set (the Tab staff): as tall as its rows, no taller. */
+.fixed {
+  flex: none;
+}

@@ -180,7 +180,8 @@ export function paintNeck(
     ctx.font = `700 ${Math.max(9, 15 * scale)}px system-ui, sans-serif`;
     ctx.fillText(d.name, x, y - scale);
     ctx.font = `700 ${Math.max(7, 10 * scale)}px system-ui, sans-serif`;
-    ctx.fillText(d.index.map((i) => i + 1).join('·'), x, y + 13 * scale);
+    // Up to three plays are listed ("2·4"); more would spill out of the dot, so they are counted.
+    ctx.fillText(d.index.length > 3 ? `${d.index.length}×` : d.index.map((i) => i + 1).join('·'), x, y + 13 * scale);
     if (d.unsure) {
       const bx = x + r * 0.8;
       const by = y - r * 0.8;

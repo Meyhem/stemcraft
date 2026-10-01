@@ -145,6 +145,7 @@ export function TabView() {
       )}
       <TimeAxis
         defaultZoom={TAB_PX_PER_BAR}
+        fill={false}
         rows={(scale, scroller) => (
           <TabStaff
             notes={notes}

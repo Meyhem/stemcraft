@@ -35,11 +35,13 @@ import { ZoomTools } from './ZoomTools';
 export interface TimeAxisProps {
   /** Nominal px per bar the axis opens at; Stems opens at DEFAULT_PX_PER_BAR. */
   defaultZoom?: number;
+  /** Grow to fill the page's height (Stems' lanes share it). Off for fixed-height rows (Tab). */
+  fill?: boolean;
   /** The rows under the chord row, laid out against the axis's scale. */
   rows(scale: TimeScale, scroller: HTMLDivElement | null): ReactNode;
 }
 
-export function TimeAxis({ defaultZoom, rows }: TimeAxisProps) {
+export function TimeAxis({ defaultZoom, fill = true, rows }: TimeAxisProps) {
   const {
     chords,
     grid,
@@ -287,7 +289,7 @@ export function TimeAxis({ defaultZoom, rows }: TimeAxisProps) {
       <div
         ref={setScroller}
         data-testid="time-axis-scroller"
-        className={styles.scroller}
+        className={fill ? styles.scroller : `${styles.scroller} ${styles.fixed}`}
         onWheel={handleAxisWheel}
         onPointerDown={handleAxisPointerDown}
         onPointerMove={handleAxisPointerMove}

@@ -2,7 +2,7 @@
    lane. Heights are STAFF_H in tabStaffPainter.ts. Tokens only. */
 .row {
   display: flex;
-  flex: 1 0 auto;
+  flex: none;
 }
 
 .head {

@@ -100,3 +100,19 @@ describe('neck marks for a transcription (U-16)', () => {
     expect(calls.fillText.some(([t]) => t === '?')).toBe(false);
   });
 });
+
+describe('play-order label', () => {
+  it('counts the plays instead of listing them when one fret is played more than three times', () => {
+    const { ctx, calls } = recordingContext();
+    const notes = Array.from({ length: 8 }, (_, i) => note('G', 0, 3, i));
+    paintNeck(ctx, 1000, colors, { notes }, null, -1);
+    expect(calls.fillText.some(([t]) => t === '8×')).toBe(true);
+    expect(calls.fillText.some(([t]) => t.includes('·'))).toBe(false);
+  });
+
+  it('still lists up to three plays', () => {
+    const { ctx, calls } = recordingContext();
+    paintNeck(ctx, 1000, colors, { notes: [note('G', 0, 3, 0), note('G', 0, 3, 2)] }, null, -1);
+    expect(calls.fillText.some(([t]) => t === '1·2')).toBe(true);
+  });
+});
