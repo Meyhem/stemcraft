@@ -5,6 +5,9 @@ from stemcraft_lib.song import (
     SCHEMA_VERSION,
     STEM_NAMES,
     Loop,
+    PlayAlong,
+    PlayAlongGuitar,
+    PlayAlongKey,
     SongUnreadable,
     create_song_dir,
     derive_files,
@@ -183,14 +186,14 @@ def test_a_v1_song_migrates_forward_with_v1_fields_intact(tmp_path):
 
 def test_new_song_defaults_play_along_to_top_key_and_quarter_triads():
     song = new_song(title="T", artist="", source_kind="upload", source_value="original.mp3")
-    assert song.schema_version == 3
+    assert song.schema_version == 4
     assert song.play_along.key is None
     assert song.play_along.pattern.notes == "triad_chord"
     assert song.play_along.pattern.rhythm == "quarter"
     assert song.play_along.pattern.approach == "none"
 
 
-def test_a_v2_song_migrates_to_v3_with_default_play_along(tmp_path):
+def test_a_v2_song_migrates_forward_with_default_play_along(tmp_path):
     song_dir = tmp_path / "song"
     song_dir.mkdir()
     (song_dir / "song.json").write_text(
@@ -210,7 +213,7 @@ def test_a_v2_song_migrates_to_v3_with_default_play_along(tmp_path):
     )
 
     song = read_song(song_dir)
-    assert song.schema_version == 3
+    assert song.schema_version == 4
     # v2's fields survive; only play_along is defaulted.
     assert song.active_loop == Loop(name="", start_bar=4, end_bar=8)
     assert song.metronome is True
@@ -240,3 +243,67 @@ def test_play_along_rejects_an_unknown_pattern_or_tonic():
         PlayAlongPattern(notes="arpeggio")
     with pytest.raises(ValidationError):
         PlayAlongKey(tonic="H", mode="major")
+
+
+def test_new_song_opens_tabs_on_bass_with_open_chords_ready_for_guitar():
+    song = new_song(title="T", artist="", source_kind="upload", source_value="original.mp3")
+    assert song.play_along.instrument == "bass"
+    assert song.play_along.guitar.style == "open"
+    assert song.play_along.guitar.strum == "folk"
+    assert song.play_along.guitar.position == "auto"
+    assert song.play_along.guitar.simplify is False
+
+
+def test_a_v3_song_migrates_to_v4_keeping_its_bass_pattern(tmp_path):
+    song_dir = tmp_path / "song"
+    song_dir.mkdir()
+    (song_dir / "song.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 3,
+                "id": "abc123",
+                "title": "V3 Song",
+                "artist": "",
+                "source": {"kind": "upload", "value": "original.mp3"},
+                "created_at": "2026-09-01T00:00:00+00:00",
+                "play_along": {
+                    "key": {"tonic": "D", "mode": "minor"},
+                    "pattern": {"notes": "root_fifth", "rhythm": "eighth", "approach": "scale"},
+                },
+            }
+        )
+    )
+
+    song = read_song(song_dir)
+    assert song.schema_version == 4
+    assert song.play_along.key == PlayAlongKey(tonic="D", mode="minor")
+    assert song.play_along.pattern.notes == "root_fifth"
+    assert song.play_along.instrument == "bass"
+    assert song.play_along.guitar == PlayAlongGuitar()
+
+
+def test_guitar_settings_round_trip_through_disk(tmp_path):
+    song = new_song(title="T", artist="", source_kind="upload", source_value="original.mp3")
+    song.play_along.instrument = "guitar"
+    song.play_along.guitar = PlayAlongGuitar(
+        style="barre", strum="push", position="mid", simplify=True
+    )
+    song_dir = tmp_path / "song"
+    song_dir.mkdir()
+    write_song(song_dir, song)
+    assert read_song(song_dir).play_along == song.play_along
+
+
+def test_guitar_settings_reject_unknown_values_and_coerced_booleans():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        PlayAlongGuitar(style="jazz")
+    with pytest.raises(ValidationError):
+        PlayAlongGuitar(strum="reggae")
+    with pytest.raises(ValidationError):
+        PlayAlongGuitar(position="high")
+    with pytest.raises(ValidationError):
+        PlayAlongGuitar(simplify="yes")
+    with pytest.raises(ValidationError):
+        PlayAlong(instrument="drums")

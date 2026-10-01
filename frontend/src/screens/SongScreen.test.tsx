@@ -45,7 +45,7 @@ const songEntry = {
   unreadable: null,
   files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: true },
   song: {
-    schema_version: 3,
+    schema_version: 4,
     id: 'abc123',
     title: 'Test Song',
     artist: 'Someone',
@@ -58,7 +58,12 @@ const songEntry = {
     active_loop: null,
     metronome: false,
     count_in_bars: 0,
-    play_along: { key: null, pattern: { notes: 'triad_chord', rhythm: 'quarter', approach: 'none' } },
+    play_along: {
+      key: null,
+      instrument: 'bass',
+      pattern: { notes: 'triad_chord', rhythm: 'quarter', approach: 'none' },
+      guitar: { style: 'open', strum: 'folk', position: 'auto', simplify: false },
+    },
   },
 };
 

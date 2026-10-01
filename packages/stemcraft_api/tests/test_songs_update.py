@@ -100,11 +100,15 @@ def test_put_round_trips_play_along(client: TestClient):
     song = _create(client)
     assert song["play_along"] == {
         "key": None,
+        "instrument": "bass",
         "pattern": {"notes": "triad_chord", "rhythm": "quarter", "approach": "none"},
+        "guitar": {"style": "open", "strum": "folk", "position": "auto", "simplify": False},
     }
     song["play_along"] = {
         "key": {"tonic": "G", "mode": "major"},
+        "instrument": "guitar",
         "pattern": {"notes": "octave_pump", "rhythm": "eighth", "approach": "fifth"},
+        "guitar": {"style": "barre", "strum": "push", "position": "low", "simplify": True},
     }
     response = client.put(f"/api/songs/{song['id']}", json=song)
     assert response.status_code == 200
@@ -118,5 +122,12 @@ def test_put_rejects_an_unknown_pattern(client: TestClient):
         "key": None,
         "pattern": {"notes": "arpeggio", "rhythm": "quarter", "approach": "none"},
     }
+    response = client.put(f"/api/songs/{song['id']}", json=song)
+    assert response.status_code == 422
+
+
+def test_put_rejects_an_unknown_guitar_style(client: TestClient):
+    song = _create(client)
+    song["play_along"]["guitar"]["style"] = "jazz"
     response = client.put(f"/api/songs/{song['id']}", json=song)
     assert response.status_code == 422

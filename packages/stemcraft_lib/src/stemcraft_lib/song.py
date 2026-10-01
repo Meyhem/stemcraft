@@ -12,12 +12,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, StrictBool, ValidationError
 
 from .atomic import atomic_write_json
 from .ids import new_song_id, song_dirname
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 # Fixed at HTDemucs v4 training time, not configured and not detected.
 STEM_NAMES: tuple[str, ...] = ("vocals", "drums", "bass", "other")
@@ -78,14 +78,27 @@ class PlayAlongPattern(BaseModel):
     approach: Literal["none", "chromatic", "scale", "fifth"] = "none"
 
 
+class PlayAlongGuitar(BaseModel):
+    """v4 (D-20). The guitar Tabs' choices: which shapes, which strum, where on
+    the neck, and whether 7ths and 6ths are reduced to triads."""
+
+    style: Literal["open", "barre", "power", "triad"] = "open"
+    strum: Literal["whole", "half", "quarters", "eighths", "folk", "push"] = "folk"
+    position: Literal["auto", "low", "mid"] = "auto"
+    # Strict: a "yes" or a 1 from a hand-edited file is an error, not a coercion.
+    simplify: StrictBool = False
+
+
 class PlayAlong(BaseModel):
-    """v3 (D-18). The Play along screen's recipe: which key to think in (None =
-    the analysis's top candidate) and which pattern to generate. Only the
-    choice is stored; the notes and fret positions are derived in the browser
-    on every change."""
+    """v3 (D-18), v4 (D-20). The Tabs recipe: which key to think in (None =
+    the analysis's top candidate), which instrument is shown, and each
+    instrument's own choices. Only the choices are stored; notes, shapes and
+    fret positions are derived in the browser on every change."""
 
     key: PlayAlongKey | None = None
+    instrument: Literal["bass", "guitar"] = "bass"
     pattern: PlayAlongPattern = Field(default_factory=PlayAlongPattern)
+    guitar: PlayAlongGuitar = Field(default_factory=PlayAlongGuitar)
 
 
 class Source(BaseModel):
@@ -148,6 +161,11 @@ def _migrate(raw: dict, path: Path) -> dict:
         # v2 -> v3 (D-18) is additive in the same way: play_along defaults.
         raw = {**raw, "schema_version": 3}
         version = 3
+    if version == 3:
+        # v3 -> v4 (D-20) is additive again: play_along.instrument and
+        # play_along.guitar take their defaults, so a song opens on bass as before.
+        raw = {**raw, "schema_version": 4}
+        version = 4
     if version == SCHEMA_VERSION:
         return raw
     raise SongUnreadable(f"{path}: no migration from schema_version {version}")

@@ -158,16 +158,33 @@ export interface PlayAlongPattern {
   approach: PatternApproach;
 }
 
+// v4 (D-20): the guitar choices, next to the bass pattern.
+export type GuitarStyle = 'open' | 'barre' | 'power' | 'triad';
+export type GuitarStrum = 'whole' | 'half' | 'quarters' | 'eighths' | 'folk' | 'push';
+export type GuitarPosition = 'auto' | 'low' | 'mid';
+
+export interface PlayAlongGuitar {
+  style: GuitarStyle;
+  strum: GuitarStrum;
+  position: GuitarPosition;
+  simplify: boolean;
+}
+
 export interface PlayAlong {
   /** null = the analysis's top key candidate. */
   key: PlayAlongKey | null;
+  instrument: 'bass' | 'guitar';
+  /** The bass pattern. */
   pattern: PlayAlongPattern;
+  guitar: PlayAlongGuitar;
 }
 
 /** The server's defaults, for fixtures and for code that builds a Song by hand. */
 export const DEFAULT_PLAY_ALONG: PlayAlong = {
   key: null,
+  instrument: 'bass',
   pattern: { notes: 'triad_chord', rhythm: 'quarter', approach: 'none' },
+  guitar: { style: 'open', strum: 'folk', position: 'auto', simplify: false },
 };
 
 export interface Song {
