@@ -6,17 +6,16 @@
 import { useCallback, useRef } from 'react';
 
 import type { SampleIndex } from '../engine/types';
-import type { PlacedBar } from '../music/fingering';
 import { beatPosition, type Grid } from '../music/grid';
-import type { ResolvedKey } from '../music/patterns';
-import { chordText } from '../music/tabSource';
+import type { BarSummary } from '../music/tabSource';
 import { usePlayhead } from '../songview/usePlayhead';
 import styles from './PlayAlong.module.css';
 
 export interface NowReadoutProps {
-  bars: PlacedBar[];
+  bars: BarSummary[];
   nextOf(bar: number): number | null;
-  songKey: ResolvedKey;
+  /** Says what follows the pitch shift: the bass fingering or the guitar shapes. */
+  instrument: 'bass' | 'guitar';
   grid: Grid;
   pitchSemitones: number;
   getPosition(): SampleIndex;
@@ -24,7 +23,7 @@ export interface NowReadoutProps {
   seekNonce: number;
 }
 
-export function NowReadout({ bars, nextOf, songKey, grid, pitchSemitones, getPosition, playing, seekNonce }: NowReadoutProps) {
+export function NowReadout({ bars, nextOf, instrument, grid, pitchSemitones, getPosition, playing, seekNonce }: NowReadoutProps) {
   const barRef = useRef<HTMLSpanElement | null>(null);
   const beatRef = useRef<HTMLSpanElement | null>(null);
   const nowRef = useRef<HTMLSpanElement | null>(null);
@@ -42,13 +41,13 @@ export function NowReadout({ bars, nextOf, songKey, grid, pitchSemitones, getPos
       };
       set(barRef.current, at ? String(at.bar + 1) : '--');
       set(beatRef.current, at ? `beat ${at.beat + 1}` : '');
-      set(nowRef.current, current ? chordText(current, songKey) : '--');
-      set(nextRef.current, next ? chordText(next, songKey) : '');
-      const note = current?.plan.substitution ?? current?.plan.reason ?? '';
+      set(nowRef.current, current ? current.text : '--');
+      set(nextRef.current, next ? next.text : '');
+      const note = current?.note ?? '';
       set(noteRef.current, note);
       if (noteRef.current) noteRef.current.hidden = note === '';
     },
-    [bars, nextOf, songKey, grid],
+    [bars, nextOf, grid],
   );
   usePlayhead(getPosition, paint, playing, seekNonce);
 
@@ -70,7 +69,7 @@ export function NowReadout({ bars, nextOf, songKey, grid, pitchSemitones, getPos
       {pitchSemitones !== 0 && (
         <span className={styles.pitchNote}>
           pitch {pitchSemitones > 0 ? '+' : '−'}
-          {Math.abs(pitchSemitones)} st · fingering follows what you hear
+          {Math.abs(pitchSemitones)} st · {instrument === 'guitar' ? 'shapes follow' : 'fingering follows'} what you hear
         </span>
       )}
     </div>

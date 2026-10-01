@@ -8,16 +8,13 @@ import { useCallback, useRef, type MouseEvent } from 'react';
 
 import type { Loop } from '../api/client';
 import type { SampleIndex } from '../engine/types';
-import type { PlacedBar } from '../music/fingering';
 import { barAt, type Grid } from '../music/grid';
-import type { ResolvedKey } from '../music/patterns';
-import { chordText } from '../music/tabSource';
+import type { BarSummary } from '../music/tabSource';
 import { usePlayhead } from '../songview/usePlayhead';
 import styles from './PlayAlong.module.css';
 
 export interface ChordRibbonProps {
-  bars: PlacedBar[];
-  songKey: ResolvedKey;
+  bars: BarSummary[];
   loop: Loop | null;
   grid: Grid;
   getPosition(): SampleIndex;
@@ -27,7 +24,7 @@ export interface ChordRibbonProps {
   onSeekBar(bar: number): void;
 }
 
-export function ChordRibbon({ bars, songKey, loop, grid, getPosition, playing, seekNonce, onLoopBars, onSeekBar }: ChordRibbonProps) {
+export function ChordRibbon({ bars, loop, grid, getPosition, playing, seekNonce, onLoopBars, onSeekBar }: ChordRibbonProps) {
   const cells = useRef<(HTMLButtonElement | null)[]>([]);
   const lit = useRef(-1);
 
@@ -63,7 +60,6 @@ export function ChordRibbon({ bars, songKey, loop, grid, getPosition, playing, s
     <div className={styles.ribbon} role="group" aria-label="Chord chart by bar. Click moves the playhead, Ctrl-click sets the loop start, shift-click the end.">
       {bars.map((b, i) => {
         const inLoop = loop !== null && i >= loop.start_bar && i < loop.end_bar;
-        const text = b.plan.empty ? (b.plan.empty === 'no_chord' ? '–' : '?') : chordText(b, songKey);
         return (
           <button
             key={i}
@@ -74,11 +70,12 @@ export function ChordRibbon({ bars, songKey, loop, grid, getPosition, playing, s
             className={styles.cell}
             data-current="false"
             data-in-loop={inLoop ? 'true' : 'false'}
-            aria-label={`Bar ${i + 1}, ${chordText(b, songKey)}`}
+            aria-label={`Bar ${i + 1}, ${b.text}`}
             onClick={(event) => select(i, event)}
           >
             <span className={styles.cellBar}>{i + 1}</span>
-            {text}
+            {b.cell}
+            {b.sub && <span className={styles.cellSub}>{b.sub}</span>}
           </button>
         );
       })}

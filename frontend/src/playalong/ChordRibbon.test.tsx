@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PLAY_ALONG, type Analysis, type Song } from '../api/client';
 import { sampleIndex } from '../engine/types';
 import { buildGrid } from '../music/grid';
-import { patternSource } from '../music/tabSource';
+import { bassSummaries, patternSource } from '../music/tabSource';
 import { ChordRibbon } from './ChordRibbon';
 
 const analysis: Analysis = {
@@ -27,8 +27,7 @@ function renderRibbon(loop = { name: '', start_bar: 1, end_bar: 3 }) {
   if (!result.ok) throw new Error(result.error);
   render(
     <ChordRibbon
-      bars={result.bars}
-      songKey={result.key}
+      bars={bassSummaries(result.bars, result.key)}
       loop={loop}
       grid={grid}
       getPosition={() => sampleIndex(96_000 + 10)}
@@ -70,5 +69,24 @@ describe('ChordRibbon', () => {
     fireEvent.click(screen.getByRole('button', { name: /Bar 1/ }), { shiftKey: true });
     expect(onLoopBars).not.toHaveBeenCalled();
     expect(onSeekBar).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChordRibbon with a simplified chord', () => {
+  it('shows the chord as heard, what it was reduced to under it, and names the bar by what is played', () => {
+    render(
+      <ChordRibbon
+        bars={[{ bar: 0, text: 'Em', cell: 'Emin7', sub: '→ Em', note: 'Emin7 → Em' }]}
+        loop={null}
+        grid={grid}
+        getPosition={() => sampleIndex(0)}
+        playing={false}
+        seekNonce={0}
+        onLoopBars={vi.fn()}
+        onSeekBar={vi.fn()}
+      />,
+    );
+    const cell = screen.getByRole('button', { name: 'Bar 1, Em' });
+    expect(cell).toHaveTextContent('1Emin7→ Em');
   });
 });

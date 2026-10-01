@@ -78,6 +78,11 @@
   color: var(--ds-accent);
 }
 
+.cellSub {
+  font: 600 10px / 1 var(--ds-font);
+  color: var(--ds-warn);
+}
+
 .cellBar {
   font: 500 11px var(--ds-mono);
   color: var(--ds-text-3);
@@ -141,4 +146,24 @@
 
 .pitchNote {
   margin-left: auto;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-2);
+  min-height: 40px;
+  font-size: var(--ds-t-md);
+  cursor: pointer;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--ds-accent);
+}
+
+.hint {
+  font-size: var(--ds-t-xs);
+  color: var(--ds-text-3);
 }

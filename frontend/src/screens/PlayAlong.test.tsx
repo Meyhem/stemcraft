@@ -46,7 +46,7 @@ const songEntry = {
   unreadable: null,
   files: { has_audio: true, has_peaks: true, has_stems: true, has_analysis: true },
   song: {
-    schema_version: 3,
+    schema_version: 4,
     id: 'abc123',
     title: 'Test Song',
     artist: 'Someone',
@@ -59,7 +59,12 @@ const songEntry = {
     active_loop: null,
     metronome: false,
     count_in_bars: 0,
-    play_along: { key: null, pattern: { notes: 'triad_chord', rhythm: 'quarter', approach: 'none' } },
+    play_along: {
+      key: null,
+      instrument: 'bass',
+      pattern: { notes: 'triad_chord', rhythm: 'quarter', approach: 'none' },
+      guitar: { style: 'open', strum: 'folk', position: 'auto', simplify: false },
+    },
   },
 };
 
@@ -121,6 +126,21 @@ describe('PlayAlong', () => {
     await waitFor(() => expect(neck.getAttribute('aria-label')).toBe('Bar 1, G: G B D B. Next: Bar 2, C: C E G E'));
     expect(screen.getByRole('heading', { name: 'Test Song' })).toBeInTheDocument();
     expect(screen.getByText(/not a transcription/i)).toBeInTheDocument();
+  });
+
+  it('shows the guitar neck, a strum lane and the other-stem note in guitar mode', async () => {
+    songEntry.song.play_along.instrument = 'guitar';
+    try {
+      renderAt('/songs/abc123/play');
+      const neck = await screen.findByTestId('guitar-neck-canvas');
+      await waitFor(() => expect(neck.getAttribute('aria-label')).toBe('Bar 1, G: 320003. Next: Bar 2, C: x32010'));
+      expect(screen.getByTestId('strum-lane-canvas')).toBeInTheDocument();
+      expect(screen.queryByTestId('neck-canvas')).not.toBeInTheDocument();
+      expect(screen.getByText(/shares the other stem/i)).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Style' })).toBeInTheDocument();
+    } finally {
+      songEntry.song.play_along.instrument = 'bass';
+    }
   });
 
   it('saves a pattern change to song.json', async () => {

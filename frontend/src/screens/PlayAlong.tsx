@@ -1,22 +1,26 @@
 // frontend/src/screens/PlayAlong.tsx
-// The Tabs content of the song screen (D-18): where Stems shows the audio, this
-// shows what to play: a bass neck showing what to play in this bar
-// and the next, a beat lane showing when, generated from the chord chart by a
-// pattern you pick. It shares the song session (and so the engine, and the
-// transport above it) with Stems, so switching between them never stops the music.
+// The Tabs content of the song screen (D-18, D-20): where Stems shows the
+// audio, this shows what to play in this bar and the next, generated from the
+// chord chart. For bass, a neck of notes and a beat lane (patternSource); for
+// guitar, a neck with the chord shape and a strum lane (guitarSource). It
+// shares the song session (and so the engine, and the transport above it)
+// with Stems, so switching between them never stops the music.
 //
-// The patterns are arithmetic over detected chords: exact given the chords,
-// but the chords are probabilistic (R-05). The banner says so, and every
-// empty or substituted bar is labelled rather than guessed (N-08).
+// Both are arithmetic over detected chords: exact given the chords, but the
+// chords are probabilistic (R-05). The banner says so, and every empty or
+// substituted bar is labelled rather than guessed (N-08).
 import { useMemo } from 'react';
 
-import { patternSource } from '../music/tabSource';
+import { guitarSource, guitarSummaries } from '../music/guitarSource';
+import { bassSummaries, patternSource } from '../music/tabSource';
 import { BeatLane } from '../playalong/BeatLane';
 import { ChordRibbon } from '../playalong/ChordRibbon';
+import { GuitarNeck } from '../playalong/GuitarNeck';
 import { Neck } from '../playalong/Neck';
 import { NowReadout } from '../playalong/NowReadout';
 import { PatternPanel } from '../playalong/PatternPanel';
 import styles from '../playalong/PlayAlong.module.css';
+import { StrumLane } from '../playalong/StrumLane';
 import { useSongSession } from '../session/SongSession';
 import { Banner, EmptyState, Panel } from '../ui';
 
@@ -31,10 +35,21 @@ export function PlayAlong() {
     [loopArmed, loopStart, loopEnd],
   );
 
-  const result = useMemo(
-    () => (song && analysis && grid ? patternSource.barsFor({ song, analysis, grid, loop: armedLoop }) : null),
-    [song, analysis, grid, armedLoop],
+  const guitar = song?.play_along.instrument === 'guitar';
+  const bass = useMemo(
+    () => (!guitar && song && analysis && grid ? patternSource.barsFor({ song, analysis, grid, loop: armedLoop }) : null),
+    [guitar, song, analysis, grid, armedLoop],
   );
+  const strums = useMemo(
+    () => (guitar && song && analysis && grid ? guitarSource.barsFor({ song, analysis, grid, loop: armedLoop }) : null),
+    [guitar, song, analysis, grid, armedLoop],
+  );
+  const result = bass ?? strums;
+  const summaries = useMemo(() => {
+    if (bass?.ok) return bassSummaries(bass.bars, bass.key);
+    if (strums?.ok) return guitarSummaries(strums.bars);
+    return null;
+  }, [bass, strums]);
 
   // The transport above still plays; only this content has nothing to draw.
   if (notAnalyzedYet) {
@@ -56,7 +71,7 @@ export function PlayAlong() {
       )}
       {result && !result.ok && <Banner tone="error" title="No patterns" trace={result.error} />}
 
-      {grid && result?.ok && (
+      {grid && result?.ok && summaries && (
         <>
           <Panel className={styles.panel}>
             <PatternPanel
@@ -69,9 +84,9 @@ export function PlayAlong() {
 
           <Panel className={styles.panel}>
             <NowReadout
-              bars={result.bars}
+              bars={summaries}
               nextOf={result.nextOf}
-              songKey={result.key}
+              instrument={song.play_along.instrument}
               grid={grid}
               pitchSemitones={song.playback.pitch_semitones}
               getPosition={getPosition}
@@ -79,28 +94,52 @@ export function PlayAlong() {
               seekNonce={seekNonce}
             />
             <div className={styles.board}>
-              <Neck
-                bars={result.bars}
-                nextOf={result.nextOf}
-                songKey={result.key}
-                grid={grid}
-                getPosition={getPosition}
-                playing={playing}
-                seekNonce={seekNonce}
-              />
-              <BeatLane
-                bars={result.bars}
-                nextOf={result.nextOf}
-                songKey={result.key}
-                grid={grid}
-                getPosition={getPosition}
-                playing={playing}
-                seekNonce={seekNonce}
-              />
+              {bass?.ok && (
+                <>
+                  <Neck
+                    bars={bass.bars}
+                    nextOf={bass.nextOf}
+                    songKey={bass.key}
+                    grid={grid}
+                    getPosition={getPosition}
+                    playing={playing}
+                    seekNonce={seekNonce}
+                  />
+                  <BeatLane
+                    bars={bass.bars}
+                    nextOf={bass.nextOf}
+                    songKey={bass.key}
+                    grid={grid}
+                    getPosition={getPosition}
+                    playing={playing}
+                    seekNonce={seekNonce}
+                  />
+                </>
+              )}
+              {strums?.ok && (
+                <>
+                  <GuitarNeck
+                    bars={strums.bars}
+                    nextOf={strums.nextOf}
+                    grid={grid}
+                    getPosition={getPosition}
+                    playing={playing}
+                    seekNonce={seekNonce}
+                  />
+                  <StrumLane
+                    bars={strums.bars}
+                    nextOf={strums.nextOf}
+                    grid={grid}
+                    strum={song.play_along.guitar.strum}
+                    getPosition={getPosition}
+                    playing={playing}
+                    seekNonce={seekNonce}
+                  />
+                </>
+              )}
             </div>
             <ChordRibbon
-              bars={result.bars}
-              songKey={result.key}
+              bars={summaries}
               loop={song.active_loop}
               grid={grid}
               getPosition={getPosition}
@@ -111,10 +150,15 @@ export function PlayAlong() {
             />
           </Panel>
 
+          {guitar && (
+            <Banner tone="warn" title="Guitar shares the other stem with keys and synths">
+              It cannot be separated on its own, so turn other down rather than muting it.
+            </Banner>
+          )}
           <Banner tone="warn" role="note" title="A practice pattern over the detected chords, not a transcription">
-            These notes are generated from the chord chart and the key you pick. The arithmetic is exact, but the chords
-            themselves are detected and can be wrong. A bar with no chord shows an empty neck saying so; nothing is
-            guessed.
+            {guitar
+              ? 'These shapes are generated from the chord chart and the style you pick. The arithmetic is exact, but the chords themselves are detected and can be wrong. A bar with no chord shows an empty neck saying so, and a substituted shape says what it replaced; nothing is guessed.'
+              : 'These notes are generated from the chord chart and the key you pick. The arithmetic is exact, but the chords themselves are detected and can be wrong. A bar with no chord shows an empty neck saying so; nothing is guessed.'}
           </Banner>
         </>
       )}
