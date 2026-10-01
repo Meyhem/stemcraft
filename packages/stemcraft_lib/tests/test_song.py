@@ -307,3 +307,11 @@ def test_guitar_settings_reject_unknown_values_and_coerced_booleans():
         PlayAlongGuitar(simplify="yes")
     with pytest.raises(ValidationError):
         PlayAlong(instrument="drums")
+
+
+def test_derive_files_sees_a_transcription(tmp_path):
+    from stemcraft_lib.song import derive_files
+
+    assert derive_files(tmp_path).has_transcription is False
+    (tmp_path / "transcription.json").write_text("{}")
+    assert derive_files(tmp_path).has_transcription is True

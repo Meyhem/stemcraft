@@ -209,6 +209,12 @@ declare("analyze", [
     ("chords", "Chords", 0.35),
     ("write", "Write analysis", 0.05),
 ])
+declare("transcribe", [
+    ("load", "Load bass stem", 0.05),
+    ("track", "Track pitch", 0.75),
+    ("notes", "Find notes", 0.15),
+    ("write", "Write tab", 0.05),
+])
 declare("export", [("render", "Render & encode", 1.0)])
 declare("import_album", [
     ("decode", "Decode to 48 kHz", 0.5),

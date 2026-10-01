@@ -197,6 +197,8 @@ class SongFiles:
     has_peaks: bool
     has_stems: bool
     has_analysis: bool
+    # D-21: an optional extra beside the lifecycle, so it never changes `state`.
+    has_transcription: bool = False
 
     @property
     def state(self) -> SongState:
@@ -244,4 +246,5 @@ def derive_files(song_dir: Path) -> SongFiles:
             (stems / f"{name}.{ext}").is_file() for name in STEM_NAMES for ext in ("wav", "opus")
         ),
         has_analysis=(song_dir / "analysis.json").is_file(),
+        has_transcription=(song_dir / "transcription.json").is_file(),
     )
