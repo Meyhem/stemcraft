@@ -28,6 +28,11 @@
       @keyframes splash-drift { from { left: -25%; } to { left: 75%; } }
       @keyframes splash-hit { 0% { opacity: .8; } 60%, 100% { opacity: .2; } }
       @keyframes splash-swell { from { opacity: .3; } to { opacity: .7; } }
+      #splash .fail { max-width: min(640px, 90vw); display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+      #splash .fail b { color: #FF3B30; font-weight: 600; }
+      #splash .fail pre { margin: 0; padding: 12px; max-width: 100%; overflow: auto; white-space: pre-wrap; word-break: break-word;
+        background: #131519; border: 1px solid #2A2F37; border-radius: 8px; color: #EDEFF2; font: 13px/18px ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+      #splash .fail button { height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid #3A414B; background: #1A1D22; color: #EDEFF2; font: inherit; cursor: pointer; }
       @media (prefers-reduced-motion: reduce) { #splash .bar i, #splash .bar i::before, #splash .bar i::after { animation: none; opacity: .7; } }
     </style>
   </head>
@@ -39,6 +44,63 @@
       </div>
     </div>
     <noscript>Stemcraft needs JavaScript.</noscript>
+    <!-- N-08: if the bundle fails to load, or throws before React mounts, the splash must say
+         why instead of pulsing for ever. A script that fails to load fires `error` on the
+         script element, which does not bubble, hence the capture listener. -->
+    <script>
+      (function () {
+        var TIMEOUT_MS = 15000;
+        var done = false;
+        function splash() { return document.getElementById('splash'); }
+        function fail(title, detail) {
+          var el = splash();
+          if (done || !el) return;
+          done = true;
+          el.setAttribute('role', 'alert');
+          el.textContent = '';
+          var box = document.createElement('div');
+          box.className = 'fail';
+          var head = document.createElement('b');
+          head.textContent = title;
+          var trace = document.createElement('pre');
+          trace.textContent = detail;
+          var retry = document.createElement('button');
+          retry.type = 'button';
+          retry.textContent = 'Reload';
+          retry.addEventListener('click', function () { location.reload(); });
+          box.appendChild(head);
+          box.appendChild(trace);
+          box.appendChild(retry);
+          el.appendChild(box);
+        }
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (t && t !== window && t.tagName === 'SCRIPT') {
+            fail('Stemcraft could not load', 'The script ' + (t.src || '(inline)') + ' failed to load.');
+          } else {
+            fail('Stemcraft failed to start', e.error && e.error.stack ? e.error.stack : String(e.message));
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e.reason;
+          fail('Stemcraft failed to start', r && r.stack ? r.stack : String(r));
+        });
+        setTimeout(function () {
+          if (done || !splash()) return;
+          var script = document.querySelector('script[type="module"][src]');
+          var src = script ? script.getAttribute('src') : '';
+          var title = 'Stemcraft is taking too long to start';
+          if (!src) return fail(title, 'No application script is referenced by this page.');
+          fetch(src, { cache: 'no-store' }).then(function (r) {
+            fail(title, r.ok
+              ? src + ' answered HTTP ' + r.status + ' but the app has not started. The browser console has the reason.'
+              : src + ' answered HTTP ' + r.status + ' ' + r.statusText);
+          }, function (err) {
+            fail(title, src + ': ' + (err && err.message ? err.message : String(err)));
+          });
+        }, TIMEOUT_MS);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
