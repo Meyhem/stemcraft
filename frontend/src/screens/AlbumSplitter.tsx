@@ -39,6 +39,7 @@ import {
   useSendTrackToLibrary,
   useUpdateAlbum,
 } from '../api/queries';
+import { AlbumPulseBar } from '../pulse/AlbumPulseBar';
 import { AlbumUploadModal } from './AlbumUploadModal';
 import { trackSpans } from '../splitter/spans';
 import { TrackTable } from '../splitter/TrackTable';
@@ -380,6 +381,8 @@ function AlbumEditor({ albumId }: { albumId: string }) {
     setSeekNonce((n) => n + 1);
   }
 
+  const getPlayheadSeconds = useCallback(() => audioRef.current?.currentTime ?? 0, []);
+
   const getPlayheadSample = useCallback(
     () => Math.round((audioRef.current?.currentTime ?? 0) * SAMPLE_RATE),
     [],
@@ -400,6 +403,26 @@ function AlbumEditor({ albumId }: { albumId: string }) {
     if (audio.paused) startPlayback();
     else audio.pause();
   }
+
+  // Space toggles play/pause, as on the song view. A ref so the window listener is
+  // registered once yet always calls the current toggle.
+  const togglePlayRef = useRef(togglePlay);
+  togglePlayRef.current = togglePlay;
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== ' ' || event.ctrlKey || event.metaKey || event.altKey) return;
+      // Never steal Space from typing: album fields, track titles and cut times live here.
+      const target = event.target as HTMLElement | null;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) {
+        return;
+      }
+      // Also stops a focused button (Play, a track row) from clicking itself a second time.
+      event.preventDefault();
+      togglePlayRef.current();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   // A track's Play starts from its first sample; the waveform follows on its own once
   // the playhead is off-screen.
@@ -540,6 +563,12 @@ function AlbumEditor({ albumId }: { albumId: string }) {
         />
       )}
       {playError && <Banner tone="error" title="Playback failed" trace={playError} />}
+      <AlbumPulseBar
+        playing={playing}
+        envelope={envelope}
+        bucketsPerSecond={peaksQuery.data?.buckets_per_second ?? 0}
+        getSeconds={getPlayheadSeconds}
+      />
 
       {showWaveform ? (
         <WaveformMarkers

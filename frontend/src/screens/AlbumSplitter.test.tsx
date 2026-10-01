@@ -362,6 +362,28 @@ describe('AlbumSplitter', () => {
     }
   });
 
+  it('toggles play/pause with Space, but never while typing in a field', async () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+    try {
+      renderWith(readyAlbum);
+      await screen.findByRole('slider', { name: /split point 1/i });
+      fireEvent.keyDown(screen.getByLabelText('Album title'), { key: ' ' });
+      expect(play).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(document.body, { key: ' ' });
+      expect(play).toHaveBeenCalledTimes(1);
+
+      const audio = document.querySelector('audio')!;
+      Object.defineProperty(audio, 'paused', { configurable: true, value: false });
+      fireEvent.keyDown(document.body, { key: ' ' });
+      expect(pause).toHaveBeenCalledTimes(1);
+    } finally {
+      play.mockRestore();
+      pause.mockRestore();
+    }
+  });
+
   it("plays a track from its first sample when its row's play button is pressed", async () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
     try {
