@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Feedback & failure" subtitle="N-08 fail loudly: banners, real errors, progress, empty states" viewport="1000x2070" -->
+<!-- @dsCard group="Components" name="Feedback & failure" subtitle="N-08 fail loudly: banners, real errors, progress, loading, empty states" viewport="1000x2420" -->
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Feedback — Stemcraft</title><style>/* @inject */</style></head><body><div class="doc">
 
 <div class="sec">
@@ -76,6 +76,31 @@ yt-dlp version 2026.09.11 — sites change often; update before retrying</div>
   <p class="note">The estimate comes from the job's recorded <b>device</b> and N-01, so a CPU job says minutes up front
   rather than looking stalled. Cancelling a running separation lands at the <b>next inference segment</b> (D-09), so the
   cancel button reads <i>Stopping…</i> for a few seconds instead of pretending to be instant.</p>
+</div>
+
+<div class="sec">
+  <h2>Loading — the pulse bar's loader (U-15)</h2>
+  <div class="card">
+    <div class="loader loader-page" role="status">
+      <span class="loader-bar" aria-hidden="true"><i class="lv"></i><i class="ld"></i><i class="lb"></i><i class="lo"></i></span>
+      <span>Loading song…</span>
+    </div>
+  </div>
+  <div class="card panel-pad col" style="gap:var(--ds-3);margin-top:var(--ds-4)">
+    <div class="loader" role="status">
+      <span class="loader-bar" aria-hidden="true"><i class="lv"></i><i class="ld"></i><i class="lb"></i><i class="lo"></i></span>
+      <span>Loading stems…</span>
+    </div>
+    <div class="loader" role="status">
+      <span class="loader-bar" aria-hidden="true"><i class="lv"></i><i class="ld"></i><i class="lb"></i><i class="lo"></i></span>
+      <span>Waiting for the waveform…</span>
+    </div>
+  </div>
+  <p class="note">Everything that loads says so with a small cousin of the navbar pulse bar: the four stem glows
+  pounding to a made-up 120 bpm groove. <b>Page</b> stands in for a whole screen's content (song, album, export,
+  library, jobs, theory); <b>inline</b> sits where one component is still coming. The label is always shown and is
+  what a screen reader hears; the strip is decoration. Under reduced motion it holds one still frame rather than
+  vanishing, because a loader that disappears reads as "finished".</p>
 </div>
 
 <div class="sec">

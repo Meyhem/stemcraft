@@ -142,6 +142,32 @@ body{
 .bar > i{display:block;height:100%;background:var(--ds-accent);transition:width var(--ds-m-progress) linear}
 .bar-ok > i{background:var(--ds-ok)} .bar-error > i{background:var(--ds-error)}
 
+/* ---------- loader (U-15) ----------
+   The app paints this on a canvas (frontend/src/ui/Loader.tsx); this is the same
+   picture in CSS: two glows per stem drifting along a 3px strip, added where they
+   cross, pounding to a 120 bpm groove (drums every beat, bass on 1 and 3, other on
+   the offbeat, vocals a slow swell). Always beside a label; the strip is aria-hidden. */
+.loader{display:flex;align-items:center;gap:var(--ds-3);color:var(--ds-text-2);font-size:var(--ds-t-sm);line-height:var(--ds-lh-sm)}
+.loader-page{flex-direction:column;justify-content:center;gap:var(--ds-4);padding:var(--ds-8) var(--ds-5)}
+.loader-bar{position:relative;flex:none;width:48px;height:3px;overflow:hidden;isolation:isolate}
+.loader-page .loader-bar{width:220px}
+.loader-bar i{position:absolute;inset:0;mix-blend-mode:screen}
+.loader-bar i::before,.loader-bar i::after{content:"";position:absolute;top:0;bottom:0;left:0;width:50%;
+  background:linear-gradient(90deg,transparent,var(--c),transparent);animation:loader-drift 3.1s ease-in-out infinite alternate}
+.loader-bar i::after{width:35%}
+.loader-bar .lv{--c:var(--ds-vocals);animation:loader-swell 5.7s ease-in-out infinite alternate}
+.loader-bar .ld{--c:var(--ds-drums);animation:loader-hit .5s ease-out infinite}
+.loader-bar .lb{--c:var(--ds-bass);animation:loader-hit 1s ease-out infinite}
+.loader-bar .lo{--c:var(--ds-other);animation:loader-hit .5s ease-out -.25s infinite}
+.loader-bar .lv::before{animation-duration:5.3s;animation-delay:-.5s} .loader-bar .lv::after{animation-duration:6.1s;animation-delay:-4s}
+.loader-bar .ld::before{animation-duration:3.7s;animation-delay:-2.9s} .loader-bar .ld::after{animation-duration:4.9s;animation-delay:-1s}
+.loader-bar .lb::before{animation-duration:4.1s;animation-delay:-3.3s} .loader-bar .lb::after{animation-duration:5.7s;animation-delay:-2.2s}
+.loader-bar .lo::before{animation-duration:3.3s;animation-delay:-1.6s} .loader-bar .lo::after{animation-duration:4.5s;animation-delay:-3.7s}
+@keyframes loader-drift{from{left:-25%}to{left:75%}}
+@keyframes loader-hit{0%{opacity:.8}60%,100%{opacity:.2}}
+@keyframes loader-swell{from{opacity:.3}to{opacity:.7}}
+@media (prefers-reduced-motion:reduce){.loader-bar i,.loader-bar i::before,.loader-bar i::after{animation:none;opacity:.7}}
+
 /* ---------- stem strips ---------- */
 .stem{--c:var(--ds-text-2)}
 .stem-v{--c:var(--ds-vocals)} .stem-d{--c:var(--ds-drums)}
