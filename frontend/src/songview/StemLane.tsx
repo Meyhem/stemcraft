@@ -20,7 +20,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 
 import type { StemName } from '../engine/EngineController';
 import type { StemSummary } from '../engine/stemPeaks';
-import { LANE_HEAD_PX } from '../music/timeScale';
+import { LANE_HEAD_PX, MAX_CANVAS_PX } from '../music/timeScale';
 import { columnHeights } from '../music/zoom';
 import { Button } from '../ui';
 import { resolveColor } from '../ui/resolveColor';
@@ -78,9 +78,13 @@ export function StemLane({
     if (!canvas) return;
     const scrollLeft = scroller?.scrollLeft ?? 0;
     const viewport = scroller ? Math.max(0, scroller.clientWidth - LANE_HEAD_PX) : width;
-    // Never wider than what is left of the lane: at Fit the content is the viewport.
-    const columns = Math.max(0, Math.min(Math.ceil(viewport), Math.ceil(width - scrollLeft)));
     const dpr = window.devicePixelRatio || 1;
+    // Never wider than what is left of the lane (at Fit the content is the viewport),
+    // nor than a canvas may be.
+    const columns = Math.max(
+      0,
+      Math.min(Math.ceil(viewport), Math.ceil(width - scrollLeft), Math.floor(MAX_CANVAS_PX / dpr)),
+    );
     if (canvas.width !== Math.round(columns * dpr) || canvas.height !== Math.round(LANE_H * dpr)) {
       canvas.width = Math.round(columns * dpr);
       canvas.height = Math.round(LANE_H * dpr);

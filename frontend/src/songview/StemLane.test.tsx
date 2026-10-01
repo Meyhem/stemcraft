@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { StemSummary } from '../engine/stemPeaks';
+import { MAX_CANVAS_PX } from '../music/timeScale';
 import { StemLane } from './StemLane';
 
 // jsdom has no canvas: a recording 2d context stands in, so the tests can see what
@@ -139,6 +140,14 @@ describe('StemLane', () => {
     renderLane({ width: 100_000, scroller: fakeScroller(900) });
     expect(rects).toHaveLength(700);
     expect(screen.getByTestId('bass-canvas').style.width).toBe('700px');
+  });
+
+  it('never allocates a canvas wider than browsers allow, even before the scroller is measured', () => {
+    // Firefox throws on a canvas over 32 767 px; with no scroller yet the lane is all there is.
+    renderLane({ width: 100_000 });
+    const canvas = screen.getByTestId('bass-canvas') as HTMLCanvasElement;
+    expect(canvas.width).toBeGreaterThan(0);
+    expect(canvas.width).toBeLessThanOrEqual(MAX_CANVAS_PX);
   });
 
   it('repaints the new slice when the axis is scrolled', async () => {

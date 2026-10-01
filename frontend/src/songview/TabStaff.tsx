@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { SampleIndex } from '../engine/types';
 import { noteAt, type TabNote } from '../music/bassTab';
 import type { Grid } from '../music/grid';
-import { LANE_HEAD_PX, type TimeScale } from '../music/timeScale';
+import { LANE_HEAD_PX, MAX_CANVAS_PX, type TimeScale } from '../music/timeScale';
 import { playAlongColors, type PlayAlongColors } from '../playalong/colors';
 import axis from './Axis.module.css';
 import { paintStaff, STAFF_H, staffStringY } from './tabStaffPainter';
@@ -36,9 +36,13 @@ export function TabStaff({ notes, scale, scroller, grid, getPosition, playing, s
     if (!canvas) return;
     const scrollLeft = scroller?.scrollLeft ?? 0;
     const viewport = scroller ? Math.max(0, scroller.clientWidth - LANE_HEAD_PX) : scale.contentWidth;
-    // Never wider than what is left of the row: at Fit the content is the viewport.
-    const width = Math.max(0, Math.min(Math.ceil(viewport), Math.ceil(scale.contentWidth - scrollLeft)));
     const dpr = window.devicePixelRatio || 1;
+    // Never wider than what is left of the row (at Fit the content is the viewport),
+    // nor than a canvas may be.
+    const width = Math.max(
+      0,
+      Math.min(Math.ceil(viewport), Math.ceil(scale.contentWidth - scrollLeft), Math.floor(MAX_CANVAS_PX / dpr)),
+    );
     if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(STAFF_H * dpr)) {
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(STAFF_H * dpr);

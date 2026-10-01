@@ -33,6 +33,13 @@ const SAMPLE_RATE = 48_000;
 /** Width of the sticky label/controls column every row of the axis starts with. */
 export const LANE_HEAD_PX = 200;
 
+/**
+ * The widest canvas a lane ever allocates, in device px. Firefox throws on a canvas
+ * over 32 767 px a side, and a long song zoomed in is wider than that: before the
+ * scroller is measured, a lane would otherwise size itself to the whole song.
+ */
+export const MAX_CANVAS_PX = 16_384;
+
 
 /**
  * Without a beat grid (analysis not run) there are no bars to measure, but the
