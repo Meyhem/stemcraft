@@ -20,8 +20,8 @@ export interface LoaderProps {
   className?: string;
 }
 
-const WIDTH_PX = { page: 220, inline: 48 } as const;
-const BAR_PX = 3;
+const WIDTH_PX = { page: 360, inline: 48 } as const;
+const BAR_PX = { page: 6, inline: 3 } as const;
 /** blobsFor drifts at the navbar's unhurried pace; a loader should look busier. */
 const DRIFT_RATE = 2.6;
 /** The still frame under reduced motion: every stem lit, glows spread out. */
@@ -40,7 +40,7 @@ export function Loader({ label, size = 'inline', className }: LoaderProps) {
 
     const dpr = window.devicePixelRatio || 1;
     const width = Math.round(WIDTH_PX[size] * dpr);
-    const height = Math.round(BAR_PX * dpr);
+    const height = Math.round(BAR_PX[size] * dpr);
     canvas.width = width;
     canvas.height = height;
 
@@ -67,7 +67,7 @@ export function Loader({ label, size = 'inline', className }: LoaderProps) {
         ref={canvasRef}
         aria-hidden="true"
         className={styles.bar}
-        style={{ width: WIDTH_PX[size], height: BAR_PX }}
+        style={{ width: WIDTH_PX[size], height: BAR_PX[size] }}
       />
       <span>{label}</span>
     </div>

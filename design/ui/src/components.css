@@ -148,9 +148,9 @@ body{
    cross, pounding to a 120 bpm groove (drums every beat, bass on 1 and 3, other on
    the offbeat, vocals a slow swell). Always beside a label; the strip is aria-hidden. */
 .loader{display:flex;align-items:center;gap:var(--ds-3);color:var(--ds-text-2);font-size:var(--ds-t-sm);line-height:var(--ds-lh-sm)}
-.loader-page{flex-direction:column;justify-content:center;gap:var(--ds-4);padding:var(--ds-8) var(--ds-5)}
+.loader-page{flex-direction:column;justify-content:center;gap:var(--ds-5);min-height:70vh;padding:var(--ds-5);font-size:var(--ds-t-md);line-height:var(--ds-lh-md)}
 .loader-bar{position:relative;flex:none;width:48px;height:3px;overflow:hidden;isolation:isolate}
-.loader-page .loader-bar{width:220px}
+.loader-page .loader-bar{width:360px;height:6px}
 .loader-bar i{position:absolute;inset:0;mix-blend-mode:screen}
 .loader-bar i::before,.loader-bar i::after{content:"";position:absolute;top:0;bottom:0;left:0;width:50%;
   background:linear-gradient(90deg,transparent,var(--c),transparent);animation:loader-drift 3.1s ease-in-out infinite alternate}

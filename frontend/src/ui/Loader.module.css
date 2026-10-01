@@ -14,8 +14,12 @@
 .page {
   flex-direction: column;
   justify-content: center;
-  gap: var(--ds-4);
-  padding: var(--ds-9) var(--ds-5);
+  gap: var(--ds-5);
+  /* Centred in the space under the navbar, not hugging its top edge. */
+  min-height: 70vh;
+  padding: var(--ds-5);
+  font-size: var(--ds-t-md);
+  line-height: var(--ds-lh-md);
 }
 
 .bar {
