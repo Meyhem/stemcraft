@@ -5,6 +5,8 @@ import { resolveColor } from '../ui/resolveColor';
 
 export interface PlayAlongColors {
   note: string;
+  /** Guitar shapes and strokes: guitar lives in the other stem (U-01, D-20). */
+  other: string;
   hot: string;
   approach: string;
   next: string;
@@ -23,6 +25,7 @@ export interface PlayAlongColors {
 export function playAlongColors(): PlayAlongColors {
   return {
     note: resolveColor('var(--ds-bass)'),
+    other: resolveColor('var(--ds-other)'),
     hot: resolveColor('var(--ds-accent)'),
     approach: resolveColor('var(--ds-warn)'),
     next: resolveColor('var(--ds-text-2)'),

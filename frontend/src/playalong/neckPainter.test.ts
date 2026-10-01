@@ -6,7 +6,7 @@ import type { PlayAlongColors } from './colors';
 import { neckGeometry, noteX, paintNeck, stringY } from './neckPainter';
 
 const colors: PlayAlongColors = {
-  note: 'teal', hot: 'blue', approach: 'orange', next: 'grey', string: 's', fret: 'f', nut: 'n',
+  note: 'teal', other: 'violet', hot: 'blue', approach: 'orange', next: 'grey', string: 's', fret: 'f', nut: 'n',
   label: 'l', board: 'b', onNote: 'black', raised: 'r', ground: 'g', text: 't', textDim: 'td',
 };
 
