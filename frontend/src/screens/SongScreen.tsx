@@ -144,6 +144,10 @@ export function SongScreen() {
         </div>
       )}
 
+      {/* Nothing to switch between until the stems have decoded: an engine that is still
+          loading leaves both views empty. An engine that failed keeps the switch, so the
+          page is not left without navigation next to its error. */}
+      {(engine || engineError) && (
       <div className={styles.viewBar}>
         {/* Links, not buttons: each view keeps its own URL (D-14). */}
         <nav className={styles.switch} aria-label="View">
@@ -154,6 +158,7 @@ export function SongScreen() {
         </nav>
         <div className={styles.tools} ref={setToolsSlot} />
       </div>
+      )}
 
       <ViewToolsContext.Provider value={toolsSlot}>
         <Outlet />

@@ -131,6 +131,20 @@ describe('SongScreen', () => {
     expect(await screen.findByTestId('time-axis')).toBeInTheDocument();
   });
 
+  it('hides the Stems/Tabs switch while the stems are still loading', async () => {
+    let finish: (value: typeof engine) => void = () => {};
+    const { EngineController } = await import('../engine/EngineController');
+    vi.mocked(EngineController.create).mockImplementationOnce(
+      () => new Promise((resolve) => { finish = resolve as typeof finish; }) as never,
+    );
+    renderAt('/songs/abc123');
+    expect(await screen.findByText('Loading stems…')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'View' })).not.toBeInTheDocument();
+
+    finish(engine);
+    expect(await screen.findByRole('navigation', { name: 'View' })).toBeInTheDocument();
+  });
+
   it('shows each view’s own tools beside the switch', async () => {
     renderAt('/songs/abc123');
     expect(await screen.findByRole('button', { name: 'Follow playhead' })).toBeInTheDocument();
