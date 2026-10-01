@@ -146,9 +146,3 @@
   text-decoration: underline;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ds-4);
-}

@@ -4,13 +4,6 @@
   gap: var(--ds-5);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ds-4);
-}
-
 /* Compact: one ~34px line per job, so a long history fits on the page. */
 .table {
   width: 100%;

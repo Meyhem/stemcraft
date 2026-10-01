@@ -134,12 +134,14 @@ function AlbumPicker() {
 
   return (
     <section className={`${styles.screen} ${styles.wide}`}>
-      <div className={styles.header}>
-        <h1>Album splitter</h1>
-        <Button variant="primary" onClick={() => setAdding(true)}>
-          Add album
-        </Button>
-      </div>
+      <ScreenHeader
+        title="Album splitter"
+        actions={
+          <Button variant="primary" onClick={() => setAdding(true)}>
+            Add album
+          </Button>
+        }
+      />
       <p className={`${styles.note} ${styles.readable}`}>
         One long file in — an album side, a live set, a tape transfer — and a set of tagged MP3s
         out. Upload it, move the boundaries where you want them, name the tracks, then render.

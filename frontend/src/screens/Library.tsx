@@ -6,7 +6,7 @@ import type { SongEntry } from '../api/client';
 import { useDeleteSong, useSongs } from '../api/queries';
 import { importLinkState } from './import/importLink';
 import { When } from './When';
-import { Banner, Button, ButtonLink, Chip, EmptyState, Loader, type ChipTone } from '../ui';
+import { Banner, Button, ButtonLink, Chip, EmptyState, Loader, ScreenHeader, type ChipTone } from '../ui';
 import styles from './Library.module.css';
 
 // Song state is derived from which files exist (CLAUDE.md: "Prefer deriving state over
@@ -40,12 +40,14 @@ export function Library() {
 
   return (
     <section className={styles.screen}>
-      <div className={styles.header}>
-        <h1>Library</h1>
-        <ButtonLink variant="primary" to="/import" state={importLinkState(location)}>
-          New Song
-        </ButtonLink>
-      </div>
+      <ScreenHeader
+        title="Library"
+        actions={
+          <ButtonLink variant="primary" to="/import" state={importLinkState(location)}>
+            New Song
+          </ButtonLink>
+        }
+      />
 
       {songs.isError && (
         <Banner tone="error" title="The library could not be listed" trace={String(songs.error)} />

@@ -4,13 +4,6 @@
   gap: var(--ds-5);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ds-4);
-}
-
 /* Compact: one line per song, so a large library fits on the page. */
 .table {
   width: 100%;

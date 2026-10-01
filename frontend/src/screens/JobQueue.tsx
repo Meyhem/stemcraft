@@ -5,7 +5,7 @@
 import { useSearchParams } from 'react-router-dom';
 
 import { useCancelJob, useEnqueueProbe, useJobs, useSongJobs } from '../api/queries';
-import { Banner, Button, EmptyState, Loader, TextLink } from '../ui';
+import { Banner, Button, EmptyState, Loader, ScreenHeader, TextLink } from '../ui';
 import { JobRow } from './JobRow';
 import styles from './JobQueue.module.css';
 
@@ -20,10 +20,10 @@ export function JobQueue() {
 
   return (
     <section className={styles.screen}>
-      <div className={styles.header}>
-        <h1>Job queue</h1>
-        <Button onClick={() => probe.mutate()}>Enqueue probe job</Button>
-      </div>
+      <ScreenHeader
+        title="Job queue"
+        actions={<Button onClick={() => probe.mutate()}>Enqueue probe job</Button>}
+      />
 
       {songId && (
         <p className={styles.filter}>
