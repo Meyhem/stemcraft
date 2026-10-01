@@ -1,0 +1,287 @@
+<!-- @dsCard group="Screens" name="Song screen — Tabs · guitar" subtitle="Guitar: chord voicings on a 6-string neck, a strum lane and per-bar substitutions" viewport="1440x1250" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Song screen — Tabs · guitar — Stemcraft</title><style>/* @inject */
+
+.body2{display:flex;flex-direction:column;flex:1;min-height:0}
+.stage{display:flex;flex-direction:column;min-width:0;flex:1}
+.rail{background:var(--ds-surface);overflow:auto;padding:var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-5)}
+.lanes{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.stem-row{flex:1}.stem-lane{height:auto}
+.axis{position:relative;display:flex;flex-direction:column;flex:1;min-height:420px;margin:0 var(--ds-4) var(--ds-4);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);overflow:hidden}
+.axrow{display:grid;grid-template-columns:200px 1fr;flex:none}
+.axhead{display:flex;align-items:center;justify-content:flex-end;padding-right:var(--ds-4);background:var(--ds-surface);border-bottom:1px solid var(--ds-border);border-right:1px solid var(--ds-border)}
+.chords{display:flex;height:44px;background:var(--ds-surface);position:relative;border-bottom:1px solid var(--ds-border)}
+.chords .c{position:absolute;top:0;bottom:0;display:flex;align-items:center;padding-left:var(--ds-2);border-left:1px solid var(--ds-border);font:600 var(--ds-t-md)/1 var(--ds-font)}
+.chords .c.now{background:rgba(79,163,255,.12);color:var(--ds-text)}
+.axis .grid-bars{background:repeating-linear-gradient(90deg,rgba(255,255,255,.16) 0 1px,transparent 1px 140px)}
+.axis .grid-beats{background:repeating-linear-gradient(90deg,rgba(255,255,255,.055) 0 1px,transparent 1px 35px)}
+.hscroll{height:10px;position:relative;border-top:1px solid var(--ds-border);background:var(--ds-ground)}
+.hscroll i{position:absolute;top:2px;height:6px;border-radius:3px;background:var(--ds-border-strong)}
+.keyrow{display:flex;flex-direction:column;gap:var(--ds-2)}
+.fb{background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);padding:var(--ds-4) var(--ds-3) var(--ds-3)}
+.fb svg{width:100%;height:auto;display:block}
+.fb text{font-family:var(--ds-font)}
+.fb .fnum{font:500 13px var(--ds-mono);fill:var(--ds-text-3)}
+.fb .sname{font-weight:600;font-size:17px;fill:var(--ds-text-3)}
+.fb .dotn{font-weight:700;font-size:15px;fill:var(--ds-ground)}
+.fb .doto{font-weight:700;font-size:10px;fill:var(--ds-ground)}
+.fb .lanel{font-weight:600;font-size:13px;fill:var(--ds-text)}
+.fb .chipn{font-weight:700;font-size:15px;fill:var(--ds-ground)}
+.fb .dim{fill:var(--ds-text-3)}
+.ribbon{display:grid;grid-template-columns:repeat(16,1fr);gap:3px}
+.rb{min-height:var(--ds-hit-setup);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:var(--ds-raised);border:1px solid var(--ds-border);border-radius:var(--ds-r-input);color:var(--ds-text-2);font:600 var(--ds-t-sm)/1 var(--ds-font);cursor:pointer}
+.rb .num{font:500 11px var(--ds-mono);color:var(--ds-text-3)}
+.rb.inloop{background:rgba(79,195,176,.12)}
+.rb.now{border-color:var(--ds-bass);color:var(--ds-bass)}
+.legend{display:flex;gap:var(--ds-5);flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;width:18px;height:18px;border-radius:50%;vertical-align:-4px;margin-right:var(--ds-2)}
+
+/* ---- new in this design ---- */
+.fb .dotd{font-weight:700;font-size:14px;fill:var(--ds-ground)}
+.fb .arr{font-size:22px}
+.fb .bnum{font:500 11px var(--ds-mono);fill:var(--ds-text-3)}
+.rb .sub{font:600 10px var(--ds-font);color:var(--ds-warn)}
+.seg-off{opacity:.45}
+.seg-off > button{cursor:not-allowed}
+.stage > .tpanel{margin:var(--ds-4) var(--ds-4) 0}
+.viewbar{display:flex;align-items:flex-end;gap:var(--ds-5);margin:var(--ds-4);min-height:56px}
+.viewseg > button{min-height:48px;padding:0 var(--ds-6);font-size:var(--ds-t-md)}
+.tabs-body{margin:0 var(--ds-4) var(--ds-4);display:flex;flex-direction:column;gap:var(--ds-4)}
+.pattern{display:flex;flex-wrap:wrap;gap:var(--ds-4) var(--ds-5);align-items:flex-end}
+.titlebtn{display:flex;align-items:center;gap:var(--ds-3);background:transparent;border:1px solid transparent;border-radius:var(--ds-r-btn);padding:var(--ds-1) var(--ds-3);margin-left:calc(-1 * var(--ds-3));color:inherit;cursor:text;text-align:left;font:inherit}
+.titlebtn:hover,.titlebtn:focus-visible{border-color:var(--ds-border-strong);background:var(--ds-raised)}
+.titlebtn svg{width:16px;height:16px;fill:var(--ds-text-3);flex:none}
+.titlebtn:hover svg{fill:var(--ds-text)}
+
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <button class="iconbtn" aria-label="Back to library"><svg viewBox="0 0 24 24"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg></button>
+
+  <!-- Rename: the title block is the control. Click it, edit title and artist in place. -->
+  <button class="titlebtn" title="Rename">
+    <span class="col" style="gap:0;min-width:0">
+      <span class="t-md" style="font-weight:600;white-space:nowrap">Tightrope</span>
+      <span class="t-sm dim" style="white-space:nowrap">Walk the Moon</span>
+    </span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+  </button>
+
+  <div class="grow"></div>
+  <button class="btn btn-primary">Export</button>
+</div>
+
+<div class="body2">
+  <div class="stage">
+
+    <!-- ONE transport, identical in both views, pinned while the content scrolls -->
+    <div class="tpanel">
+      <div class="trow">
+        <button class="iconbtn iconbtn-perform iconbtn-play" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>
+        <div class="readout"><span class="cap">bar</span><span class="big">5</span></div>
+        <div class="readout"><span class="cap">chord</span><span class="chord">G <span class="dim3">&rarr; D</span></span></div>
+        <div class="grow"></div>
+        <div class="readout"><span class="cap">tempo</span><div class="stepper stepper-perform"><button aria-label="Tempo down">&minus;</button><output>120%</output><button aria-label="Tempo up">+</button></div></div>
+        <div class="readout"><span class="cap">pitch</span><div class="stepper stepper-perform"><button aria-label="Pitch down">&minus;</button><output>&minus;2 st</output><button aria-label="Pitch up">+</button></div></div>
+        <div class="splitbtn">
+          <button class="btn btn-perform" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>Loop <span class="num">5&ndash;8</span></button>
+          <button class="btn btn-perform" aria-pressed="true" aria-label="Edit loop" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button>
+        </div>
+        <button class="btn btn-perform" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>Practice</button>
+      </div>
+    </div>
+
+    <!-- View switch + the setup controls that belong to the chosen view -->
+    <div class="viewbar">
+      <div class="seg viewseg" role="tablist" aria-label="View">
+        <button role="tab" aria-selected="false">Stems</button>
+        <button role="tab" aria-selected="true">Tabs</button>
+      </div>
+      <div class="grow"></div>
+      <div class="row">
+        <span class="chip">guitar · standard tuning · pitch &minus;2 st · shapes follow what you hear</span>
+      </div>
+    </div>
+
+    <!-- ===== Tabs content ===== -->
+    <div class="tabs-body">
+      <div class="panel panel-pad pattern">
+        <div class="col" style="gap:var(--ds-1)"><span class="cap">instrument</span>
+          <div class="seg"><button>Bass</button><button aria-selected="true">Guitar</button></div></div>
+        <div class="col" style="gap:var(--ds-1)"><span class="cap">key</span>
+          <div class="seg"><button aria-selected="true">G major <span class="num dim3">81%</span></button><button>E minor <span class="num dim3">12%</span></button><button>D major <span class="num dim3">4%</span></button></div></div>
+        <button class="btn btn-ghost">Scale &amp; fretboard &rarr;</button>
+        <div class="col" style="gap:var(--ds-1)"><span class="cap">style</span>
+          <div class="seg"><button aria-selected="true">Open</button><button>Barre</button><button>Power</button><button>Triad</button></div></div>
+        <div class="col" style="gap:var(--ds-1)"><span class="cap">strum</span>
+          <div class="seg"><button>Whole</button><button>Half</button><button>Quarters</button><button>Eighths</button><button>Folk</button><button aria-selected="true">Push</button></div></div>
+        <div class="col" style="gap:var(--ds-1)"><span class="cap">position</span>
+          <div class="seg seg-off" title="Open chords only exist low on the neck"><button aria-selected="true" disabled>Auto</button><button disabled>Low</button><button disabled>Mid</button></div>
+          <span class="t-xs dim">open shapes sit at frets 0&ndash;4</span></div>
+        <div class="col" style="gap:var(--ds-1)"><span class="cap">simplify</span>
+          <div class="check" data-on="true"><span class="box"></span>7ths &amp; 6ths &rarr; triads</div></div>
+      </div>
+      <div class="panel panel-pad col" style="gap:var(--ds-4)">
+    <div class="fb">
+<svg viewBox="0 0 1360 238" role="img" aria-label="Guitar neck: bar 5 G open shape 320003, strummed now; next bar D shape xx0232">
+<rect x="72" y="16" width="1270" height="196" rx="4" fill="var(--ds-surface)"/>
+<text x="124.9" y="12" text-anchor="middle" class="fnum">1</text>
+<text x="230.8" y="12" text-anchor="middle" class="fnum">2</text>
+<text x="336.6" y="12" text-anchor="middle" class="fnum">3</text>
+<text x="442.4" y="12" text-anchor="middle" class="fnum">4</text>
+<text x="548.2" y="12" text-anchor="middle" class="fnum">5</text>
+<text x="654.1" y="12" text-anchor="middle" class="fnum">6</text>
+<text x="759.9" y="12" text-anchor="middle" class="fnum">7</text>
+<text x="865.8" y="12" text-anchor="middle" class="fnum">8</text>
+<text x="971.6" y="12" text-anchor="middle" class="fnum">9</text>
+<text x="1077.4" y="12" text-anchor="middle" class="fnum">10</text>
+<text x="1183.2" y="12" text-anchor="middle" class="fnum">11</text>
+<text x="1289.1" y="12" text-anchor="middle" class="fnum">12</text>
+<line x1="72.0" x2="72.0" y1="16" y2="212" stroke="var(--ds-text)" stroke-width="6"/>
+<line x1="177.8" x2="177.8" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="283.7" x2="283.7" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="389.5" x2="389.5" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="495.3" x2="495.3" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="601.2" x2="601.2" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="707.0" x2="707.0" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="812.8" x2="812.8" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="918.7" x2="918.7" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="1024.5" x2="1024.5" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="1130.3" x2="1130.3" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="1236.2" x2="1236.2" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="1342.0" x2="1342.0" y1="16" y2="212" stroke="var(--ds-border-strong)" stroke-width="2"/>
+<line x1="72" x2="1342" y1="194" y2="194" stroke="var(--ds-text-3)" stroke-width="2.8"/>
+<text x="8" y="200" class="sname">E</text>
+<line x1="72" x2="1342" y1="162" y2="162" stroke="var(--ds-text-3)" stroke-width="2.4"/>
+<text x="8" y="168" class="sname">A</text>
+<line x1="72" x2="1342" y1="130" y2="130" stroke="var(--ds-text-3)" stroke-width="2.1"/>
+<text x="8" y="136" class="sname">D</text>
+<line x1="72" x2="1342" y1="98" y2="98" stroke="var(--ds-text-3)" stroke-width="1.8"/>
+<text x="8" y="104" class="sname">G</text>
+<line x1="72" x2="1342" y1="66" y2="66" stroke="var(--ds-text-3)" stroke-width="1.4"/>
+<text x="8" y="72" class="sname">B</text>
+<line x1="72" x2="1342" y1="34" y2="34" stroke="var(--ds-text-3)" stroke-width="1.0"/>
+<text x="8" y="40" class="sname">e</text>
+<circle cx="336.6" cy="226" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="548.2" cy="226" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="759.9" cy="226" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="971.6" cy="226" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="1279.1" cy="226" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="1299.1" cy="226" r="5" fill="var(--ds-border-strong)"/>
+<circle cx="42.0" cy="130" r="16" fill="none" stroke="var(--ds-text-2)" stroke-width="2" stroke-dasharray="5 4"/>
+<circle cx="230.8" cy="98" r="16" fill="none" stroke="var(--ds-text-2)" stroke-width="2" stroke-dasharray="5 4"/>
+<circle cx="336.6" cy="66" r="16" fill="none" stroke="var(--ds-text-2)" stroke-width="2" stroke-dasharray="5 4"/>
+<circle cx="230.8" cy="34" r="16" fill="none" stroke="var(--ds-text-2)" stroke-width="2" stroke-dasharray="5 4"/>
+<circle cx="336.6" cy="194" r="23" fill="var(--ds-accent)" opacity=".18"/>
+<circle cx="336.6" cy="194" r="16" fill="var(--ds-other)" stroke="var(--ds-text)" stroke-width="3"/>
+<text x="336.6" y="199" text-anchor="middle" class="dotd">R</text>
+<circle cx="230.8" cy="162" r="23" fill="var(--ds-accent)" opacity=".18"/>
+<circle cx="230.8" cy="162" r="16" fill="var(--ds-other)"/>
+<text x="230.8" y="167" text-anchor="middle" class="dotd">3</text>
+<circle cx="42.0" cy="130" r="23" fill="var(--ds-accent)" opacity=".18"/>
+<circle cx="42.0" cy="130" r="15" fill="var(--ds-ground)" stroke="var(--ds-other)" stroke-width="3"/>
+<text x="42.0" y="135" text-anchor="middle" class="dotd" style="fill:var(--ds-other)">5</text>
+<circle cx="42.0" cy="98" r="23" fill="var(--ds-accent)" opacity=".18"/>
+<circle cx="42.0" cy="98" r="15" fill="var(--ds-ground)" stroke="var(--ds-other)" stroke-width="3"/>
+<text x="42.0" y="103" text-anchor="middle" class="dotd" style="fill:var(--ds-other)">R</text>
+<circle cx="42.0" cy="66" r="23" fill="var(--ds-accent)" opacity=".18"/>
+<circle cx="42.0" cy="66" r="15" fill="var(--ds-ground)" stroke="var(--ds-other)" stroke-width="3"/>
+<text x="42.0" y="71" text-anchor="middle" class="dotd" style="fill:var(--ds-other)">3</text>
+<circle cx="336.6" cy="34" r="23" fill="var(--ds-accent)" opacity=".18"/>
+<circle cx="336.6" cy="34" r="16" fill="var(--ds-other)" stroke="var(--ds-text)" stroke-width="3"/>
+<text x="336.6" y="39" text-anchor="middle" class="dotd">R</text>
+</svg>
+<svg viewBox="0 0 1360 96" role="img" aria-label="Strum lane: bar 5 folk pattern, cursor on the and of beat 3; the last up-stroke pushes into D">
+<rect x="13" y="22" width="664" height="66" rx="8" fill="var(--ds-raised)" stroke="var(--ds-border)"/>
+<text x="20" y="15" class="lanel">Bar 5 · G · folk, push</text>
+<line x1="179.0" x2="179.0" y1="28" y2="82" stroke="var(--ds-border)"/>
+<line x1="345.0" x2="345.0" y1="28" y2="82" stroke="var(--ds-border)"/>
+<line x1="511.0" x2="511.0" y1="28" y2="82" stroke="var(--ds-border)"/>
+<text x="23.0" y="40" class="bnum">1</text>
+<text x="102.0" y="40" class="bnum">&amp;</text>
+<text x="189.0" y="40" class="bnum">2</text>
+<text x="268.0" y="40" class="bnum">&amp;</text>
+<text x="355.0" y="40" class="bnum">3</text>
+<text x="434.0" y="40" class="bnum">&amp;</text>
+<text x="521.0" y="40" class="bnum">4</text>
+<text x="600.0" y="40" class="bnum">&amp;</text>
+<rect x="23.5" y="46" width="62" height="34" rx="17" fill="var(--ds-other)"/>
+<text x="54.5" y="70" text-anchor="middle" class="chipn arr">&#8595;</text>
+<rect x="189.5" y="46" width="62" height="34" rx="17" fill="var(--ds-other)"/>
+<text x="220.5" y="70" text-anchor="middle" class="chipn arr">&#8595;</text>
+<rect x="272.5" y="46" width="62" height="34" rx="17" fill="var(--ds-other)"/>
+<text x="303.5" y="70" text-anchor="middle" class="chipn arr">&#8593;</text>
+<rect x="438.5" y="46" width="62" height="34" rx="17" fill="var(--ds-accent)"/>
+<text x="469.5" y="70" text-anchor="middle" class="chipn arr">&#8593;</text>
+<rect x="521.5" y="46" width="62" height="34" rx="17" fill="var(--ds-other)"/>
+<text x="552.5" y="70" text-anchor="middle" class="chipn arr">&#8595;</text>
+<rect x="604.5" y="46" width="62" height="34" rx="17" fill="var(--ds-other)" stroke="var(--ds-warn)" stroke-width="3"/>
+<text x="635.5" y="70" text-anchor="middle" class="chipn arr">&#8593; D</text>
+<rect x="683" y="22" width="664" height="66" rx="8" fill="var(--ds-ground)" stroke="var(--ds-border)"/>
+<text x="690" y="15" class="lanel dim">Next · bar 6 · D</text>
+<line x1="849.0" x2="849.0" y1="28" y2="82" stroke="var(--ds-border)"/>
+<line x1="1015.0" x2="1015.0" y1="28" y2="82" stroke="var(--ds-border)"/>
+<line x1="1181.0" x2="1181.0" y1="28" y2="82" stroke="var(--ds-border)"/>
+<text x="693.0" y="40" class="bnum">1</text>
+<text x="772.0" y="40" class="bnum">&amp;</text>
+<text x="859.0" y="40" class="bnum">2</text>
+<text x="938.0" y="40" class="bnum">&amp;</text>
+<text x="1025.0" y="40" class="bnum">3</text>
+<text x="1104.0" y="40" class="bnum">&amp;</text>
+<text x="1191.0" y="40" class="bnum">4</text>
+<text x="1270.0" y="40" class="bnum">&amp;</text>
+<rect x="859.5" y="46" width="62" height="34" rx="17" fill="none" stroke="var(--ds-text-3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="890.5" y="70" text-anchor="middle" class="chipn arr dim">&#8595;</text>
+<rect x="942.5" y="46" width="62" height="34" rx="17" fill="none" stroke="var(--ds-text-3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="973.5" y="70" text-anchor="middle" class="chipn arr dim">&#8593;</text>
+<rect x="1108.5" y="46" width="62" height="34" rx="17" fill="none" stroke="var(--ds-text-3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="1139.5" y="70" text-anchor="middle" class="chipn arr dim">&#8593;</text>
+<rect x="1191.5" y="46" width="62" height="34" rx="17" fill="none" stroke="var(--ds-text-3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="1222.5" y="70" text-anchor="middle" class="chipn arr dim">&#8595;</text>
+<rect x="1274.5" y="46" width="62" height="34" rx="17" fill="none" stroke="var(--ds-text-3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="1305.5" y="70" text-anchor="middle" class="chipn arr dim">&#8593;</text>
+<line x1="429.5" x2="429.5" y1="20" y2="90" stroke="var(--ds-accent)" stroke-width="3"/>
+</svg>
+    </div>
+    <div class="ribbon" aria-label="Chord chart by bar. Click sets loop start, shift-click sets loop end.">
+  <button class="rb"><span class="num">1</span>G</button>
+  <button class="rb"><span class="num">2</span>D</button>
+  <button class="rb"><span class="num">3</span>Em7<span class="sub">&rarr; Em</span></button>
+  <button class="rb"><span class="num">4</span>C</button>
+  <button class="rb now inloop" aria-current="true"><span class="num">5</span>G</button>
+  <button class="rb inloop"><span class="num">6</span>D</button>
+  <button class="rb inloop"><span class="num">7</span>Em7<span class="sub">&rarr; Em</span></button>
+  <button class="rb inloop"><span class="num">8</span>C</button>
+  <button class="rb"><span class="num">9</span>G</button>
+  <button class="rb"><span class="num">10</span>D</button>
+  <button class="rb"><span class="num">11</span>Em7<span class="sub">&rarr; Em</span></button>
+  <button class="rb"><span class="num">12</span>C</button>
+  <button class="rb"><span class="num">13</span>G</button>
+  <button class="rb"><span class="num">14</span>D</button>
+  <button class="rb"><span class="num">15</span>Em7<span class="sub">&rarr; Em</span></button>
+  <button class="rb"><span class="num">16</span>C</button>
+    </div>
+    <div class="legend t-sm dim">
+      <span><i style="background:var(--ds-other)"></i>this bar's shape · chord degree on each dot</span>
+      <span><i style="background:var(--ds-ground);border:3px solid var(--ds-other)"></i>open string</span>
+      <span><i style="background:var(--ds-accent);opacity:.5"></i>lights on every stroke</span>
+      <span><i style="border:2px dashed var(--ds-text-2)"></i>next bar's shape</span>
+      <span><i style="background:var(--ds-other);box-shadow:0 0 0 3px var(--ds-warn)"></i>push: next chord, an eighth early</span>
+      <span><span class="chip chip-warn">Em7 &rarr; Em</span> simplified, shown not hidden</span>
+    </div>
+      </div>
+      <div class="banner banner-warn">
+        <span class="bicon"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></span>
+        <div class="banner-body"><p class="banner-title">Guitar shares the <em>other</em> stem with keys and synths</p>
+        <p class="t-sm dim" style="margin:0">It can't be separated on its own, so turn <em>other</em> down rather than muting it.</p></div>
+      </div>
+      <div class="banner" style="border-color:var(--ds-border);color:var(--ds-text-2)">
+        <span class="bicon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg></span>
+        <div class="banner-body"><p class="banner-title">A practice pattern over the detected chords, not a transcription</p>
+        <p class="t-sm dim" style="margin:0">Generated from the chord chart and the style you pick. A bar with no chord shows an empty neck saying so; a substituted shape says what it replaced. Nothing is guessed.</p></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</body></html>
