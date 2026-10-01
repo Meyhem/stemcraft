@@ -12,7 +12,11 @@
       html { background: #0B0C0E; }
       #splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
         color: #9BA3AE; font: 24px/30px ui-sans-serif, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif; }
-      #splash .bar { position: relative; width: 560px; max-width: 80vw; height: 10px; overflow: hidden; isolation: isolate; }
+      #splash .bar { position: relative; width: 560px; max-width: 80vw; height: 10px; overflow: hidden; isolation: isolate;
+        -webkit-mask-image: linear-gradient(90deg, transparent, black 30%, black 70%, transparent), linear-gradient(180deg, transparent, black 25%, black 75%, transparent);
+        -webkit-mask-composite: source-in;
+        mask-image: linear-gradient(90deg, transparent, black 30%, black 70%, transparent), linear-gradient(180deg, transparent, black 25%, black 75%, transparent);
+        mask-composite: intersect; }
       #splash .bar i { position: absolute; inset: 0; mix-blend-mode: screen; }
       #splash .bar i::before, #splash .bar i::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 50%;
         background: linear-gradient(90deg, transparent, var(--c), transparent); animation: splash-drift 3.1s ease-in-out infinite alternate; }

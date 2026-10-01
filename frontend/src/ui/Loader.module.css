@@ -26,4 +26,9 @@
   max-width: 80vw;
   display: block;
   flex: none;
+  /* Soft edges: a lot left/right, barely top/bottom. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 30%, black 70%, transparent), linear-gradient(180deg, transparent, black 25%, black 75%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, black 30%, black 70%, transparent), linear-gradient(180deg, transparent, black 25%, black 75%, transparent);
+  mask-composite: intersect;
 }
