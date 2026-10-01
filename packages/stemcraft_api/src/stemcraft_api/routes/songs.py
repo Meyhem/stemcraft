@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -35,6 +36,7 @@ from stemcraft_lib.song import (
     read_song,
     write_song,
 )
+from stemcraft_lib.transcription import read_transcription
 
 from ..deps import get_conn
 
@@ -81,6 +83,7 @@ def _entry(song_dir: Path) -> dict:
             "has_peaks": files.has_peaks,
             "has_stems": files.has_stems,
             "has_analysis": files.has_analysis,
+            "has_transcription": files.has_transcription,
         },
         "unreadable": None,
     }
@@ -117,6 +120,50 @@ def get_analysis(song_id: str) -> dict:
     if not (song_dir / "analysis.json").is_file():
         raise HTTPException(status_code=404, detail=f"song {song_id} has no analysis yet")
     return read_analysis(song_dir).model_dump(mode="json")
+
+
+@router.get("/api/songs/{song_id}/transcription")
+def get_transcription(song_id: str) -> dict:
+    song_dir = _find_dir(song_id)
+    path = song_dir / "transcription.json"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=f"song {song_id} has no tab yet")
+    try:
+        body = read_transcription(song_dir).model_dump(mode="json")
+    except ValidationError as exc:
+        # N-08: a file the worker could not have written is named, not hidden.
+        raise HTTPException(status_code=500, detail=f"{path}: {exc}") from exc
+    # Derived, not stored: when the worker last wrote it.
+    body["written_at"] = datetime.fromtimestamp(path.stat().st_mtime, UTC).isoformat()
+    return body
+
+
+@router.post("/api/songs/{song_id}/transcribe", status_code=201)
+def queue_transcribe(song_id: str, conn: Conn) -> dict:
+    """D-21: opt-in per song. Re-extract is the same call; the worker replaces the
+    file atomically when it finishes, so the old tab stays readable meanwhile."""
+    song_dir = _find_dir(song_id)
+    if not derive_files(song_dir).has_stems:
+        raise HTTPException(
+            status_code=409, detail=f"song {song_id} has no separated stems to transcribe yet"
+        )
+    # limit=None: a gate must see the whole table (see delete_song).
+    live = [
+        job
+        for job in jobs_db.list_jobs(
+            conn, states=("queued", "running"), song_id=song_id, limit=None
+        )
+        if job.kind == "transcribe"
+    ]
+    if live:
+        raise HTTPException(
+            status_code=409,
+            detail=f"song {song_id} is already being transcribed (job {live[0].id})",
+        )
+    job_id = jobs_db.enqueue(
+        conn, kind="transcribe", song_id=song_id, payload={"song_id": song_id}
+    )
+    return {"job_id": job_id}
 
 
 @router.get("/api/songs/{song_id}/stems/{stem}.opus")
