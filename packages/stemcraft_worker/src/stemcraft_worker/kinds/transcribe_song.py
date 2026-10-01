@@ -68,6 +68,7 @@ def run(ctx: JobContext) -> dict:
             fmin_hz=FMIN_HZ, fmax_hz=FMAX_HZ, hop_samples=HOP, voiced_min=params.voiced_min,
             gate_db=params.gate_db, jump_semitones=params.jump_semitones,
             min_note_samples=params.min_note_frames * HOP,
+            min_repeat_samples=params.min_repeat_frames * HOP,
         ),
         notes=[
             TranscribedNote(

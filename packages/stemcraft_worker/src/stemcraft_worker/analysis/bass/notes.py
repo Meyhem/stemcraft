@@ -4,7 +4,9 @@ rules are tested on synthetic tracks.
 A note is a run of voiced frames (periodic enough AND loud enough). A run splits
 where the pitch leaves its running median by more than `jump_semitones` for
 `jump_frames` frames in a row (a one-frame glitch does not split it), and where
-an onset falls inside it (a repeated note). A fragment shorter than
+an onset falls inside it (a repeated note) -- but only once the note has lasted
+`min_repeat_frames`: a second onset peak just after the attack is the same pluck,
+not a new one (90 ms is a sixteenth at 166 bpm). A fragment shorter than
 `min_note_frames` merges into an adjacent note of the same pitch before it, and
 is dropped otherwise.
 """
@@ -24,6 +26,7 @@ class SegmentParams:
     jump_semitones: float = 0.6
     jump_frames: int = 3
     min_note_frames: int = 6
+    min_repeat_frames: int = 9
 
 
 @dataclass(frozen=True)
@@ -57,7 +60,8 @@ def segment(
         if start is None:
             start = t
             continue
-        if _jumps(midi, voiced, t, float(np.median(midi[start:t])), params) or t in onset_set:
+        repeat = t in onset_set and t - start >= params.min_repeat_frames
+        if repeat or _jumps(midi, voiced, t, float(np.median(midi[start:t])), params):
             spans.append((start, t))
             start = t
     if start is not None:

@@ -41,6 +41,8 @@ class TranscriptionParams(BaseModel):
     gate_db: float
     jump_semitones: float
     min_note_samples: int
+    # Added after the first files were written; absent there, which meant no floor.
+    min_repeat_samples: int = 0
 
 
 class Transcription(BaseModel):

@@ -61,3 +61,16 @@ def test_pitch_is_the_rounded_median_with_cents_and_mean_confidence():
     per[:] = 0.8
     (n,) = segment(midi, per, rms, onsets=[], params=SegmentParams())
     assert n.midi == 31 and abs(n.cents - 20.0) < 1e-6 and abs(n.confidence - 0.8) < 1e-9
+
+
+def test_an_onset_too_soon_after_the_attack_does_not_split_the_note():
+    # Fortunate Son: one picked eighth (~220 ms) came back as a 60 ms + 160 ms pair,
+    # because a second onset peak fired just after the attack.
+    notes = segment(*track((22, 31.0)), onsets=[6])
+    assert [(n.start_frame, n.end_frame) for n in notes] == [(0, 22)]
+
+
+def test_a_fast_repeat_at_the_floor_still_splits():
+    params = SegmentParams()
+    notes = segment(*track((30, 31.0)), onsets=[params.min_repeat_frames])
+    assert [n.start_frame for n in notes] == [0, params.min_repeat_frames]
