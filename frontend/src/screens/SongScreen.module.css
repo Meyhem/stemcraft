@@ -11,17 +11,6 @@
   min-height: calc(100dvh - var(--ds-9));
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-4);
-}
-
-
-.export {
-  margin-left: auto;
-}
-
 /* Stays pinned at the top while the page scrolls. Above the axis's sticky head
    column (z 2). */
 .transport {

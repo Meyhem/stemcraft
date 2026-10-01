@@ -5,18 +5,6 @@
   max-width: 640px;
 }
 
-.head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--ds-4);
-}
-
-.sub {
-  margin: 0;
-  color: var(--ds-text-2);
-}
-
 .group {
   margin: 0;
   display: flex;

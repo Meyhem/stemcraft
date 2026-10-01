@@ -14,7 +14,7 @@ import { exportUrl } from '../api/client';
 import { queryKeys, useExports, useJobs, useQueueExport, useSong } from '../api/queries';
 import { STEM_ORDER, type StemName } from '../engine/types';
 import { proposeExportName } from './exportName';
-import { Banner, Button, ButtonLink, Loader, ProgressBar, TextField, TextLink } from '../ui';
+import { Banner, Button, Loader, ProgressBar, ScreenHeader, TextField, TextLink } from '../ui';
 import styles from './Export.module.css';
 
 function formatBytes(bytes: number): string {
@@ -99,17 +99,15 @@ export function Export() {
 
   return (
     <section className={styles.screen}>
-      <header className={styles.head}>
-        <div>
-          <h1>Export</h1>
-          <p className={styles.sub}>
-            {song ? `${song.title}${song.artist ? ` — ${song.artist}` : ''}` : songId}
-          </p>
-        </div>
-        <ButtonLink variant="ghost" to={`/songs/${songId}`}>
-          Back to the song
-        </ButtonLink>
-      </header>
+      <ScreenHeader
+        crumbs={[
+          { label: 'Library', to: '/' },
+          { label: song?.title ?? songId ?? '', to: `/songs/${songId}` },
+          { label: 'Export' },
+        ]}
+        title="Export"
+        subtitle={song ? `${song.title}${song.artist ? ` — ${song.artist}` : ''}` : songId}
+      />
 
       {songQuery.data?.unreadable && (
         <Banner tone="error" title="This song could not be read" trace={songQuery.data.unreadable} />

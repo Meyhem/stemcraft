@@ -1,0 +1,38 @@
+/* Equal side columns keep the title on the page's centre line whatever the crumbs or
+   actions weigh. */
+.head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ds-4);
+}
+
+.title {
+  text-align: center;
+  min-width: 0;
+}
+
+.title h1 {
+  margin: 0;
+}
+
+.sub {
+  margin: 0;
+  color: var(--ds-text-2);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .head {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .title {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

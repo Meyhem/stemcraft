@@ -27,3 +27,7 @@ export { Stepper } from './Stepper';
 export type { StepperProps, StepperTier } from './Stepper';
 export { Popover } from './Popover';
 export type { PopoverProps } from './Popover';
+export { Breadcrumbs } from './Breadcrumbs';
+export type { Crumb } from './Breadcrumbs';
+export { ScreenHeader } from './ScreenHeader';
+export type { ScreenHeaderProps } from './ScreenHeader';

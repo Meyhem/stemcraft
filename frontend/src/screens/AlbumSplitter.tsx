@@ -46,11 +46,11 @@ import { WaveformMarkers } from '../splitter/WaveformMarkers';
 import {
   Banner,
   Button,
-  ButtonLink,
   Chip,
   EmptyState,
   Loader,
   ProgressBar,
+  ScreenHeader,
   TextField,
   TextLink,
   type ChipTone,
@@ -458,15 +458,15 @@ function AlbumEditor({ albumId }: { albumId: string }) {
     // parse error in view.
     return (
       <section className={styles.screen}>
-        <h1>Album splitter</h1>
+        <ScreenHeader
+          crumbs={[{ label: 'Albums', to: '/splitter' }, { label: albumId }]}
+          title="Album splitter"
+        />
         <Banner
           tone="error"
           title="This album could not be read"
           trace={albumQuery.data?.unreadable}
         />
-        <ButtonLink variant="ghost" to="/splitter">
-          Back to albums
-        </ButtonLink>
       </section>
     );
   }
@@ -486,18 +486,11 @@ function AlbumEditor({ albumId }: { albumId: string }) {
 
   return (
     <section className={`${styles.screen} ${styles.wide}`}>
-      <header className={styles.head}>
-        <div>
-          <h1>Album splitter</h1>
-          <p className={styles.sub}>
-            {album.title}
-            {album.artist ? ` — ${album.artist}` : ''}
-          </p>
-        </div>
-        <ButtonLink variant="ghost" to="/splitter">
-          Back to albums
-        </ButtonLink>
-      </header>
+      <ScreenHeader
+        crumbs={[{ label: 'Albums', to: '/splitter' }, { label: album.title }]}
+        title="Album splitter"
+        subtitle={`${album.title}${album.artist ? ` — ${album.artist}` : ''}`}
+      />
 
       {/* ApiError's message already carries the server's own detail, so it is
           shown as it came rather than paraphrased into reassurance. */}

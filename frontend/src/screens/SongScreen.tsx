@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 
-import { ButtonLink, Loader } from '../ui';
+import { ButtonLink, Loader, ScreenHeader } from '../ui';
 import { useSongSession } from '../session/SongSession';
 import { TitleEditor } from '../songview/TitleEditor';
 import { Transport } from '../songview/Transport';
@@ -76,19 +76,17 @@ export function SongScreen() {
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <ButtonLink variant="ghost" to="/">
-          &larr; Library
-        </ButtonLink>
-        <TitleEditor
-          title={song?.title ?? fetchedSong?.title ?? songId}
-          artist={song?.artist ?? fetchedSong?.artist ?? ''}
-          onRename={session.onRename}
-        />
-        <ButtonLink className={styles.export} to={`/songs/${songId}/export`}>
-          Export
-        </ButtonLink>
-      </header>
+      <ScreenHeader
+        crumbs={[{ label: 'Library', to: '/' }, { label: song?.title ?? fetchedSong?.title ?? songId }]}
+        title={
+          <TitleEditor
+            title={song?.title ?? fetchedSong?.title ?? songId}
+            artist={song?.artist ?? fetchedSong?.artist ?? ''}
+            onRename={session.onRename}
+          />
+        }
+        actions={<ButtonLink to={`/songs/${songId}/export`}>Export</ButtonLink>}
+      />
 
       {engineError && (
         <p role="alert" className={styles.alert}>
