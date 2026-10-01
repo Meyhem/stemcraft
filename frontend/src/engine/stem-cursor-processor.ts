@@ -1,5 +1,6 @@
 /// <reference types="audioworklet" />
 import { renderBlock, type CursorState, type FourStems, type MixParams } from './loopCursor';
+import { StemAssembler, type StemLoadMessage } from './stemLoad';
 
 // `@types/audioworklet` (Task 4) covers the AudioWorkletGlobalScope surface but does
 // not define `AudioParamDescriptor` — it's normally a main-thread-adjacent type that
@@ -13,10 +14,6 @@ interface AudioParamDescriptor {
   defaultValue?: number;
 }
 
-interface LoadStemsMessage {
-  type: 'load-stems';
-  stems: { left: ArrayBuffer; right: ArrayBuffer }[]; // length 4, fixed order
-}
 
 interface SetLoopMessage {
   type: 'set-loop';
@@ -35,7 +32,7 @@ interface SetGridMessage {
   downbeatFlags: number[];
 }
 
-type ControlMessage = LoadStemsMessage | SetLoopMessage | SeekMessage | SetGridMessage;
+type ControlMessage = StemLoadMessage | SetLoopMessage | SeekMessage | SetGridMessage;
 
 const STEM_COUNT = 4;
 const POSITION_REPORT_INTERVAL_BLOCKS = 40; // ~107 ms at 128-sample blocks / 48 kHz
@@ -58,6 +55,7 @@ class StemCursorProcessor extends AudioWorkletProcessor {
   }
 
   private stems: FourStems | null = null;
+  private readonly assembler = new StemAssembler();
   private cursor: CursorState = { position: 0, ended: false };
   private loop: MixParams['loop'] = null;
   private crossfadeFrames = 0;
@@ -71,12 +69,12 @@ class StemCursorProcessor extends AudioWorkletProcessor {
     super();
     this.port.onmessage = (event: MessageEvent<ControlMessage>) => {
       const msg = event.data;
-      if (msg.type === 'load-stems') {
-        this.stems = msg.stems.map((s) => ({
-          left: new Float32Array(s.left),
-          right: new Float32Array(s.right),
-        })) as unknown as FourStems;
-        this.lengthFrames = this.stems[0]!.left.length;
+      if (msg.type === 'load-begin' || msg.type === 'load-chunk' || msg.type === 'load-end') {
+        const stems = this.assembler.receive(msg);
+        if (stems) {
+          this.stems = stems;
+          this.lengthFrames = stems[0].left.length;
+        }
       } else if (msg.type === 'set-loop') {
         this.loop = msg.loop;
         this.crossfadeFrames = msg.crossfadeFrames;

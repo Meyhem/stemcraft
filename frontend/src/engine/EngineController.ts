@@ -4,6 +4,7 @@ import { ProcessorMetrics, SoundTouchNode } from '@soundtouchjs/audio-worklet';
 import { computeSoundTouchParams } from './soundtouch';
 import { EngineClock } from './clock';
 import { SAMPLE_RATE, SampleIndex, clampTempo, sampleIndex, toDeviceDomain, toStemDomain, STEM_ORDER, type StemName } from './types';
+import { stemLoadMessages } from './stemLoad';
 import { summariseStem } from './stemPeaks';
 import type { StemSummary } from './stemPeaks';
 
@@ -112,14 +113,12 @@ export class EngineController {
       outputChannelCount: [2],
     });
 
-    const transferList: ArrayBuffer[] = [];
+    // In chunks, never one message: Firefox aborts the tab on a worklet message over 4 GB (stemLoad.ts).
     const stems = buffers.map((buffer) => {
-      const left = buffer.getChannelData(0).slice();
-      const right = buffer.numberOfChannels > 1 ? buffer.getChannelData(1).slice() : left.slice();
-      transferList.push(left.buffer, right.buffer);
-      return { left: left.buffer, right: right.buffer };
+      const left = buffer.getChannelData(0);
+      return { left, right: buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left };
     });
-    cursorNode.port.postMessage({ type: 'load-stems', stems }, transferList);
+    for (const { message, transfer } of stemLoadMessages(stems)) cursorNode.port.postMessage(message, transfer);
 
     const stNode = new SoundTouchNode({ context });
     cursorNode.connect(stNode);

@@ -1,5 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import type { StemChannels } from './loopCursor';
+import { stemLoadMessages } from './stemLoad';
+
 // The processor module calls `registerProcessor` and extends
 // `AudioWorkletProcessor` at import time — neither exists in jsdom, since both
 // are normally only defined inside the real AudioWorkletGlobalScope (a
@@ -54,12 +57,11 @@ interface ProcessorHandle {
   endedMessages(): { type: 'ended'; position: number; contextTime: number }[];
 }
 
-function stemBuffers(lengthFrames: number): { left: ArrayBuffer; right: ArrayBuffer }[] {
-  return [0, 1, 2, 3].map(() => {
-    const left = new Float32Array(lengthFrames).fill(0.1);
-    const right = new Float32Array(lengthFrames).fill(0.1);
-    return { left: left.buffer, right: right.buffer };
-  });
+function stemBuffers(lengthFrames: number): StemChannels[] {
+  return [0, 1, 2, 3].map(() => ({
+    left: new Float32Array(lengthFrames).fill(0.1),
+    right: new Float32Array(lengthFrames).fill(0.1),
+  }));
 }
 
 function defaultParameters(overrides: Partial<Record<string, number>> = {}): Record<string, Float32Array> {
@@ -88,7 +90,7 @@ function makeProcessor(lengthFrames: number): ProcessorHandle {
     process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean;
   };
 
-  instance.port.onmessage?.({ data: { type: 'load-stems', stems: stemBuffers(lengthFrames) } } as MessageEvent);
+  for (const { message } of stemLoadMessages(stemBuffers(lengthFrames))) instance.port.onmessage?.({ data: message } as MessageEvent);
 
   return {
     process(parameters: Record<string, Float32Array>) {
