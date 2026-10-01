@@ -18,11 +18,12 @@
   /* Centred in the space under the navbar, not hugging its top edge. */
   min-height: 70vh;
   padding: var(--ds-5);
-  font-size: var(--ds-t-md);
-  line-height: var(--ds-lh-md);
+  font-size: var(--ds-t-lg);
+  line-height: var(--ds-lh-lg);
 }
 
 .bar {
+  max-width: 80vw;
   display: block;
   flex: none;
 }

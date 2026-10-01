@@ -163,7 +163,7 @@ hit-target tiers rather than one.
   pounding to a made-up groove, always beside a text label.** One `Loader` component,
   two sizes: `page` stands in for a whole screen's content (song, album, export,
   library, jobs, theory); `inline` sits where one component is still coming (stems,
-  album list, exports, waveform, a song's chords). `page` is a 360×6 px strip and 18 px label centred in the space under the navbar;
+  album list, exports, waveform, a song's chords). `page` is a 560×10 px strip and 24 px label centred in the space under the navbar;
   `inline` is a 3px strip like U-14's, 48 px wide. Its levels a fixed 120 bpm pattern (drums every beat, bass on 1 and 3).
   *Because:* a wait looks like the app it belongs to, and a stranger learns the
   four hues as "the stems" before they see a lane. This is a second, bounded exception

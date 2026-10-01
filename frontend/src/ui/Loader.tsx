@@ -20,8 +20,8 @@ export interface LoaderProps {
   className?: string;
 }
 
-const WIDTH_PX = { page: 360, inline: 48 } as const;
-const BAR_PX = { page: 6, inline: 3 } as const;
+const WIDTH_PX = { page: 560, inline: 48 } as const;
+const BAR_PX = { page: 10, inline: 3 } as const;
 /** blobsFor drifts at the navbar's unhurried pace; a loader should look busier. */
 const DRIFT_RATE = 2.6;
 /** The still frame under reduced motion: every stem lit, glows spread out. */
