@@ -7,6 +7,7 @@ import { vi } from 'vitest';
 
 import { DEFAULT_THEORY, type Analysis, type TheoryDoc } from '../../api/client';
 import { Theory } from '../../screens/Theory';
+import type { GuessEngine } from '../useGuessSound';
 
 export function renderTool(
   path: string,
@@ -107,4 +108,22 @@ export function renderFlaky(path: string, theory: Partial<TheoryDoc> = {}) {
       await refetch();
     },
   };
+}
+
+/** A GuessEngine that records calls; `end()` fires its ended listener as the worklet would. */
+export function fakeEngine() {
+  let ended = () => {};
+  const e = {
+    replaceStems: vi.fn(),
+    seek: vi.fn(),
+    play: vi.fn(async () => {}),
+    pause: vi.fn(),
+    onEnded: vi.fn((cb: () => void) => {
+      ended = cb;
+      return () => {};
+    }),
+    dispose: vi.fn(async () => {}),
+    end: () => ended(),
+  };
+  return e satisfies GuessEngine & { end(): void };
 }
