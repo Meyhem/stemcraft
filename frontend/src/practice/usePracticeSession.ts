@@ -29,11 +29,12 @@ export interface PracticeEngine {
 }
 
 export function gainsFor(instrument: PracticeInstrument, levels: PracticeLevels): Record<StemName, number> {
-  const ref = levels.ref_muted ? 0 : levels.ref;
-  const backing = levels.backing_muted ? 0 : levels.backing;
+  const on = (level: number, muted: boolean) => (muted ? 0 : level);
+  const ref = on(levels.ref, levels.ref_muted);
+  const drums = on(levels.drums, levels.drums_muted);
   return instrument === 'bass'
-    ? { vocals: 0, drums: 0, bass: ref, other: 0 }
-    : { vocals: 0, drums: 0, bass: backing, other: ref };
+    ? { vocals: 0, drums, bass: ref, other: on(levels.chords, levels.chords_muted) }
+    : { vocals: 0, drums, bass: on(levels.backing, levels.backing_muted), other: ref };
 }
 
 export interface PracticeSession {
@@ -77,6 +78,8 @@ export function usePracticeSession({
   const [error, setError] = useState<string | null>(null);
 
   const renderBpm = settings.ramp.on ? settings.ramp.start : settings.bpm;
+  // Keyed on its values, so a new object with the same pickers does not re-render.
+  const backingKey = settings.backing.chord_sound + settings.backing.drum_groove;
   const latest = useRef({ settings, instrument, rendered });
   latest.current = { settings, instrument, rendered };
 
@@ -112,7 +115,7 @@ export function usePracticeSession({
     let cancelled = false;
     (async () => {
       try {
-        const r = renderPractice(loop, renderBpm);
+        const r = renderPractice(loop, renderBpm, latest.current.settings.backing);
         let e = engine.current;
         if (!e) {
           creating.current ??= createEngine(r.stems);
@@ -142,7 +145,7 @@ export function usePracticeSession({
     return () => {
       cancelled = true;
     };
-  }, [loop, renderBpm, createEngine, applyGains, start]);
+  }, [loop, renderBpm, backingKey, createEngine, applyGains, start]);
 
   useEffect(() => {
     applyGains();

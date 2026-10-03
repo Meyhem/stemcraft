@@ -5,10 +5,13 @@
 // before sample 0 (EngineController.countInAndPlay); the loop is bar 1 to the
 // end. Anything that rings past the loop end is folded onto the loop start,
 // so the buffer is truly circular and the wrap has no seam (R-01).
+import { DEFAULT_INSTRUMENT_SETTINGS, type PracticeBacking } from '../../api/client';
 import { STEM_ORDER, SAMPLE_RATE, sampleIndex, type SampleIndex, type StemName } from '../../engine/types';
 import type { StemChannels } from '../../engine/loopCursor';
 import type { Grid } from '../../music/grid';
 import { BEATS_PER_BAR, type PracticeLoop } from '../../music/practice/types';
+import { drumHit, drumHits } from './drums';
+import { chordHits, keysNote, padNote, voicing } from './pad';
 import { bassNote, pluckNote } from './voices';
 
 export const LEAD_IN_BARS = 2;
@@ -34,7 +37,11 @@ function gridOf(barCount: number, firstBar: number, bpm: number): Grid {
   return { bars, beats, beatsPerBar: BEATS_PER_BAR, bpm, barCount, medianBarSamples: beatFrames(BEATS_PER_BAR, bpm) };
 }
 
-export function renderPractice(loop: PracticeLoop, bpm: number): RenderedPractice {
+export function renderPractice(
+  loop: PracticeLoop,
+  bpm: number,
+  backing: PracticeBacking = DEFAULT_INSTRUMENT_SETTINGS.backing,
+): RenderedPractice {
   const loopBars = loop.bars.length;
   const loopStart = beatFrames(LEAD_IN_BARS * BEATS_PER_BAR, bpm);
   const loopEnd = loopStart + beatFrames(loopBars * BEATS_PER_BAR, bpm);
@@ -79,6 +86,24 @@ export function renderPractice(loop: PracticeLoop, bpm: number): RenderedPractic
       const { at, frames } = span(note.start, note.dur);
       mix(mono.bass, bassNote(note.midi, frames), at);
     }
+  }
+
+  // Drums, both instruments: one pattern per bar for the whole loop.
+  drumHits(backing.drum_groove, loopBars).forEach((hit, k) => {
+    mix(mono.drums, drumHit(hit.voice, k + 1), loopStart + beatFrames(hit.beat, bpm));
+  });
+
+  // The chord part, bass mode only: in guitar mode `other` is the reference guitar.
+  if (loop.instrument === 'bass') {
+    const voice = backing.chord_sound === 'pad' ? padNote : keysNote;
+    loop.bars.forEach((bar, b) => {
+      const notes = bar.chord ? voicing(bar.chord) : null;
+      if (!notes) return;
+      for (const hit of chordHits(backing.chord_sound)) {
+        const { at, frames } = span(b * BEATS_PER_BAR + hit.beat, hit.dur);
+        for (const midi of notes) mix(mono.other, voice(midi, frames), at);
+      }
+    });
   }
 
   for (const samples of Object.values(mono)) {

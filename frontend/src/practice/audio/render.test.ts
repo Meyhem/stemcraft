@@ -47,14 +47,13 @@ describe('renderPractice', () => {
     expect(r.display.beatsPerBar).toBe(4);
   });
 
-  test('the reference bass sounds at every note onset in the bass slot; vocals and drums are silent', () => {
+  test('the reference bass sounds at every note onset in the bass slot; vocals are silent', () => {
     const bass = r.stems[slot('bass')]!.left;
     for (const beat of [0, 1, 2, 3, 4, 8, 12]) {
       const at = r.loopStart + beatFrames(beat, bpm);
       expect(energy(bass, at, at + 480)).toBeGreaterThan(1);
     }
     expect(energy(r.stems[slot('vocals')]!.left, 0, r.loopEnd)).toBe(0);
-    expect(energy(r.stems[slot('drums')]!.left, 0, r.loopEnd)).toBe(0);
   });
 
   test('a release that runs past the loop end is folded onto the loop start, so the wrap is continuous', () => {
@@ -71,5 +70,33 @@ describe('renderPractice', () => {
     const other = g.stems[slot('other')]!.left;
     expect(energy(other, g.loopStart, g.loopStart + STRUM_STAGGER_FRAMES)).toBeGreaterThan(0);
     expect(energy(g.stems[slot('bass')]!.left, g.loopStart, g.loopStart + 480)).toBeGreaterThan(1);
+  });
+});
+
+describe('the band', () => {
+  const bass = loopFor('bass');
+  test('drums in the drums slot on every bar; the pad in other, in bass mode', () => {
+    const r = renderPractice(bass, 120, { chord_sound: 'pad', drum_groove: 'rock' });
+    const drums = r.stems[slot('drums')]!.left;
+    for (let bar = 0; bar < 4; bar++) {
+      const at = r.loopStart + beatFrames(bar * 4, 120);
+      expect(energy(drums, at, at + 480)).toBeGreaterThan(1);
+    }
+    expect(energy(drums, 0, r.loopStart)).toBe(0);
+    expect(energy(r.stems[slot('other')]!.left, r.loopStart, r.loopEnd)).toBeGreaterThan(1);
+  });
+
+  test('guitar mode keeps other for the reference guitar: no pad mixed in', () => {
+    const g = loopFor('guitar');
+    const withBand = renderPractice(g, 120, { chord_sound: 'pad', drum_groove: 'rock' });
+    const plain = renderPractice(g, 120);
+    expect(withBand.stems[slot('other')]!.left).toEqual(plain.stems[slot('other')]!.left);
+  });
+
+  test('a drill has no harmony: the pad slot is silent', () => {
+    const r = generate('bass', { ...DEFAULT_INSTRUMENT_SETTINGS, exercise: 'drill' });
+    if (!r.ok) throw new Error(r.error);
+    const out = renderPractice(r.loop, 120, { chord_sound: 'keys', drum_groove: 'funk' });
+    expect(energy(out.stems[slot('other')]!.left, 0, out.loopEnd)).toBe(0);
   });
 });

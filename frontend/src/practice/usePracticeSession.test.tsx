@@ -53,11 +53,11 @@ function setup(settings: InstrumentSettings = DEFAULT_INSTRUMENT_SETTINGS) {
   return { engine, hook, createEngine, loop: r.loop };
 }
 
-test('gainsFor: the reference in its slot, mutes as zero, the rest silent', () => {
-  const levels = { ...DEFAULT_INSTRUMENT_SETTINGS.levels, backing_muted: true };
-  expect(gainsFor('bass', levels)).toEqual({ vocals: 0, drums: 0, bass: 0.8, other: 0 });
-  expect(gainsFor('guitar', levels)).toEqual({ vocals: 0, drums: 0, bass: 0, other: 0.8 });
-  expect(gainsFor('guitar', { ...levels, backing_muted: false, ref_muted: true })).toEqual({ vocals: 0, drums: 0, bass: 0.6, other: 0 });
+test('gainsFor: each part in its slot, mutes as zero', () => {
+  const levels = { click: 0.7, ref: 0.8, ref_muted: false, backing: 0.6, backing_muted: true, chords: 0.5, chords_muted: false, drums: 0.4, drums_muted: false };
+  expect(gainsFor('bass', levels)).toEqual({ vocals: 0, drums: 0.4, bass: 0.8, other: 0.5 });
+  expect(gainsFor('guitar', levels)).toEqual({ vocals: 0, drums: 0.4, bass: 0, other: 0.8 });
+  expect(gainsFor('bass', { ...levels, drums_muted: true, chords_muted: true }).drums).toBe(0);
 });
 
 describe('usePracticeSession', () => {
@@ -134,4 +134,14 @@ describe('usePracticeSession', () => {
     hook.unmount();
     expect(engine.dispose).toHaveBeenCalled();
   });
+});
+
+test('changing the groove re-renders; changing a level does not', async () => {
+  const { engine, hook, loop } = setup();
+  await waitFor(() => expect(hook.result.current.rendered).not.toBeNull());
+  hook.rerender({ settings: { ...DEFAULT_INSTRUMENT_SETTINGS, levels: { ...DEFAULT_INSTRUMENT_SETTINGS.levels, drums: 0.1 } }, loop });
+  await new Promise((r) => setTimeout(r, 0));
+  expect(engine.replaceStems).not.toHaveBeenCalled();
+  hook.rerender({ settings: { ...DEFAULT_INSTRUMENT_SETTINGS, backing: { chord_sound: 'pad', drum_groove: 'funk' } }, loop });
+  await waitFor(() => expect(engine.replaceStems).toHaveBeenCalledTimes(1));
 });
