@@ -336,6 +336,18 @@ assuming it can vary.
    save is a warn banner with **Retry**, and unsaved answers are never dropped. References:
    `screens/theory-*.html`.
 
+- **Practice (D-22)** is a rail (instrument, the four exercises, presets), then a perform-tier
+  transport (play, bar and beat, now → next, BPM with Tap, Ramp, count-in, Regenerate), a ramp
+  strip while the ramp is on, the settings panel for the chosen exercise, the tab staff (the
+  whole loop up to 8 bars, gliding with the playhead a third in beyond that), the neck (Play
+  along's guitar neck and strum lane for a guitar groove) and the sound panel (click and
+  reference level, mute with M; chords and drums are marked Phase B). A help box says what the
+  exercise is. Errors: an exercise that does not fit is an error banner with one button per
+  fix and a disabled Play; an engine that cannot start is "Can't play" quoting the real
+  message; `practice.json` failures follow U-09 (verbatim error, confirmed **Reset to
+  defaults**, and a warn banner with **Retry** for a failed save). Space plays and pauses.
+  Reference: `screens/practice.html`.
+
 ## 7. Keyboard
 
 Performance controls all have keys, because reaching for a mouse mid-song is what the

@@ -1,0 +1,49 @@
+<!-- @dsCard group="Screens" name="Practice" subtitle="Rail, transport with ramp, settings, tab staff, neck and sound panel (D-22)" viewport="1440x1100" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Practice — Stemcraft</title><style>/* @inject */
+.grp .cap{width:72px}
+.prac{display:flex;gap:0;flex:1;align-items:stretch}.prac-rail{width:264px;display:flex;flex-direction:column;gap:var(--ds-2);padding:var(--ds-4) var(--ds-3);background:var(--ds-surface);border-right:1px solid var(--ds-border)}.prac-rail a{display:flex;flex-direction:column;padding:var(--ds-2) var(--ds-3);border-radius:var(--ds-r-btn);color:var(--ds-text-2)}.prac-rail a small{color:var(--ds-text-3)}.prac-rail a[aria-current]{background:var(--ds-overlay);color:var(--ds-text)}.staff{background:var(--ds-ground);border:1px solid var(--ds-border);border-radius:var(--ds-r-panel);padding:var(--ds-4);font:600 15px var(--ds-mono)}.chan{display:flex;align-items:center;gap:var(--ds-3);min-width:220px}.chan input{flex:1;accent-color:var(--ds-accent)}
+</style></head><body><div class="app">
+
+<div class="topbar">
+  <div class="brand"><span class="mark"><i style="height:10px;background:var(--ds-vocals)"></i><i style="height:16px;background:var(--ds-drums)"></i><i style="height:20px;background:var(--ds-bass)"></i><i style="height:13px;background:var(--ds-other)"></i></span>Stemcraft</div>
+  <div class="seg" style="margin-left:var(--ds-5)"><button>Library</button><button>Album splitter</button><button>Theory</button><button aria-selected="true">Practice</button></div>
+  <div class="grow"></div>
+</div>
+
+<div class="prac">
+  <aside class="prac-rail">
+    <span class="cap">Instrument</span><div class="seg"><button aria-selected="true">Bass</button><button>Guitar</button></div>
+    <span class="cap">Exercise</span>
+    <a aria-current="page">Groove over chords<small>Progression + pattern</small></a>
+    <a>Scales &amp; modes<small>Positions and sequences</small></a>
+    <a>Arpeggios<small>Chord tones, triads and 7ths</small></a>
+    <a>Technique drills<small>Chromatic, spider, crossing</small></a>
+    <span class="cap">Presets</span><a>Blues warm-up<small>groove · 100 bpm</small></a>
+    <div class="col" style="margin-top:auto;gap:var(--ds-2)"><button class="btn">Save as preset…</button></div>
+  </aside>
+  <main class="main col" style="gap:var(--ds-4)">
+    <div class="panel row wrap" style="gap:var(--ds-5);align-items:center">
+      <button class="btn btn-primary" aria-label="Play" style="width:56px;height:56px">▶</button>
+      <div class="col"><span class="cap">bar</span><span class="t-xl">2 <span class="dim">/ 4</span></span></div>
+      <div class="col"><span class="cap">chord</span><span class="t-lg">D → Em</span></div>
+      <div class="grow"></div>
+      <div class="col"><span class="cap">bpm · ramping</span><div class="row"><div class="seg"><button>−</button><button>100</button><button>+</button></div><button class="btn">Tap</button></div></div>
+      <button class="btn">Ramp ▾</button>
+      <div class="col"><span class="cap">count-in</span><div class="seg"><button>Off</button><button aria-selected="true">1</button><button>2</button></div></div>
+      <button class="btn">⟳ Regenerate</button>
+    </div>
+    <div class="panel row wrap" style="gap:var(--ds-4)"><span class="chip">Ramp</span><span><b>80 → 120 bpm</b>, +5 every 2 loops</span><span class="dim">85 bpm · step 2 of 9 · loop 1 of 2</span></div>
+    <div class="panel col" style="gap:var(--ds-3)">
+      <span class="cap">Key</span><div class="notekeys"><button>C</button><button>C♯/D♭</button><button>D</button><button>D♯/E♭</button><button>E</button><button>F</button><button>F♯/G♭</button><button aria-selected="true">G</button><button>G♯/A♭</button><button>A</button><button>A♯/B♭</button><button>B</button></div>
+      <div class="row wrap" style="gap:var(--ds-5)"><div class="col"><span class="cap">Progression</span><button class="btn">I–V–vi–IV ▾</button></div><div class="col"><span class="cap">Bars per chord</span><div class="seg"><button aria-selected="true">1</button><button>2</button><button>4</button></div></div><div class="col"><span class="cap">Notes</span><div class="seg"><button>Root</button><button>1–5</button><button aria-selected="true">1–5–8</button><button>Octave</button></div></div><div class="col"><span class="cap">Approach</span><div class="seg"><button>None</button><button aria-selected="true">Chromatic</button><button>Scale</button><button>Fifth</button></div></div></div>
+    </div>
+    <div class="staff col" style="gap:var(--ds-3)"><div class="row" style="gap:var(--ds-8)"><span>G</span><span>D</span><span>Em</span><span>C</span></div><span class="dim">G ─3───5───0───[2]─ · D ─── · low-to-high, one string per row, 4 bars looping</span></div>
+    <div class="neck"><!--@neck inst=bass4 root=G scale=major frets=12 w=1100 label=interval window=1-4--></div>
+    <div class="panel row wrap" style="gap:var(--ds-6)"><span class="cap">Sound</span>
+      <div class="chan"><b>Click</b><input type="range" value="70"></div>
+      <div class="chan"><b style="color:var(--ds-bass)">Ref. bass</b><button class="btn" aria-label="Mute Ref. bass">M</button><input type="range" value="80"></div>
+      <div class="chan dim"><b>Chords</b><span class="chip">Phase B</span></div><div class="chan dim"><b>Drums</b><span class="chip">Phase B</span></div></div>
+    <div class="help">A bass line over the progression, from Play along's patterns. The approach note falls on the last beat before each chord change. Listen to the reference bass for a pass, press M to mute it, then play it yourself.</div>
+  </main>
+</div>
+</div></body></html>

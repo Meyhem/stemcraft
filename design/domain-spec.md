@@ -283,6 +283,15 @@ The song screen's third view, beside Stems and Play along. Opt-in per Song, bass
 
 Clean single-note lines transcribe well; distorted notes, slides and very fast runs less so.
 
+## Practice (no song)
+
+A top-level tab for practising without a song. Pick bass or guitar, then one of four exercises: **Groove over chords** (a progression in a key, played with Play along's bass patterns or guitar shapes and strums), **Scales & modes** (one hand position or two octaves, walked by a path), **Arpeggios** (each chord's tones, over one chord or a progression) and **Technique drills** (chromatic, permutations, spider, string crossing, octaves; fret-based, so no key). Each has a key, a BPM, a count-in and an optional tempo ramp, and plays as a looping tab with a neck, a metronome and a reference part you can mute.
+
+- Settings are kept between visits, per instrument; presets are named snapshots of them.
+- Regenerate draws a new seed (approach notes in grooves, permutations in drills).
+- An exercise that does not fit the neck says why and offers fixes; nothing plays until it fits.
+- Spelling is key-aware (F major gives B♭); drills use sharps. The key picker shows both names on the black keys (C♯/D♭).
+
 ## Backlog
 
 - Guitar transcription (the generated shapes and strums cover practising over the chords)

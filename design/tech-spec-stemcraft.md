@@ -598,6 +598,32 @@ audit requirement exists.
   *Reversibility:* two-way. The file, route and job kind are additive.
   Design: `docs/superpowers/specs/2026-10-01-bass-tab-design.md`.
 
+- **D-22 — Practice is a song-free screen; exercises are generated and rendered in the
+  browser and played through the existing engine.** A top-level Practice tab
+  (`/practice`): bass or guitar, four exercises (groove over chords, scales and modes,
+  arpeggios, technique drills), a key, a BPM, a count-in and an optional tempo ramp.
+  Pure TypeScript generators (`music/practice/`) turn the settings and a seed into timed,
+  fretted notes; a pure TypeScript renderer (`practice/audio/`) synthesises them into the
+  engine's four stem slots at 48 kHz with two bars of silent lead-in, and one
+  `EngineController` per visit plays them (`createFromStems`, `replaceStems`), so looping,
+  count-in, click, mute and the playhead clock are the existing ones. Settings and named
+  presets live in `<data_dir>/practice.json`, written only by the API (`GET`/`PUT
+  /api/practice`, atomic); notes, audio and grids are never stored.
+  *Amended while planning:* the synths are plain DSP into `Float32Array`s, not an
+  `OfflineAudioContext` (jsdom has none, so it could not be unit-tested); the engine gains
+  `replaceStems` and a real click level (`setMetronomeLevel`); the staff follows the clock
+  directly (the loop is drawn tiled, so there is no jump to ease); arpeggios cycle to fill
+  each chord's bars; the guitar groove reuses D-20 whole through `guitarBars()`.
+  *Because:* the generators, painters and the seamless-looping engine already exist (D-18,
+  D-20, R-01); stem-shaped buffers get looping, count-in, click and mute without a second
+  audio path or clock.
+  *Rejected:* a live Web Audio scheduler (a second clock beside the engine); worker-rendered
+  WAVs (a queue round-trip on every picker change, and stored derived data, as D-18
+  rejected); re-rendering on every ramp step (the tempo ratio is seamless); wrapping long
+  loops into rows (too tall with 6 strings, so the staff glides).
+  *Reversibility:* two-way. The route, `practice.json` and the endpoints are additive.
+  Design: `docs/superpowers/specs/2026-10-02-practice-design.md`.
+
 ## 12. Deferred decisions
 
 - **Tab editing and export** (alphaTab, `.gp5` via PyGuitarPro, MusicXML) **and guitar
