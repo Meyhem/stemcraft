@@ -23,6 +23,7 @@ import { chordInfo, pretty } from '../../music/spell';
 import { neckFrets } from '../../music/tuning';
 import { Button, Chip, Panel, Segmented } from '../../ui';
 import { HelpBox, NotePicker, ToolHeader } from '../controls';
+import { FocusControls } from '../FocusControls';
 import { StartFresh } from '../StartFresh';
 import styles from '../Theory.module.css';
 import { TheoryNeck, type NeckDot } from '../TheoryNeck';
@@ -64,7 +65,6 @@ interface Problem {
 }
 
 const same = (a: Cell, b: Cell) => a.string === b.string && a.fret === b.fret;
-const sameSet = (a: readonly number[], b: readonly number[]) => a.length === b.length && a.every((x) => b.includes(x));
 const OUTSIDE = "but not in the strings and frets you're practising";
 
 export function FretboardQuiz() {
@@ -84,7 +84,6 @@ export function FretboardQuiz() {
   };
 
   const frets = neckFrets(inst);
-  const rows = inst.tuning.length;
   const focus = { strings: settings.strings, frets: settings.frets, accidentals: settings.accidentals };
   const [, hi] = focusFrets(inst, focus);
 
@@ -217,11 +216,6 @@ export function FretboardQuiz() {
     for (const c of attempt.found) dots.push({ ...c, label: pretty(plainName(pcAt(inst, c))), marker: 'ok' });
     for (const c of attempt.wrong) dots.push({ ...c, label: '', marker: 'wrong' });
   }
-  const lowTwo = [rows - 1, rows - 2];
-  const stringsValue = settings.strings.length === 0 || sameSet(settings.strings, Array.from({ length: rows }, (_, i) => i)) ? 'all' : sameSet(settings.strings, lowTwo) ? 'low' : 'custom';
-  const lowNames = lowTwo.map((r) => pretty(inst.tuning[rows - 1 - r]!.replace(/-?\d+$/, ''))).join(' + ');
-  const fretOptions = [[0, 5], [0, 12], [0, frets]] as const;
-
   return (
     <>
       {header}
@@ -275,34 +269,7 @@ export function FretboardQuiz() {
           </Chip>
         )}
       </div>
-      <div className={styles.row}>
-        <span className={styles.cap}>practise</span>
-        <Segmented<string>
-          label="Strings"
-          value={stringsValue}
-          onChange={(v) => setSettings({ strings: v === 'all' ? [] : lowTwo })}
-          options={[
-            { value: 'all', label: 'All strings' },
-            { value: 'low', label: `${lowNames} only` },
-          ]}
-        />
-        <Segmented<string>
-          label="Frets"
-          // A range to the end of the neck or past it (saved on a longer neck) is the every-fret chip: that is what is asked.
-          value={settings.frets[0] === 0 && settings.frets[1] >= frets ? `0-${frets}` : settings.frets.join('-')}
-          onChange={(v) => setSettings({ frets: v.split('-').map(Number) as [number, number] })}
-          options={fretOptions.map(([lo, top]) => ({ value: `${lo}-${top}`, label: `Frets ${lo}–${top}` }))}
-        />
-        <Segmented<string>
-          label="Notes"
-          value={settings.accidentals ? 'all' : 'naturals'}
-          onChange={(v) => setSettings({ accidentals: v === 'all' })}
-          options={[
-            { value: 'naturals', label: 'Naturals' },
-            { value: 'all', label: '+ sharps/flats' },
-          ]}
-        />
-      </div>
+      <FocusControls inst={inst} focus={focus} onChange={setSettings} />
       <HelpBox>{HELP[settings.mode]}</HelpBox>
       <StartFresh onReset={practice.resetHistory} />
     </>
