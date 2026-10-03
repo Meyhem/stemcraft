@@ -10,7 +10,32 @@ const peak = (xs: Float32Array, from = 0, to = xs.length) => {
   return m;
 };
 
+/** Amplitude of one frequency in a span of samples (Goertzel). */
+function amplitudeAt(xs: Float32Array, hz: number, from: number, to: number): number {
+  const w = (2 * Math.PI * hz) / SAMPLE_RATE;
+  let re = 0;
+  let im = 0;
+  for (let i = from; i < to; i++) {
+    re += xs[i]! * Math.cos(w * i);
+    im += xs[i]! * Math.sin(w * i);
+  }
+  return (2 * Math.hypot(re, im)) / (to - from);
+}
+
 describe('renderGuess', () => {
+  test('a low bass note keeps overtones through its sustain, so small speakers that cannot play 40-100 Hz still carry its pitch', () => {
+    const midi = 28; // E1, 41 Hz
+    const hz = 440 * 2 ** ((midi - 69) / 12);
+    const voice = renderGuess('bass', midi, null)[STEM_ORDER.indexOf('bass')]!.left;
+    const from = Math.round(0.4 * SAMPLE_RATE);
+    const to = Math.round(0.9 * SAMPLE_RATE);
+    const fundamental = amplitudeAt(voice, hz, from, to);
+    const overtones = [2, 3, 4, 5].map((n) => amplitudeAt(voice, n * hz, from, to));
+    expect(overtones[0]).toBeGreaterThan(fundamental * 0.4);
+    expect(overtones[1]).toBeGreaterThan(fundamental * 0.3);
+    expect(overtones[2]! + overtones[3]!).toBeGreaterThan(fundamental * 0.3);
+  });
+
   test.each(['bass', 'guitar'] as const)('%s: the voice is in its slot, the other slots are silent, nothing clips', (kind) => {
     const stems = renderGuess(kind, 43, 45);
     expect(stems).toHaveLength(STEM_ORDER.length);
