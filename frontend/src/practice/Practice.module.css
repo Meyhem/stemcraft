@@ -1,0 +1,13 @@
+/* The Practice tab (D-22). Reference: the canvas mockup's Main artboard. Tokens only (U-02). */
+.staff,
+.neck {
+  background: var(--ds-ground);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+  overflow: hidden;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+}
