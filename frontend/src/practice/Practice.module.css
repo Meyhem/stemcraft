@@ -11,3 +11,234 @@
   display: block;
   width: 100%;
 }
+
+.layout {
+  display: flex;
+  min-height: calc(100vh - 65px);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-4);
+  padding: var(--ds-4);
+}
+
+.cap {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--ds-t-xs);
+  font-weight: 600;
+  color: var(--ds-text-3);
+}
+
+.dim {
+  color: var(--ds-text-3);
+  font-size: var(--ds-t-sm);
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  gap: var(--ds-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.panel {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+  padding: var(--ds-4);
+}
+
+/* ---- rail ---- */
+.rail {
+  width: 264px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+  padding: var(--ds-4) var(--ds-3);
+  background: var(--ds-surface);
+  border-right: 1px solid var(--ds-border);
+}
+
+.railItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: var(--ds-hit-setup);
+  padding: var(--ds-2) var(--ds-3);
+  border: 0;
+  border-radius: var(--ds-r-btn);
+  background: transparent;
+  color: var(--ds-text-2);
+  font: 400 var(--ds-t-sm) / 1.3 var(--ds-font);
+  text-align: left;
+  cursor: pointer;
+}
+
+.railItem small {
+  font-size: var(--ds-t-xs);
+  color: var(--ds-text-3);
+}
+
+.railItem:hover {
+  background: var(--ds-raised);
+  color: var(--ds-text);
+}
+
+.railItem[aria-current='page'] {
+  background: var(--ds-overlay);
+  color: var(--ds-text);
+}
+
+.railFoot {
+  margin-top: auto;
+  padding-top: var(--ds-3);
+  border-top: 1px solid var(--ds-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-2);
+}
+
+/* ---- settings ---- */
+.settings {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+  padding: var(--ds-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-4) var(--ds-5);
+  align-items: flex-end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-1);
+}
+
+.keys {
+  display: flex;
+  gap: var(--ds-1);
+  flex-wrap: wrap;
+}
+
+.keys > button {
+  min-width: 44px;
+  height: var(--ds-hit-setup);
+  padding: 0 var(--ds-2);
+  border-radius: var(--ds-r-btn);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border);
+  font: 600 var(--ds-t-sm) / 1 var(--ds-font);
+  color: var(--ds-text-2);
+  cursor: pointer;
+}
+
+.keys > button[aria-pressed='true'] {
+  background: var(--ds-accent);
+  border-color: var(--ds-accent);
+  color: var(--ds-on-accent);
+}
+
+.select {
+  height: var(--ds-hit-setup);
+  padding: 0 var(--ds-3);
+  background: var(--ds-ground);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-r-input);
+  color: var(--ds-text);
+  font: 400 var(--ds-t-sm) / 1 var(--ds-font);
+}
+
+/* ---- sound ---- */
+.sound {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-r-panel);
+  padding: var(--ds-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-4) var(--ds-6);
+  align-items: center;
+}
+
+.channel {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-3);
+  min-width: 220px;
+}
+
+.channel input[type='range'] {
+  flex: 1;
+  accent-color: var(--ds-accent);
+}
+
+.channelName {
+  width: 104px;
+  font-weight: 600;
+  font-size: var(--ds-t-sm);
+}
+
+.mute {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--ds-r-btn);
+  border: 1px solid var(--ds-border-strong);
+  background: var(--ds-raised);
+  color: var(--ds-text-2);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mute[aria-pressed='true'] {
+  background: var(--ds-warn);
+  border-color: var(--ds-warn);
+  color: var(--ds-on-warn);
+}
+
+.later {
+  opacity: 0.45;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--ds-3);
+  border-radius: var(--ds-r-pill);
+  background: var(--ds-raised);
+  border: 1px solid var(--ds-border-strong);
+  font: 600 var(--ds-t-xs) / 1 var(--ds-font);
+  color: var(--ds-text-2);
+}
+
+/* ---- help ---- */
+.help {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-left: 3px solid var(--ds-accent);
+  border-radius: var(--ds-r-btn);
+  padding: var(--ds-3) var(--ds-4);
+  font-size: var(--ds-t-sm);
+  color: var(--ds-text-2);
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .layout {
+    flex-direction: column;
+  }
+  .rail {
+    width: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--ds-border);
+  }
+}
