@@ -159,25 +159,36 @@
 
 /* ---- sound ---- */
 .sound {
+  --picker-w: 168px;
   background: var(--ds-surface);
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-r-panel);
   padding: var(--ds-4);
-  display: flex;
-  flex-wrap: wrap;
+  /* One or two columns of identical cells (as width allows): name | mute | slider | optional picker. */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
   gap: var(--ds-4) var(--ds-6);
   align-items: center;
 }
 
+.sound > .cap {
+  grid-column: 1 / -1;
+}
+
 .channel {
-  display: flex;
+  display: grid;
+  grid-template-columns: 104px 40px minmax(80px, 1fr);
   align-items: center;
   gap: var(--ds-3);
-  min-width: 220px;
+}
+
+/* A channel with no picker keeps the picker's column free, so sliders line up. */
+.sound > .channel {
+  margin-right: calc(var(--picker-w) + var(--ds-3));
 }
 
 .channel input[type='range'] {
-  flex: 1;
+  width: 100%;
   accent-color: var(--ds-accent);
 }
 
@@ -334,9 +345,24 @@
 }
 
 .channelWide {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--picker-w);
   align-items: center;
   gap: var(--ds-3);
-  min-width: 480px;
-  flex-wrap: wrap;
+}
+
+.channelWide > .dim {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+  .sound {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sound > .channel {
+    margin-right: 0;
+  }
+  .channelWide {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
