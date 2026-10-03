@@ -26,7 +26,6 @@ export interface NeckBar {
 }
 const TOP = 40;
 const STRING_GAP = 44;
-const STRINGS = 'EADG';
 
 export interface NeckGeometry {
   width: number;
@@ -42,6 +41,21 @@ export function neckGeometry(width: number): NeckGeometry {
 /** 0 = low E, drawn at the bottom, as a player looks down at the neck. */
 export function stringY(string: number): number {
   return TOP + STRING_GAP * (3 - string);
+}
+
+/** Strings and spacing. The bass default is exactly the Play along neck (D-18); Practice adds six strings (D-22). */
+export interface NeckLayout {
+  /** Low string first. */
+  names: readonly string[];
+  top: number;
+  gap: number;
+  height: number;
+}
+export const BASS_LAYOUT: NeckLayout = { names: ['E', 'A', 'D', 'G'], top: TOP, gap: STRING_GAP, height: NECK_H };
+export const GUITAR_LINE_LAYOUT: NeckLayout = { names: ['E', 'A', 'D', 'G', 'B', 'e'], top: 40, gap: 30, height: 250 };
+
+function yOf(layout: NeckLayout, string: number): number {
+  return layout.top + layout.gap * (layout.names.length - 1 - string);
 }
 
 /** Centre of a fretted note: between wire fret-1 and wire fret. Open notes sit left of the nut. */
@@ -68,14 +82,15 @@ export function paintNeck(
   current: NeckBar | null,
   next: NeckBar | null,
   hot: number,
+  layout: NeckLayout = BASS_LAYOUT,
 ): void {
   const g = neckGeometry(width);
-  const top = stringY(3) - 22;
-  const bottom = stringY(0) + 22;
+  const top = yOf(layout, layout.names.length - 1) - 22;
+  const bottom = yOf(layout, 0) + 22;
   // Dots shrink with the frets on a phone so adjacent frets do not overlap; 21 on desktop.
-  const r = Math.min(21, g.fretW * 0.48);
+  const r = Math.min(21, layout.gap * 0.48, g.fretW * 0.48);
   const scale = r / 21;
-  ctx.clearRect(0, 0, width, NECK_H);
+  ctx.clearRect(0, 0, width, layout.height);
 
   ctx.fillStyle = colors.board;
   ctx.fillRect(g.nutX, top, g.fretW * MAX_FRET, bottom - top);
@@ -95,12 +110,12 @@ export function paintNeck(
 
   ctx.font = '600 17px system-ui, sans-serif';
   ctx.textAlign = 'left';
-  for (let s = 0; s < 4; s++) {
+  for (let s = 0; s < layout.names.length; s++) {
     ctx.strokeStyle = colors.string;
-    ctx.lineWidth = 3.2 - s * 0.6;
-    line(ctx, g.nutX, stringY(s), g.nutX + g.fretW * MAX_FRET, stringY(s));
+    ctx.lineWidth = 3.2 - s * (layout.names.length === 4 ? 0.6 : 0.45);
+    line(ctx, g.nutX, yOf(layout, s), g.nutX + g.fretW * MAX_FRET, yOf(layout, s));
     ctx.fillStyle = colors.label;
-    ctx.fillText(STRINGS[s]!, 8, stringY(s) + 6);
+    ctx.fillText(layout.names[s]!, 8, yOf(layout, s) + 6);
   }
 
   ctx.fillStyle = colors.fret;
@@ -118,7 +133,7 @@ export function paintNeck(
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 4]);
     for (const n of next.notes) {
-      dot(ctx, noteX(g, n.position.fret), stringY(n.position.string), r * (18 / 21));
+      dot(ctx, noteX(g, n.position.fret), yOf(layout, n.position.string), r * (18 / 21));
       ctx.stroke();
     }
     ctx.setLineDash([]);
@@ -156,7 +171,7 @@ export function paintNeck(
   ctx.textAlign = 'center';
   for (const d of byPosition.values()) {
     const x = noteX(g, d.fret);
-    const y = stringY(d.string);
+    const y = yOf(layout, d.string);
     const isHot = d.index.includes(hot);
     if (isHot) {
       ctx.globalAlpha = 0.22;

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PlacedBar } from '../music/fingering';
 import type { BarPlan } from '../music/patterns';
 import type { PlayAlongColors } from './colors';
-import { neckGeometry, noteX, paintNeck, stringY } from './neckPainter';
+import { GUITAR_LINE_LAYOUT, neckGeometry, noteX, paintNeck, stringY } from './neckPainter';
 
 const colors: PlayAlongColors = {
   note: 'teal', other: 'violet', hot: 'blue', approach: 'orange', next: 'grey', string: 's', fret: 'f', nut: 'n',
@@ -114,5 +114,18 @@ describe('play-order label', () => {
     const { ctx, calls } = recordingContext();
     paintNeck(ctx, 1000, colors, { notes: [note('G', 0, 3, 0), note('G', 0, 3, 2)] }, null, -1);
     expect(calls.fillText.some(([t]) => t === '1·2')).toBe(true);
+  });
+});
+
+
+describe('a six-string layout', () => {
+  it('names six strings and keeps dots inside the narrower gap', () => {
+    const { ctx, calls } = recordingContext();
+    const bar = { notes: [{ name: 'A', position: { string: 5, fret: 5 } }] };
+    paintNeck(ctx, 1200, colors, bar, null, -1, GUITAR_LINE_LAYOUT);
+    // The string names are painted before the notes, so they are the first six single letters.
+    const names = calls.fillText.map(([t]) => t).filter((t) => /^[EADGBe]$/.test(t)).slice(0, 6);
+    expect(names).toEqual(['E', 'A', 'D', 'G', 'B', 'e']);
+    expect(Math.max(...calls.arc)).toBeLessThanOrEqual(GUITAR_LINE_LAYOUT.gap * 0.48 + 1e-9);
   });
 });
