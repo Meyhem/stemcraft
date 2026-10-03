@@ -81,3 +81,8 @@ describe('guitarGroove', () => {
     expect(loop.notes.filter((n) => n.group === 0).every((n) => n.dur === 1)).toBe(true);
   });
 });
+
+test('every groove bar names its chord for the pad', () => {
+  const loop = loopOrThrow(bassGroove(withGroove({ bars_per_chord: 2 })));
+  expect(loop.bars.map((b) => b.chord)).toEqual(['G', 'G', 'D', 'D', 'E:min', 'E:min', 'C', 'C']);
+});

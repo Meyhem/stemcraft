@@ -49,6 +49,8 @@ export interface PracticeBar {
   repeat: boolean;
   /** A substitution the generator made in this bar, shown, never hidden (N-08); null if none. */
   note: string | null;
+  /** The bar's harmony for the chord pad, as a BTC label parseChord reads; null for none (drills). */
+  chord: string | null;
 }
 
 export interface PracticeLoop {

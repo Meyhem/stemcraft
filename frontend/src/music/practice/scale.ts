@@ -5,6 +5,7 @@
 import type { InstrumentSettings, PracticeInstrument, PracticeScale } from '../../api/client';
 import { mod12 } from '../chordTones';
 import { pretty, rootName, scaleDef, scaleNotes } from '../spell';
+import { toBtcLabel } from './chords';
 import { HAND_SPAN, placeLine, PRACTICE_MAX_FRET, STRING_NAMES, TUNINGS, type Fretted } from './neck';
 import { BEATS_PER_BAR, loopOf, RHYTHM_STEP, type Fix, type GenerateResult, type PracticeNote } from './types';
 
@@ -54,6 +55,9 @@ export function scaleLine(settings: InstrumentSettings, inst: PracticeInstrument
   const tuning = TUNINGS[inst];
   const span = HAND_SPAN[inst];
   const title = `${pretty(tonic)} ${def.label}`;
+  // The pad drones the scale's tonic triad.
+  const btcRoot = toBtcLabel(tonic);
+  const drone = def.mode === 'minor' ? `${btcRoot}:min` : btcRoot;
 
   let line: (Fretted & { midi: number })[];
   if (sc.shape === 'position') {
@@ -117,6 +121,6 @@ export function scaleLine(settings: InstrumentSettings, inst: PracticeInstrument
       stroke: null,
     };
   });
-  const bars = Array.from({ length: barCount }, (_, i) => ({ label: i === 0 ? title : '', repeat: false, note: null }));
+  const bars = Array.from({ length: barCount }, (_, i) => ({ label: i === 0 ? title : '', repeat: false, note: null, chord: drone }));
   return { ok: true, loop: loopOf(inst, bars, notes) };
 }

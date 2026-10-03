@@ -105,6 +105,6 @@ export function arpeggioLine(settings: InstrumentSettings, inst: PracticeInstrum
     });
     start = end;
   }
-  const bars = chordBars.map((b, i) => ({ label: pretty(b.symbol), repeat: b.repeat, note: barNotes[i] ?? null }));
+  const bars = chordBars.map((b, i) => ({ label: pretty(b.symbol), repeat: b.repeat, note: barNotes[i] ?? null, chord: b.label }));
   return { ok: true, loop: loopOf(inst, bars, notes) };
 }

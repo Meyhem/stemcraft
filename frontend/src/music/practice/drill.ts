@@ -80,7 +80,7 @@ export function drillLine(settings: InstrumentSettings, inst: PracticeInstrument
     const inBar = notes.filter((n) => n.start >= b * BEATS_PER_BAR && n.start < (b + 1) * BEATS_PER_BAR);
     const first = names[inBar[0]?.string ?? 0]!;
     const last = names[inBar.at(-1)?.string ?? 0]!;
-    return { label: first === last ? first : `${first} → ${last}`, repeat: false, note: null };
+    return { label: first === last ? first : `${first} → ${last}`, repeat: false, note: null, chord: null };
   });
   return { ok: true, loop: loopOf(inst, bars, notes) };
 }

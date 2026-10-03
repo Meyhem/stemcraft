@@ -67,3 +67,12 @@ describe('scaleLine', () => {
     expect(r.fixes[0]!.apply(withScale({ from_fret: 11 })).scale.from_fret).toBe(9);
   });
 });
+
+test('a scale drones its tonic triad', () => {
+  const r = scaleLine(withScale({}), 'bass');
+  if (!r.ok) throw new Error(r.error);
+  expect(r.loop.bars.map((b) => b.chord)).toEqual(['A:min', 'A:min']);
+  const major = scaleLine(withScale({ scale: 'lydian' }, { key: 0 }), 'bass');
+  if (!major.ok) throw new Error(major.error);
+  expect(major.loop.bars[0]!.chord).toBe('C');
+});

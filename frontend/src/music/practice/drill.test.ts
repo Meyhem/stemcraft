@@ -58,3 +58,9 @@ describe('drillLine', () => {
     expect(r.fixes[0]!.apply(withDrill({ drill: 'octaves', from_fret: 8 })).drill.from_fret).toBe(7);
   });
 });
+
+test('drills have no harmony', () => {
+  const r = drillLine(withDrill({}), 'bass');
+  if (!r.ok) throw new Error(r.error);
+  expect(r.loop.bars.every((b) => b.chord === null)).toBe(true);
+});

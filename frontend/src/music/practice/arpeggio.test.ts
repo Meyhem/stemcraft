@@ -45,3 +45,9 @@ describe('arpeggioLine', () => {
     expect(r.loop.bars[0]!.note).toBe('G has no 7th: root, 3rd, 5th, octave');
   });
 });
+
+test('arpeggio bars name their chords', () => {
+  const r = arpeggioLine(withArp({}), 'bass');
+  if (!r.ok) throw new Error(r.error);
+  expect(r.loop.bars.map((b) => b.chord)).toEqual(['D:min7', 'G:7', 'C:maj7']);
+});

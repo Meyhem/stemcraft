@@ -18,7 +18,7 @@ import { rng } from './random';
 import { BEATS_PER_BAR, loopOf, type GenerateResult, type PracticeBar, type PracticeNote, type SynthNote } from './types';
 
 function chordRow(bars: readonly ChordBar[], notes: (string | null)[] = []): PracticeBar[] {
-  return bars.map((b, i) => ({ label: pretty(b.symbol), repeat: b.repeat, note: notes[i] ?? null }));
+  return bars.map((b, i) => ({ label: pretty(b.symbol), repeat: b.repeat, note: notes[i] ?? null, chord: b.label }));
 }
 
 /**
