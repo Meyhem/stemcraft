@@ -36,16 +36,36 @@ const READY = {
   'theory-quiz': '[data-marker="question"]', // a question is on the neck: the document is read and the round has started
   'album-splitter': '[data-testid="album-canvas"]',
   'job-queue': '[aria-label="Jobs"] tbody tr', // a job row: the list is in
+  'theory-guess-note': '[aria-live="polite"]', // the prompt: the document is read and a question is waiting
 };
 
 // Screens taller than the default viewport: the play-along neck sits below the pickers;
 // the Theory rail's instrument footer (tuning, left-handed) sits below the fold at 900; the
 // quiz's question, neck, note buttons and weak-spot heatmap need a tall page to be seen together.
-const HEIGHTS = { tab: 1300, 'play-along': 1420, 'play-along-guitar': 1420, theory: 960, 'theory-shapes': 960, 'theory-quiz': 1100 };
+const HEIGHTS = { tab: 1300, 'play-along': 1420, 'play-along-guitar': 1420, theory: 960, 'theory-shapes': 960, 'theory-quiz': 1100, 'theory-guess-note': 900 };
 
 // Screens that only show their point once playing: press Space, let a few bars go by,
 // press Space again so the frame is still. (The neck is empty before the first bar.)
 const PLAY_MS = { tab: 7000, 'play-along': 7000, 'play-along-guitar': 7000 };
+
+// Screens whose point only shows after a few clicks: a page expression run once the screen is
+// ready. Guess the note says nothing until Play, and shows its feedback only after a wrong answer,
+// so this plays, switches to the neck and taps E-string frets until one is marked wrong.
+const ACT = {
+  'theory-guess-note': `(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const button = (name) => [...document.querySelectorAll('button, [aria-label]')].find((b) => b.getAttribute('aria-label') === name || (b.tagName === 'BUTTON' && b.textContent.trim() === name));
+    const press = (name) => button(name).dispatchEvent(new MouseEvent('click', { bubbles: true })); // SVG cells have no click()
+    press('On the neck');
+    await wait(300);
+    press('▶ Play');
+    await wait(800);
+    for (let fret = 1; fret <= 12 && !document.querySelector('[role=status]').textContent; fret++) {
+      press('E string, fret ' + fret);
+      await wait(200);
+    }
+  })()`,
+};
 
 const shots = process.argv.slice(2).map((arg) => {
   // Split on the FIRST '=' only: a path may carry a query string (theory=/theory/x?root=A).
@@ -149,6 +169,10 @@ try {
     });
     await cdp.send('Page.navigate', { url: `${BASE}${path}` });
     await waitFor(cdp, READY[name] ?? 'body');
+    if (ACT[name]) {
+      const { exceptionDetails } = await cdp.send('Runtime.evaluate', { expression: ACT[name], awaitPromise: true });
+      if (exceptionDetails) throw new Error(`${name}: ${exceptionDetails.exception?.description ?? exceptionDetails.text}`);
+    }
     if (PLAY_MS[name]) {
       const space = (type) =>
         cdp.send('Input.dispatchKeyEvent', { type, key: ' ', code: 'Space', windowsVirtualKeyCode: 32, text: ' ' });

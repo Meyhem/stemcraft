@@ -333,8 +333,13 @@ assuming it can vary.
    no score, round counter, streak, timer or stats (on purpose: practice stays relaxed), feedback in an error chip that explains the mistake,
    focus settings, and a quiet **Start fresh**. `theory.json` failures are an error banner
    with the verbatim validation error and a confirmed **Reset to defaults** (U-09). A failed
-   save is a warn banner with **Retry**, and unsaved answers are never dropped. References:
-   `screens/theory-*.html`.
+   save is a warn banner with **Retry**, and unsaved answers are never dropped. **Guess the
+   note** (D-23) sits between the two quizzes: **▶ Play** (nothing sounds before it), then
+   each question plays by itself (an A first unless "No reference", then the note), with
+   **Replay** and the Space key. Answer with the note buttons or by tapping the neck
+   (**Name it** / **On the neck**); the focus row is the Fretboard quiz's, and a quiet
+   "That was D3" confirms the last answer. An audio engine that cannot start replaces the
+   quiz with its error message. References: `screens/theory-*.html`.
 
 - **Practice (D-22)** is a rail (instrument, the four exercises, presets), then a perform-tier
   transport (play, bar and beat, now → next, BPM with Tap, Ramp, count-in, Regenerate), a ramp

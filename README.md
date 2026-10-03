@@ -10,7 +10,7 @@ instrument and play along.
 - **Analysis** — beat, key and chord detection
 - **Tablature generator** — transcribe the bass stem into tab
 - **Play-along patterns** — generated bass lines and guitar chord shapes from the chord chart
-- **Theory tools** — scales, chords, positions and relaxed quizzes for bass and guitar
+- **Theory tools** — scales, chords, positions and relaxed quizzes for bass and guitar, including ear training: hear a note in bass or guitar voice (after a reference A, or cold) and name it or find it on the neck
 - **Practice** — no song needed: generated grooves over 19 progressions (pop, 12-bar and jazz blues, rhythm changes, minor standards), scales, arpeggios and drills for bass or guitar, with live tab, metronome, count-in, drums and a chord pad, a tempo ramp and a reference part you can mute
 - **Album splitting** — cut a full album rip into tagged tracks
 - **Export** — download the current mix
@@ -29,10 +29,11 @@ instrument and play along.
 ![Theory](docs/screenshots/theory.png)
 ![Theory: scale positions](docs/screenshots/theory-shapes.png)
 ![Theory: fretboard quiz](docs/screenshots/theory-quiz.png)
+![Theory: guess the note](docs/screenshots/theory-guess-note.png)
 ![Job queue](docs/screenshots/job-queue.png)
 
 All ten are captures of the running app, made with
-`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> tab=/songs/<id>/tab play-along=/songs/<id>/play play-along-guitar=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" "theory-shapes=/theory/scale-positions?root=A&scale=minor-pentatonic" theory-quiz=/theory/fretboard-quiz practice=/practice album-splitter=/splitter/<id> job-queue=/jobs`
+`node scripts/capture-screens.mjs library=/ import=/import song-view=/songs/<id> tab=/songs/<id>/tab play-along=/songs/<id>/play play-along-guitar=/songs/<id>/play "theory=/theory/scale-finder?root=A&scale=minor-pentatonic" "theory-shapes=/theory/scale-positions?root=A&scale=minor-pentatonic" theory-quiz=/theory/fretboard-quiz theory-guess-note=/theory/guess-note practice=/practice album-splitter=/splitter/<id> job-queue=/jobs`
 (API and dev server running; it loads the pages, and for the Tab and Play along views it presses Space to play a few bars and pause again; the Tab capture needs the song's tab extracted first; for the guitar capture, switch that song's Play along to Guitar first, and back to Bass after). The design system these follow —
 tokens, components and screen mockups — is in [design/ui](design/ui) (build it with
 `python3 design/ui/build.py`), with its rules in [design/ui-spec.md](design/ui-spec.md).

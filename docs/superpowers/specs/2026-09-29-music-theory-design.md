@@ -27,9 +27,10 @@ reference next to the practice tool they already use.
 
 ## Non-goals
 
-- **Sound.** No reference tones, drone or ear training. The only audio source stays
-  the playback engine. Ear training can come later with its own design for how a
-  second audio source coexists with the engine.
+- **Sound.** No drone, and no ear training beyond single notes. The only audio source
+  stays the playback engine. Single-note ear training is now
+  [Guess the note](2026-10-03-guess-the-note-design.md) (D-23), which plays through that
+  engine; intervals, chords and melodies by ear remain future work.
 - **Printable sheets and tab export.**
 - **Sharing the instrument setting with Play along.** Theory's instrument lives in
   `theory.json`, and Play along stays EADG as its spec says. Both necks share drawing

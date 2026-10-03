@@ -1,7 +1,7 @@
 # Guess the note: design
 
 **Date:** 2026-10-03
-**Status:** draft
+**Status:** implemented
 **Amends:** [2026-09-29-music-theory-design.md](2026-09-29-music-theory-design.md) (the "Sound" non-goal)
 **Builds on:** D-19 (Theory tab, quizzes), D-22 (Practice: browser-rendered audio played through the existing engine)
 

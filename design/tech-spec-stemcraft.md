@@ -628,6 +628,22 @@ audit requirement exists.
   names each bar's harmony (scales drone the tonic triad, drills have none).
   Design: `docs/superpowers/specs/2026-10-02-practice-design.md`.
 
+- **D-23 — Ear training (Guess the note) renders each question in the browser and plays it
+  through the existing engine.** A third Theory quiz plays one note in the instrument's
+  own voice (Practice's synthesised bass or plucked guitar), optionally after a reference
+  A, and the player names it or taps it on the neck. A question is one short buffer (the
+  A, a gap, the target) rendered at 48 kHz into stem-shaped `Float32Array`s and swapped
+  into one `EngineController` per visit with `replaceStems`. `theory.json` stays v1 and
+  gains `quiz.settings.ear`, the `"ear"` quiz kind and the `guess-note` tool.
+  *Because:* the Theory spec deferred sound until it was clear how a second audio source
+  would coexist with the engine; D-22 answered that with no second audio path or clock.
+  *Rejected:* an oscillator or buffer source on its own `AudioContext` (a second audio
+  path beside the engine); sampled instruments (assets to ship, for a sound the synths
+  already make); no reference by default (absolute pitch, which most adults never learn;
+  it stays available as a setting).
+  *Reversibility:* two-way. The additions to `theory.json` are optional fields.
+  Design: `docs/superpowers/specs/2026-10-03-guess-the-note-design.md`.
+
 ## 12. Deferred decisions
 
 - **Tab editing and export** (alphaTab, `.gp5` via PyGuitarPro, MusicXML) **and guitar
