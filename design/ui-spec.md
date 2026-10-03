@@ -341,7 +341,7 @@ assuming it can vary.
   strip while the ramp is on, the settings panel for the chosen exercise, the tab staff (the
   whole loop up to 8 bars, gliding with the playhead a third in beyond that), the neck (Play
   along's guitar neck and strum lane for a guitar groove) and the sound panel (click and
-  reference level, mute with M; chords and drums are marked Phase B). A help box says what the
+  reference level, mute with M; bass mode adds a chord pad or keys, both modes a drum groove, each with its own level and mute). A help box says what the
   exercise is. Errors: an exercise that does not fit is an error banner with one button per
   fix and a disabled Play; an engine that cannot start is "Can't play" quoting the real
   message; `practice.json` failures follow U-09 (verbatim error, confirmed **Reset to

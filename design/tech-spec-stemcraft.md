@@ -622,6 +622,10 @@ audit requirement exists.
   rejected); re-rendering on every ramp step (the tempo ratio is seamless); wrapping long
   loops into rows (too tall with 6 strings, so the staff glides).
   *Reversibility:* two-way. The route, `practice.json` and the endpoints are additive.
+  *Amended (Phase B):* chord pad (bass mode, `other`) and drum grooves (both, `drums`) are
+  rendered by the same renderer; `practice.json` is v2 (additive: chord and drum levels,
+  `backing.chord_sound`/`drum_groove`; v1 files upgrade in memory); `PracticeBar.chord`
+  names each bar's harmony (scales drone the tonic triad, drills have none).
   Design: `docs/superpowers/specs/2026-10-02-practice-design.md`.
 
 ## 12. Deferred decisions

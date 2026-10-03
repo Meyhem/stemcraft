@@ -11,7 +11,7 @@ instrument and play along.
 - **Tablature generator** — transcribe the bass stem into tab
 - **Play-along patterns** — generated bass lines and guitar chord shapes from the chord chart
 - **Theory tools** — scales, chords, positions and relaxed quizzes for bass and guitar
-- **Practice** — no song needed: generated grooves, scales, arpeggios and drills for bass or guitar, with live tab, metronome, count-in, a tempo ramp and a reference part you can mute
+- **Practice** — no song needed: generated grooves, scales, arpeggios and drills for bass or guitar, with live tab, metronome, count-in, drums and a chord pad, a tempo ramp and a reference part you can mute
 - **Album splitting** — cut a full album rip into tagged tracks
 - **Export** — download the current mix
 - **Job queue** — live progress, with real error messages on failure
