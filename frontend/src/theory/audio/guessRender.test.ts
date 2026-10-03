@@ -41,6 +41,15 @@ describe('renderGuess', () => {
     expect(peak(voice, 0, SAMPLE_RATE / 10)).toBeGreaterThan(0.05);
   });
 
+  test.each(['bass', 'guitar'] as const)('%s: each note dies away before it ends, so it is not chopped off while ringing', (kind) => {
+    const voice = renderGuess(kind, 43, 45)[STEM_ORDER.indexOf(VOICE_SLOT[kind])]!.left;
+    const loudest = peak(voice);
+    const end = voice.length;
+    expect(peak(voice, end - SAMPLE_RATE / 20, end)).toBeLessThan(loudest * 0.05);
+    const refEnd = REFERENCE_FRAMES + RELEASE_FRAMES;
+    expect(peak(voice, refEnd - SAMPLE_RATE / 20, refEnd)).toBeLessThan(loudest * 0.05);
+  });
+
   test('is deterministic', () => {
     expect(renderGuess('guitar', 55, 57)[3]!.left).toEqual(renderGuess('guitar', 55, 57)[3]!.left);
   });

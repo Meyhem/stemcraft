@@ -21,7 +21,7 @@ export interface GuessEngine {
 export const guessEngine = {
   async create(stems: readonly StemChannels[]): Promise<GuessEngine> {
     const { EngineController } = await import('../engine/EngineController');
-    return EngineController.createFromStems(stems);
+    return EngineController.createFromStems(stems, { stretch: false }); // a note is never retimed: no stretcher's latency or startup dropout
   },
 };
 

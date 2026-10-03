@@ -14,9 +14,15 @@ export const TARGET_AT = REFERENCE_FRAMES + GAP_FRAMES;
 
 export const VOICE_SLOT: Record<'bass' | 'guitar', StemName> = { bass: 'bass', guitar: 'other' };
 
+/** A note rings on well past its length (the bass has barely decayed), so the voice's own 30 ms release would chop it. */
+const FADE_FRAMES = Math.round(0.3 * SAMPLE_RATE);
+
 function voice(kind: 'bass' | 'guitar', midi: number, frames: number): Float32Array {
   // The pluck's noise is seeded by the pitch, so a replay sounds the same.
-  return kind === 'bass' ? bassNote(midi, frames) : pluckNote(midi, frames, midi);
+  const note = kind === 'bass' ? bassNote(midi, frames) : pluckNote(midi, frames, midi);
+  const from = Math.max(0, note.length - FADE_FRAMES);
+  for (let i = from; i < note.length; i++) note[i]! *= 0.5 * (1 + Math.cos((Math.PI * (i - from)) / (note.length - from)));
+  return note;
 }
 
 export function renderGuess(kind: 'bass' | 'guitar', target: number, reference: number | null): StemChannels[] {

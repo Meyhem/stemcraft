@@ -74,6 +74,7 @@ export class EngineController {
     private readonly playingState: { playing: boolean },
     private durationFrames: number,
     private summaries: readonly StemSummary[],
+    private readonly stretching: boolean,
   ) {
     this.endedBox.fire = () => {
       this.pause();
@@ -116,15 +117,20 @@ export class EngineController {
       const left = buffer.getChannelData(0);
       return { left, right: buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left };
     });
-    return EngineController.build(context, stems);
+    return EngineController.build(context, stems, true);
   }
 
   /**
    * An engine over stems already in memory, at 48 kHz (the Practice tab, D-22). They
    * cannot be resampled the way decodeAudioData resamples a file, so a context that
    * refuses 48 kHz is an error, not a warning (N-08).
+   *
+   * `stretch: false` plays the stems straight to the output, with no time-stretcher: a
+   * player that never changes tempo or pitch (Guess the note) has no use for its ~135 ms
+   * of latency, and its first pass over a fresh stream drops 96 frames mid-note, a pop.
+   * Such an engine refuses setTempo and setPitchSemitones rather than ignore them (N-08).
    */
-  static async createFromStems(stems: readonly StemChannels[]): Promise<EngineController> {
+  static async createFromStems(stems: readonly StemChannels[], options: { stretch?: boolean } = {}): Promise<EngineController> {
     const context = await EngineController.openContext();
     if (context.sampleRate !== SAMPLE_RATE) {
       await context.close();
@@ -133,7 +139,7 @@ export class EngineController {
           'Practice renders at 48 kHz and cannot play at another rate.',
       );
     }
-    return EngineController.build(context, stems);
+    return EngineController.build(context, stems, options.stretch ?? true);
   }
 
   private static async openContext(): Promise<AudioContext> {
@@ -149,7 +155,7 @@ export class EngineController {
     return context;
   }
 
-  private static build(context: AudioContext, stems: readonly StemChannels[]): EngineController {
+  private static build(context: AudioContext, stems: readonly StemChannels[], stretching: boolean): EngineController {
     const cursorNode = new AudioWorkletNode(context, 'stem-cursor-processor', {
       numberOfInputs: 0,
       numberOfOutputs: 1,
@@ -159,8 +165,12 @@ export class EngineController {
     for (const { message, transfer } of stemLoadMessages(stems)) cursorNode.port.postMessage(message, transfer);
 
     const stNode = new SoundTouchNode({ context });
-    cursorNode.connect(stNode);
-    stNode.connect(context.destination);
+    if (stretching) {
+      cursorNode.connect(stNode);
+      stNode.connect(context.destination);
+    } else {
+      cursorNode.connect(context.destination);
+    }
 
     const tempoState = { ratio: 1.0 };
     const endedBox: { fire: () => void } = { fire: () => {} };
@@ -201,6 +211,7 @@ export class EngineController {
       playingState,
       durationFrames,
       summariesOf(stems, context.sampleRate),
+      stretching,
     );
   }
 
@@ -217,6 +228,7 @@ export class EngineController {
   }
 
   setTempo(ratio: number): void {
+    this.requireStretcher('setTempo');
     const clamped = clampTempo(ratio); // N-04: 50-150%
     this.tempoState.ratio = clamped;
     this.cursorNode.parameters.get('readRate')!.setValueAtTime(clamped, this.context.currentTime);
@@ -225,7 +237,12 @@ export class EngineController {
     this.stNode.pitch.setValueAtTime(stParams.pitch, this.context.currentTime);
   }
 
+  private requireStretcher(what: string): void {
+    if (!this.stretching) throw new Error(`${what}: this engine was created without the time-stretcher`);
+  }
+
   setPitchSemitones(semitones: number): void {
+    this.requireStretcher('setPitchSemitones');
     this.stNode.pitchSemitones.setValueAtTime(semitones, this.context.currentTime);
   }
 
