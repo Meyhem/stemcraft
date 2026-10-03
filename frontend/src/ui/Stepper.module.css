@@ -26,11 +26,13 @@
   pointer-events: none;
 }
 
-.stepper > output {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 5ch;
+.stepper > input {
+  box-sizing: content-box;
+  width: 5ch;
+  min-width: 0;
+  border-block: 0;
+  background: transparent;
+  text-align: center;
   padding: 0 var(--ds-2);
   border-inline: 1px solid var(--ds-border);
   font: 600 var(--ds-t-md) / 1 var(--ds-mono);
@@ -38,7 +40,9 @@
   color: var(--ds-text);
 }
 
-.stepper > output[data-default='true'] {
+.stepper > input:focus-visible { outline: 2px solid var(--ds-accent, currentColor); outline-offset: -2px; }
+
+.stepper > input[data-default='true'] {
   font-weight: 400;
   color: var(--ds-text-3);
 }
@@ -48,4 +52,4 @@
   min-height: var(--ds-hit-perform);
 }
 
-.perform > output { min-width: 7ch; }
+.perform > input { width: 7ch; }

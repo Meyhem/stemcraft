@@ -22,7 +22,7 @@ function setup(over: Partial<Parameters<typeof Stepper>[0]> = {}) {
 describe('Stepper', () => {
   it('shows the formatted value under the label', () => {
     setup({ value: 90 });
-    expect(screen.getByLabelText('Tempo')).toHaveTextContent('90%');
+    expect(screen.getByLabelText('Tempo')).toHaveValue('90%');
   });
 
   it('steps by `step` in either direction', async () => {
@@ -54,5 +54,37 @@ describe('Stepper', () => {
     setup({ label: 'Loop start bar', downLabel: 'Start bar earlier', upLabel: 'Start bar later' });
     expect(screen.getByRole('button', { name: 'Start bar earlier' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start bar later' })).toBeInTheDocument();
+  });
+
+  it('selects the whole value on focus and commits a typed number on Enter', async () => {
+    const props = setup({ value: 100 });
+    const input = screen.getByLabelText('Tempo') as HTMLInputElement;
+    await userEvent.click(input);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(input.value.length);
+    await userEvent.keyboard('75{Enter}');
+    expect(props.onChange).toHaveBeenCalledTimes(1);
+    expect(props.onChange).toHaveBeenLastCalledWith(75);
+  });
+
+  it('commits on blur, clamps to the range, and takes a negative number', async () => {
+    const props = setup({ value: 0, min: -12, max: 12, step: 1, format: (v) => `${v} st` });
+    const input = screen.getByLabelText('Tempo');
+    await userEvent.click(input);
+    await userEvent.keyboard('-40');
+    await userEvent.tab();
+    expect(props.onChange).toHaveBeenLastCalledWith(-12);
+  });
+
+  it('restores the old value on Escape or when nothing numeric was typed', async () => {
+    const props = setup({ value: 100 });
+    const input = screen.getByLabelText('Tempo');
+    await userEvent.click(input);
+    await userEvent.keyboard('80{Escape}');
+    expect(input).toHaveValue('100%');
+    await userEvent.click(input);
+    await userEvent.keyboard('abc{Enter}');
+    expect(input).toHaveValue('100%');
+    expect(props.onChange).not.toHaveBeenCalled();
   });
 });

@@ -57,8 +57,8 @@ const openPractice = () => userEvent.click(screen.getByRole('button', { name: 'P
 describe('Transport', () => {
   it('shows tempo as a percentage and pitch in semitones, both mono', () => {
     renderTransport({ tempo: 0.75, pitchSemitones: -2 });
-    expect(screen.getByLabelText('Tempo')).toHaveTextContent('75%');
-    expect(screen.getByLabelText('Pitch')).toHaveTextContent('-2 st');
+    expect(screen.getByLabelText('Tempo')).toHaveValue('75%');
+    expect(screen.getByLabelText('Pitch')).toHaveValue('-2 st');
   });
 
   it('steps tempo 10% with the buttons', async () => {
@@ -186,8 +186,8 @@ describe('Transport', () => {
     await openLoop();
     expect(screen.queryByRole('button', { name: /set a/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /set b/i })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Loop start bar')).toHaveTextContent('5');
-    expect(screen.getByLabelText('Loop end bar')).toHaveTextContent('6');
+    expect(screen.getByLabelText('Loop start bar')).toHaveValue('5');
+    expect(screen.getByLabelText('Loop end bar')).toHaveValue('6');
     await userEvent.click(screen.getByRole('button', { name: 'End bar later' }));
     expect(props.onLoopBars).toHaveBeenCalledWith(4, 7);
   });

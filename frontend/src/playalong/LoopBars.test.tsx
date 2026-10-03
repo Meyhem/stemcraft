@@ -7,8 +7,8 @@ import { LoopBars } from './LoopBars';
 describe('LoopBars', () => {
   it('shows the stored loop as 1-based inclusive bars', () => {
     render(<LoopBars loop={{ name: '', start_bar: 4, end_bar: 8 }} barCount={16} onLoopBars={vi.fn()} />);
-    expect(screen.getByLabelText('Loop start bar')).toHaveTextContent('5');
-    expect(screen.getByLabelText('Loop end bar')).toHaveTextContent('8');
+    expect(screen.getByLabelText('Loop start bar')).toHaveValue('5');
+    expect(screen.getByLabelText('Loop end bar')).toHaveValue('8');
   });
 
   it('steps the ends, pushing the end along rather than inverting the loop', async () => {

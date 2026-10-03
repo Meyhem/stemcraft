@@ -5,7 +5,7 @@ instrument and play along.
 
 - **Import** — add songs from a file or a link (YouTube and direct media)
 - **Stem separation** — GPU split into vocals, drums, bass and other
-- **Play along** — live mixer (mute, solo, volume), tempo and pitch change, seamless
+- **Play along** — live mixer (mute, solo, volume), tempo and pitch change (click a value to type it), seamless
   loops on the beat grid, count-in and metronome
 - **Analysis** — beat, key and chord detection
 - **Tablature generator** — transcribe the bass stem into tab
