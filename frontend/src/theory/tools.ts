@@ -9,6 +9,7 @@ import { ChordFinder } from './tools/ChordFinder';
 import { ChordsInKey } from './tools/ChordsInKey';
 import { CircleOfFifthsTool } from './tools/CircleOfFifthsTool';
 import { FretboardQuiz } from './tools/FretboardQuiz';
+import { GuessNote } from './tools/GuessNote';
 import { NameThatChord } from './tools/NameThatChord';
 import { NoteFinder } from './tools/NoteFinder';
 import { Progressions } from './tools/Progressions';
@@ -42,6 +43,7 @@ export const TOOLS: readonly ToolDef[] = [
   { slug: 'progressions', label: 'Progressions', group: 'Harmony', Component: Progressions },
   { slug: 'scales-over-chord', label: 'Scales over a chord', group: 'Harmony', Component: ScalesOverChord },
   { slug: 'fretboard-quiz', label: 'Fretboard quiz', group: 'Practice', Component: FretboardQuiz },
+  { slug: 'guess-note', label: 'Guess the note', group: 'Practice', Component: GuessNote },
   { slug: 'theory-quiz', label: 'Theory quiz', group: 'Practice', Component: TheoryQuiz },
 ];
 
