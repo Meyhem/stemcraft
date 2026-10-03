@@ -22,19 +22,31 @@ function release(i: number, frames: number): number {
   return i < frames ? 1 : Math.max(0, 1 - (i - frames) / RELEASE_FRAMES);
 }
 
-/** Two slightly detuned voices with a few soft harmonics, swelling in over 120 ms. */
+/**
+ * Two slightly detuned voices with a few soft harmonics, swelling in over 120 ms.
+ * Each voice is a rotating phasor (no Math.sin per sample); its 2nd and 3rd
+ * harmonics come from the double- and triple-angle identities.
+ */
 export function padNote(midi: number, frames: number): Float32Array {
   const out = new Float32Array(frames + RELEASE_FRAMES);
   const f = midiHz(midi);
   const attack = 0.12 * SAMPLE_RATE;
+  const voices = [-0.002, 0.002].map((detune) => {
+    const step = (2 * Math.PI * f * (1 + detune)) / SAMPLE_RATE;
+    return { cos: Math.cos(step), sin: Math.sin(step), s: 0, c: 1 };
+  });
   for (let i = 0; i < out.length; i++) {
     const env = Math.min(1, i / attack) * release(i, frames);
-    let s = 0;
-    for (const detune of [-0.002, 0.002]) {
-      const w = (2 * Math.PI * f * (1 + detune) * i) / SAMPLE_RATE;
-      s += Math.sin(w) + 0.3 * Math.sin(2 * w) + 0.12 * Math.sin(3 * w);
+    let sum = 0;
+    for (const v of voices) {
+      const s2 = 2 * v.s * v.c;
+      const s3 = v.s * (3 - 4 * v.s * v.s);
+      sum += v.s + 0.3 * s2 + 0.12 * s3;
+      const s = v.s * v.cos + v.c * v.sin;
+      v.c = v.c * v.cos - v.s * v.sin;
+      v.s = s;
     }
-    out[i] = 0.06 * env * s;
+    out[i] = 0.06 * env * sum;
   }
   return out;
 }
@@ -44,10 +56,16 @@ export function keysNote(midi: number, frames: number): Float32Array {
   const out = new Float32Array(frames + RELEASE_FRAMES);
   const w = (2 * Math.PI * midiHz(midi)) / SAMPLE_RATE;
   const attack = 0.003 * SAMPLE_RATE;
+  // exp(-t/tau) as a geometric sequence: one multiply per sample instead of an exp.
+  const dBody = Math.exp(-1 / (0.8 * SAMPLE_RATE));
+  const dBell = Math.exp(-1 / (0.1 * SAMPLE_RATE));
+  let body = 1;
+  let bell = 1;
   for (let i = 0; i < out.length; i++) {
-    const t = i / SAMPLE_RATE;
-    const env = Math.min(1, i / attack) * Math.exp(-t / 0.8) * release(i, frames);
-    out[i] = 0.12 * env * (Math.sin(w * i) + 0.25 * Math.exp(-t / 0.1) * Math.sin(4 * w * i));
+    const env = Math.min(1, i / attack) * body * release(i, frames);
+    out[i] = 0.12 * env * (Math.sin(w * i) + 0.25 * bell * Math.sin(4 * w * i));
+    body *= dBody;
+    bell *= dBell;
   }
   return out;
 }
