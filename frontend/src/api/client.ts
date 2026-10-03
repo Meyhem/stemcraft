@@ -413,7 +413,7 @@ export type TheoryTool =
   | 'scale-finder' | 'chord-finder' | 'note-finder' | 'name-that-chord'
   | 'scale-positions' | 'triads' | 'arpeggios'
   | 'chords-in-key' | 'circle-of-fifths' | 'progressions' | 'scales-over-chord'
-  | 'fretboard-quiz' | 'theory-quiz';
+  | 'fretboard-quiz' | 'guess-note' | 'theory-quiz';
 
 export interface TheoryInstrument {
   kind: 'bass' | 'guitar';
@@ -431,12 +431,21 @@ export interface FretboardQuizSettings {
   accidentals: boolean;
 }
 
+export interface EarQuizSettings {
+  answer: 'name' | 'neck';
+  reference: 'a' | 'none';
+  /** Rows (0 = highest string); empty = every string. */
+  strings: number[];
+  frets: [number, number];
+  accidentals: boolean;
+}
+
 export interface TheoryQuizSettings {
   topics: ('keys' | 'chords' | 'intervals')[];
 }
 
 export interface QuizAnswer {
-  quiz: 'fretboard' | 'theory';
+  quiz: 'fretboard' | 'theory' | 'ear';
   mode: string;
   item: string;
   correct: boolean;
@@ -449,7 +458,7 @@ export interface TheoryDoc {
   last_tool: TheoryTool;
   song_id: string | null;
   quiz: {
-    settings: { fretboard: FretboardQuizSettings; theory: TheoryQuizSettings };
+    settings: { fretboard: FretboardQuizSettings; theory: TheoryQuizSettings; ear: EarQuizSettings };
     history: QuizAnswer[];
   };
 }
@@ -464,6 +473,7 @@ export const DEFAULT_THEORY: TheoryDoc = {
     settings: {
       fretboard: { mode: 'find-note', strings: [], frets: [0, 12], accidentals: false },
       theory: { topics: ['keys', 'chords', 'intervals'] },
+      ear: { answer: 'name', reference: 'a', strings: [], frets: [0, 12], accidentals: false },
     },
     history: [],
   },

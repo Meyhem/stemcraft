@@ -1,7 +1,7 @@
 // Instrument, tuning and left-handed (D-19). Applies to every tool and is
 // saved to theory.json. Play along keeps its own EADG (D-18). A custom tuning
 // that doesn't parse is refused with the reason, never corrected (N-08). The
-// fretboard quiz's strings and frets are neck rows and frets, so another
+// fretboard and ear quizzes' strings and frets are neck rows and frets, so another
 // instrument carries them over in the same save (focusFor).
 import { useState, type FormEvent } from 'react';
 
@@ -35,7 +35,10 @@ export function InstrumentFooter() {
   const set = (next: Instrument) =>
     update((d) => {
       const fretboard = focusFor(d.quiz.settings.fretboard, d.instrument, next);
-      const quiz = fretboard === d.quiz.settings.fretboard ? d.quiz : { ...d.quiz, settings: { ...d.quiz.settings, fretboard } };
+      // A document saved before the ear quiz existed (kept from an unsaved tab) may lack it.
+      const ear = focusFor(d.quiz.settings.ear ?? DEFAULT_THEORY.quiz.settings.ear, d.instrument, next);
+      const unchanged = fretboard === d.quiz.settings.fretboard && ear === d.quiz.settings.ear;
+      const quiz = unchanged ? d.quiz : { ...d.quiz, settings: { ...d.quiz.settings, fretboard, ear } };
       return { ...d, instrument: next, quiz };
     });
 

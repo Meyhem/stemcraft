@@ -37,6 +37,7 @@ Tool = Literal[
     "progressions",
     "scales-over-chord",
     "fretboard-quiz",
+    "guess-note",
     "theory-quiz",
 ]
 
@@ -79,6 +80,13 @@ class Instrument(_Strict):
         return self
 
 
+def _fret_range(frets: tuple[int, int]) -> tuple[int, int]:
+    lo, hi = frets
+    if not 0 <= lo < hi <= 24:
+        raise ValueError(f"fret range must satisfy 0 <= lo < hi <= 24, got {lo}-{hi}")
+    return frets
+
+
 class FretboardQuizSettings(_Strict):
     mode: Literal["name-note", "find-note", "find-interval", "spell-chord"] = "find-note"
     strings: list[int] = Field(default_factory=list)  # rows, 0 = highest string; empty = all
@@ -88,10 +96,23 @@ class FretboardQuizSettings(_Strict):
     @field_validator("frets")
     @classmethod
     def _range(cls, frets: tuple[int, int]) -> tuple[int, int]:
-        lo, hi = frets
-        if not 0 <= lo < hi <= 24:
-            raise ValueError(f"fret range must satisfy 0 <= lo < hi <= 24, got {lo}-{hi}")
-        return frets
+        return _fret_range(frets)
+
+
+class EarQuizSettings(_Strict):
+    """Guess the note: how the player answers, whether an A is played first, and
+    the same focus as the Fretboard quiz (stored apart from it)."""
+
+    answer: Literal["name", "neck"] = "name"
+    reference: Literal["a", "none"] = "a"
+    strings: list[int] = Field(default_factory=list)
+    frets: tuple[int, int] = (0, 12)
+    accidentals: bool = False
+
+    @field_validator("frets")
+    @classmethod
+    def _range(cls, frets: tuple[int, int]) -> tuple[int, int]:
+        return _fret_range(frets)
 
 
 class TheoryQuizSettings(_Strict):
@@ -103,10 +124,11 @@ class TheoryQuizSettings(_Strict):
 class QuizSettings(_Strict):
     fretboard: FretboardQuizSettings = Field(default_factory=FretboardQuizSettings)
     theory: TheoryQuizSettings = Field(default_factory=TheoryQuizSettings)
+    ear: EarQuizSettings = Field(default_factory=EarQuizSettings)
 
 
 class QuizAnswer(_Strict):
-    quiz: Literal["fretboard", "theory"]
+    quiz: Literal["fretboard", "theory", "ear"]
     mode: str
     item: str
     correct: bool

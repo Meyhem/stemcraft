@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from pydantic import ValidationError
 from stemcraft_lib.theory import (
     HISTORY_CAP,
     QuizAnswer,
@@ -137,3 +138,38 @@ def test_legacy_answer_time_is_accepted_but_not_written_back(tmp_path):
     assert theory.quiz.history[0].correct is True
     write_theory(tmp_path, theory)
     assert "ms" not in json.loads(theory_path(tmp_path).read_text())["quiz"]["history"][0]
+
+
+def test_ear_settings_default_and_old_files_read(tmp_path):
+    # A file written before the ear quiz existed has no "ear": it reads with the defaults.
+    raw = Theory().model_dump(mode="json")
+    del raw["quiz"]["settings"]["ear"]
+    theory_path(tmp_path).write_text(json.dumps(raw))
+    ear = read_theory(tmp_path).quiz.settings.ear
+    assert (ear.answer, ear.reference, ear.strings, ear.frets, ear.accidentals) == ("name", "a", [], (0, 12), False)
+
+
+def test_ear_answers_and_tool_round_trip(tmp_path):
+    theory = Theory.model_validate(
+        {
+            "last_tool": "guess-note",
+            "quiz": {
+                "settings": {"ear": {"answer": "neck", "reference": "none", "frets": [0, 5]}},
+                "history": [{"quiz": "ear", "mode": "neck/none", "item": "m43", "correct": False, "at": "2026-10-03T00:00:00Z"}],
+            },
+        }
+    )
+    write_theory(tmp_path, theory)
+    back = read_theory(tmp_path)
+    assert back.last_tool == "guess-note"
+    assert back.quiz.settings.ear.answer == "neck"
+    assert back.quiz.history[0].quiz == "ear"
+
+
+@pytest.mark.parametrize(
+    "ear",
+    [{"answer": "hum"}, {"reference": "c"}, {"frets": [7, 3]}, {"tempo": 90}],
+)
+def test_bad_ear_settings_are_rejected(ear):
+    with pytest.raises(ValidationError):
+        Theory.model_validate({"quiz": {"settings": {"ear": ear}}})
