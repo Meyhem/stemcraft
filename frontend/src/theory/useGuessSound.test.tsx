@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 
 import type { StemChannels } from '../engine/loopCursor';
@@ -56,6 +57,17 @@ test('leaving the tool disposes the engine', async () => {
   vi.spyOn(guessEngine, 'create').mockResolvedValue(e);
   const { result, unmount } = renderHook(() => useGuessSound());
   await act(() => result.current.play(stems()));
+  unmount();
+  expect(e.dispose).toHaveBeenCalled();
+});
+
+test('StrictMode’s simulated unmount does not leave the hook "gone": the engine it creates stays alive and plays', async () => {
+  const e = fakeEngine();
+  vi.spyOn(guessEngine, 'create').mockResolvedValue(e);
+  const { result, unmount } = renderHook(() => useGuessSound(), { wrapper: StrictMode });
+  await act(() => result.current.play(stems()));
+  expect(e.dispose).not.toHaveBeenCalled();
+  expect(e.play).toHaveBeenCalledTimes(1);
   unmount();
   expect(e.dispose).toHaveBeenCalled();
 });

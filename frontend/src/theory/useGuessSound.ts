@@ -67,14 +67,15 @@ export function useGuessSound() {
     await start(e);
   }, []);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    gone.current = false; // StrictMode's simulated unmount runs the cleanup below once, then mounts again
+    return () => {
       gone.current = true;
       void engine.current?.dispose();
       engine.current = null;
-    },
-    [],
-  );
+      creating.current = null;
+    };
+  }, []);
 
   return { play, replay, playing, error };
 }
