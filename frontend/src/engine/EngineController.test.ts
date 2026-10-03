@@ -343,3 +343,39 @@ describe('EngineController stem gains', () => {
     expect(controller.getStemGain('vocals')).toBe(0.5);
   });
 });
+
+describe('EngineController stems replaced in place', () => {
+  it('pauses, loads the new stems in order, takes their length, and goes back to the top', () => {
+    const { controller, cursorNode } = makeController();
+    const stem = (n: number) => ({ left: new Float32Array(n), right: new Float32Array(n) });
+    controller.replaceStems([stem(4800), stem(4800), stem(4800), stem(4800)]);
+    const types = cursorNode.port.postMessage.mock.calls.map(([m]) => (m as { type: string }).type);
+    expect(types[0]).toBe('load-begin');
+    expect(types).toContain('load-end');
+    expect(types.indexOf('seek')).toBeGreaterThan(types.indexOf('load-end'));
+    expect(controller.durationSamples).toBe(4800);
+    expect(controller.getPositionSamples()).toBe(0);
+    expect(cursorNode.parameters.get('playing')!.value).toBe(0);
+  });
+});
+
+describe('EngineController metronome level', () => {
+  it('uses the level when the click is on, and 0 when off', () => {
+    const { controller, cursorNode } = makeController();
+    controller.setMetronomeLevel(0.4);
+    controller.setMetronome(true);
+    expect(cursorNode.parameters.get('metronomeGain')!.value).toBe(0.4);
+    controller.setMetronomeLevel(0.9);
+    expect(cursorNode.parameters.get('metronomeGain')!.value).toBe(0.9);
+    controller.setMetronome(false);
+    expect(cursorNode.parameters.get('metronomeGain')!.value).toBe(0);
+    controller.setMetronomeLevel(0.5);
+    expect(cursorNode.parameters.get('metronomeGain')!.value).toBe(0);
+  });
+
+  it('defaults to full level, as before', () => {
+    const { controller, cursorNode } = makeController();
+    controller.setMetronome(true);
+    expect(cursorNode.parameters.get('metronomeGain')!.value).toBe(1);
+  });
+});

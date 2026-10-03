@@ -7,6 +7,18 @@ import { SAMPLE_RATE, SampleIndex, clampTempo, sampleIndex, toDeviceDomain, toSt
 import { stemLoadMessages } from './stemLoad';
 import { summariseStem } from './stemPeaks';
 import type { StemSummary } from './stemPeaks';
+import type { StemChannels } from './loopCursor';
+
+/** Waveform summaries from raw channels: summariseStem only needs an AudioBuffer's shape. */
+function summariesOf(stems: readonly StemChannels[], sampleRate: number): StemSummary[] {
+  return STEM_ORDER.map((name, i) => {
+    const stem = stems[i]!;
+    return summariseStem(
+      { length: stem.left.length, sampleRate, numberOfChannels: 2, getChannelData: (c) => (c === 0 ? stem.left : stem.right) },
+      name,
+    );
+  });
+}
 
 export { STEM_ORDER, type StemName } from './types';
 
@@ -35,6 +47,10 @@ export class EngineController {
   // AudioParam mid-ramp reports a value on its way somewhere; this is where it
   // is going, which is what "is this stem audible" means to a reader.
   private readonly stemGains: number[] = STEM_ORDER.map(() => 1);
+  // The click's level (0..1) and whether it is on. The worklet's metronomeGain
+  // is one number; these are what it is set from.
+  private metronomeLevel = 1;
+  private metronomeOn = false;
 
   private constructor(
     private readonly context: AudioContext,
@@ -56,8 +72,8 @@ export class EngineController {
     // stops being exact. create()'s port.onmessage reads this box too, so the
     // next report after a pause does not undo the stop.
     private readonly playingState: { playing: boolean },
-    private readonly durationFrames: number,
-    private readonly summaries: readonly StemSummary[],
+    private durationFrames: number,
+    private summaries: readonly StemSummary[],
   ) {
     this.endedBox.fire = () => {
       this.pause();
@@ -88,17 +104,7 @@ export class EngineController {
   }
 
   static async create(stemUrls: Record<StemName, string>): Promise<EngineController> {
-    const context = new AudioContext({ sampleRate: SAMPLE_RATE });
-    if (context.sampleRate !== SAMPLE_RATE) {
-      console.warn(
-        `AudioContext ignored the requested ${SAMPLE_RATE} Hz and runs at ${context.sampleRate} Hz; ` +
-          'loop bounds will be scaled at the domain boundary (types.ts:toDeviceDomain).',
-      );
-    }
-
-    await context.audioWorklet.addModule(stemCursorProcessorUrl);
-    await SoundTouchNode.register(context, processorUrl);
-
+    const context = await EngineController.openContext();
     const buffers = await Promise.all(
       STEM_ORDER.map(async (name) => {
         const response = await fetch(stemUrls[name]);
@@ -106,18 +112,50 @@ export class EngineController {
         return context.decodeAudioData(bytes);
       }),
     );
+    const stems = buffers.map((buffer) => {
+      const left = buffer.getChannelData(0);
+      return { left, right: buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left };
+    });
+    return EngineController.build(context, stems);
+  }
 
+  /**
+   * An engine over stems already in memory, at 48 kHz (the Practice tab, D-22). They
+   * cannot be resampled the way decodeAudioData resamples a file, so a context that
+   * refuses 48 kHz is an error, not a warning (N-08).
+   */
+  static async createFromStems(stems: readonly StemChannels[]): Promise<EngineController> {
+    const context = await EngineController.openContext();
+    if (context.sampleRate !== SAMPLE_RATE) {
+      await context.close();
+      throw new Error(
+        `The browser's audio runs at ${context.sampleRate} Hz and would not switch to ${SAMPLE_RATE} Hz; ` +
+          'Practice renders at 48 kHz and cannot play at another rate.',
+      );
+    }
+    return EngineController.build(context, stems);
+  }
+
+  private static async openContext(): Promise<AudioContext> {
+    const context = new AudioContext({ sampleRate: SAMPLE_RATE });
+    if (context.sampleRate !== SAMPLE_RATE) {
+      console.warn(
+        `AudioContext ignored the requested ${SAMPLE_RATE} Hz and runs at ${context.sampleRate} Hz; ` +
+          'loop bounds will be scaled at the domain boundary (types.ts:toDeviceDomain).',
+      );
+    }
+    await context.audioWorklet.addModule(stemCursorProcessorUrl);
+    await SoundTouchNode.register(context, processorUrl);
+    return context;
+  }
+
+  private static build(context: AudioContext, stems: readonly StemChannels[]): EngineController {
     const cursorNode = new AudioWorkletNode(context, 'stem-cursor-processor', {
       numberOfInputs: 0,
       numberOfOutputs: 1,
       outputChannelCount: [2],
     });
-
     // In chunks, never one message: Firefox aborts the tab on a worklet message over 4 GB (stemLoad.ts).
-    const stems = buffers.map((buffer) => {
-      const left = buffer.getChannelData(0);
-      return { left, right: buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left };
-    });
     for (const { message, transfer } of stemLoadMessages(stems)) cursorNode.port.postMessage(message, transfer);
 
     const stNode = new SoundTouchNode({ context });
@@ -149,11 +187,9 @@ export class EngineController {
       }
     };
 
-    // Device-domain frame count; all four stems are decoded from the same source
-    // and are the same length. Exposed in the stem domain via durationSamples.
-    const durationFrames = buffers[0]!.length;
-
-    const summaries = STEM_ORDER.map((name, i) => summariseStem(buffers[i]!, name));
+    // Device-domain frame count; all four stems are the same length. Exposed in the
+    // stem domain via durationSamples.
+    const durationFrames = stems[0]!.left.length;
 
     return new EngineController(
       context,
@@ -164,7 +200,7 @@ export class EngineController {
       endedBox,
       playingState,
       durationFrames,
-      summaries,
+      summariesOf(stems, context.sampleRate),
     );
   }
 
@@ -235,9 +271,29 @@ export class EngineController {
   }
 
   setMetronome(on: boolean): void {
+    this.metronomeOn = on;
     this.cursorNode.parameters
       .get('metronomeGain')!
-      .setValueAtTime(on ? 1 : 0, this.context.currentTime);
+      .setValueAtTime(on ? this.metronomeLevel : 0, this.context.currentTime);
+  }
+
+  /** The click's level, 0..1. Takes effect at once if the click is on. */
+  setMetronomeLevel(level: number): void {
+    this.metronomeLevel = Math.min(1, Math.max(0, level));
+    if (this.metronomeOn) this.setMetronome(true);
+  }
+
+  /**
+   * New stems in the same engine (D-22: the Practice loop re-rendered). The worklet
+   * takes a fresh load sequence in place of the old stems; nothing else is rebuilt.
+   * Leaves the transport paused at the top; the caller sets grid and loop again.
+   */
+  replaceStems(stems: readonly StemChannels[]): void {
+    this.pause();
+    for (const { message, transfer } of stemLoadMessages(stems)) this.cursorNode.port.postMessage(message, transfer);
+    this.durationFrames = stems[0]!.left.length;
+    this.summaries = summariesOf(stems, this.context.sampleRate);
+    this.seek(sampleIndex(0));
   }
 
   getPositionSamples(): SampleIndex {
