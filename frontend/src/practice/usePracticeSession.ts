@@ -89,7 +89,8 @@ export function usePracticeSession({
     const { instrument: inst, settings: s } = latest.current;
     const gains = gainsFor(inst, s.levels);
     for (const stem of STEM_ORDER) e.setStemGain(stem, gains[stem]);
-    e.setMetronomeLevel(s.levels.click);
+    // A muted click is level 0, so the count-in is silent too.
+    e.setMetronomeLevel(s.levels.click_muted ? 0 : s.levels.click);
     e.setMetronome(true);
   }, []);
 

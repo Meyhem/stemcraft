@@ -26,15 +26,21 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function ProgressionSelect({ value, onChange }: { value: string; onChange(id: string): void }) {
+  const current = PROGRESSIONS.find((p) => p.id === value);
   return (
     <Field label="Progression">
       <select className={styles.select} aria-label="Progression" value={value} onChange={(e) => onChange(e.target.value)}>
         {PROGRESSIONS.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.label}
+            {p.label} · {p.blurb}
           </option>
         ))}
       </select>
+      {current && (
+        <small className={styles.dim}>
+          {current.numerals.length} chords · {current.blurb}
+        </small>
+      )}
     </Field>
   );
 }

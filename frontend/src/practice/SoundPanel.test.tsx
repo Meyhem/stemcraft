@@ -35,3 +35,9 @@ test('a loop with no harmony says why the chords are silent', () => {
   mount('bass', false);
   expect(screen.getByText('Drills have no chords.')).toBeInTheDocument();
 });
+
+test('the click can be muted', async () => {
+  const { onChange } = mount('bass');
+  await userEvent.click(screen.getByRole('button', { name: 'Mute Click' }));
+  expect(onChange).toHaveBeenCalledWith({ ...levels, click_muted: true });
+});

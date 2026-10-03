@@ -53,3 +53,23 @@ test('regenerable only where a seed changes something', () => {
   expect(regenerable('bass', base('drill', { drill: { ...DEFAULT_INSTRUMENT_SETTINGS.drill, drill: 'permutations' } }))).toBe(true);
   expect(regenerable('bass', base('drill'))).toBe(false);
 });
+
+test('every progression generates in every key, for bass and guitar and arpeggios', async () => {
+  const { PROGRESSIONS } = await import('../progressions');
+  const failures: string[] = [];
+  for (const p of PROGRESSIONS) {
+    for (let key = 0; key < 12; key++) {
+      const base = { ...DEFAULT_INSTRUMENT_SETTINGS, key };
+      const cases = [
+        ['bass', { ...base, groove: { ...base.groove, progression: p.id as never } }],
+        ['guitar', { ...base, groove: { ...base.groove, progression: p.id as never } }],
+        ['bass', { ...base, exercise: 'arpeggio' as const, arpeggio: { ...base.arpeggio, over: 'progression' as const, progression: p.id as never } }],
+      ] as const;
+      for (const [inst, s] of cases) {
+        const r = generate(inst, s);
+        if (!r.ok) failures.push(`${p.id} ${inst} ${s.exercise} key ${key}: ${r.error}`);
+      }
+    }
+  }
+  expect(failures.slice(0, 8)).toEqual([]);
+});

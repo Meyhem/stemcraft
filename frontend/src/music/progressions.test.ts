@@ -19,8 +19,8 @@ describe('progressions', () => {
     expect(numeralToSymbol('C', 'Imaj9')).toBeNull();
   });
 
-  test('fifteen progressions, all readable', () => {
-    expect(PROGRESSIONS).toHaveLength(15);
+  test('nineteen progressions, all readable', () => {
+    expect(PROGRESSIONS).toHaveLength(19);
     for (const p of PROGRESSIONS) for (const n of p.numerals) expect(numeralToSymbol('C', n), `${p.id} ${n}`).not.toBeNull();
   });
 

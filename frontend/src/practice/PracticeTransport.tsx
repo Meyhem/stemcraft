@@ -133,6 +133,8 @@ export function PracticeTransport({
           </Button>
         </div>
       </div>
+      <div className={styles.readout}>
+        <span className={styles.cap}>ramp</span>
       <Popover
         open={rampOpen}
         onClose={() => setRampOpen(false)}
@@ -142,7 +144,7 @@ export function PracticeTransport({
             <Button tier="perform" aria-pressed={ramp.on} onClick={() => setRamp({ on: !ramp.on, start: ramp.on ? ramp.start : settings.bpm, target: Math.min(rampLimits(settings.bpm).hi, Math.max(ramp.target, settings.bpm)) })}>
               Ramp
             </Button>
-            <Button tier="perform" variant="ghost" aria-label="Edit ramp" aria-expanded={rampOpen} onClick={() => setRampOpen((o) => !o)}>
+            <Button tier="perform" aria-label="Edit ramp" aria-expanded={rampOpen} onClick={() => setRampOpen((o) => !o)}>
               ▾
             </Button>
           </div>
@@ -168,6 +170,7 @@ export function PracticeTransport({
           <Stepper label="Ramp every" value={ramp.every_loops} min={1} max={8} step={1} format={(v) => (v === 1 ? '1 loop' : `${v} loops`)} onChange={(every_loops) => setRamp({ every_loops })} />
         </div>
       </Popover>
+      </div>
       <div className={styles.readout}>
         <span className={styles.cap}>count-in</span>
         <Segmented

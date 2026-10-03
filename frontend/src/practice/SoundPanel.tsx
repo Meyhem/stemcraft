@@ -6,7 +6,7 @@ import { Segmented } from '../ui';
 import styles from './Practice.module.css';
 
 type LevelKey = 'click' | 'ref' | 'backing' | 'chords' | 'drums';
-type MuteKey = 'ref_muted' | 'backing_muted' | 'chords_muted' | 'drums_muted';
+type MuteKey = 'click_muted' | 'ref_muted' | 'backing_muted' | 'chords_muted' | 'drums_muted';
 
 function Channel({
   label,
@@ -66,7 +66,7 @@ export function SoundPanel({
   return (
     <div className={styles.sound}>
       <span className={styles.cap}>Sound</span>
-      <Channel label="Click" hue="var(--ds-text)" level={levels.click} onLevel={level('click')} />
+      <Channel label="Click" hue="var(--ds-text)" level={levels.click} muted={levels.click_muted} onLevel={level('click')} onMute={mute('click_muted')} />
       {instrument === 'bass' ? (
         <>
           <Channel label="Ref. bass" hue="var(--ds-bass)" level={levels.ref} muted={levels.ref_muted} onLevel={level('ref')} onMute={mute('ref_muted')} />

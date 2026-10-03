@@ -66,18 +66,18 @@ test('progressions: every progression is listed, and shows the numerals it defin
 
 // Semitones above the tonic and chord tones, written out here so the check does not lean on progressions.ts.
 const DEGREE: Record<string, number> = { I: 0, II: 2, III: 4, IV: 5, V: 7, VI: 9, VII: 11 };
-const TONES: Record<string, number[]> = { '': [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 7, 10], m7: [0, 3, 7, 10], maj7: [0, 4, 7, 11], m7b5: [0, 3, 6, 10] };
+const TONES: Record<string, number[]> = { '': [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 7, 10], m7: [0, 3, 7, 10], maj7: [0, 4, 7, 11], m7b5: [0, 3, 6, 10], dim7: [0, 3, 6, 9] };
 function expected(numeral: string): { offset: number; tones: number[] } {
-  const m = /^(b|#)?([ivIV]+)(ø7|maj7|7)?$/.exec(numeral)!;
+  const m = /^(b|#)?([ivIV]+)(°7|ø7|maj7|7)?$/.exec(numeral)!;
   const roman = m[2]!;
   const upper = roman === roman.toUpperCase();
   const offset = DEGREE[roman.toUpperCase()]! + (m[1] === 'b' ? -1 : m[1] === '#' ? 1 : 0);
-  const quality = m[3] === 'ø7' ? 'm7b5' : m[3] === 'maj7' ? 'maj7' : m[3] === '7' ? (upper ? '7' : 'm7') : upper ? '' : 'm';
+  const quality = m[3] === '°7' ? 'dim7' : m[3] === 'ø7' ? 'm7b5' : m[3] === 'maj7' ? 'maj7' : m[3] === '7' ? (upper ? '7' : 'm7') : upper ? '' : 'm';
   return { offset, tones: TONES[quality]! };
 }
 
-test('progressions: 15 progressions in all 12 keys land on the right roots and chord tones', () => {
-  expect(PROGRESSIONS).toHaveLength(15);
+test('progressions: 19 progressions in all 12 keys land on the right roots and chord tones', () => {
+  expect(PROGRESSIONS).toHaveLength(19);
   for (const def of PROGRESSIONS) {
     for (let tonicPc = 0; tonicPc < 12; tonicPc++) {
       const tonic = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'][tonicPc]!;

@@ -38,6 +38,10 @@ ProgressionId = Literal[
     "one-four-six-five",
     "epic-minor",
     "one-three-four-five",
+    "jazz-blues",
+    "rhythm-changes",
+    "minor-standard",
+    "circle-fifths",
 ]
 # music/spell.ts SCALES ids, in its order.
 ScaleId = Literal[
@@ -91,6 +95,7 @@ class Ramp(_Strict):
 
 class Levels(_Strict):
     click: float = Field(0.7, ge=0, le=1)
+    click_muted: bool = False
     ref: float = Field(0.8, ge=0, le=1)
     ref_muted: bool = False
     backing: float = Field(0.6, ge=0, le=1)

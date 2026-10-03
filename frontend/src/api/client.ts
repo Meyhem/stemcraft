@@ -478,13 +478,14 @@ export type BarsPerChord = 1 | 2 | 4;
 export type ProgressionId =
   | 'pop' | 'fifties' | 'two-five-one' | 'one-four-five' | 'twelve-bar' | 'minor-blues' | 'sensitive'
   | 'andalusian' | 'minor-one-four-five' | 'mixolydian' | 'minor-two-five-one' | 'canon'
-  | 'one-four-six-five' | 'epic-minor' | 'one-three-four-five';
+  | 'one-four-six-five' | 'epic-minor' | 'one-three-four-five'
+  | 'jazz-blues' | 'rhythm-changes' | 'minor-standard' | 'circle-fifths';
 
 export type ChordSound = 'pad' | 'keys';
 export type DrumGroove = 'rock' | 'shuffle' | 'half_time' | 'funk' | 'four_floor';
 export interface PracticeBacking { chord_sound: ChordSound; drum_groove: DrumGroove }
 export interface PracticeRamp { on: boolean; start: number; target: number; step: number; every_loops: number }
-export interface PracticeLevels { click: number; ref: number; ref_muted: boolean; backing: number; backing_muted: boolean; chords: number; chords_muted: boolean; drums: number; drums_muted: boolean }
+export interface PracticeLevels { click: number; click_muted: boolean; ref: number; ref_muted: boolean; backing: number; backing_muted: boolean; chords: number; chords_muted: boolean; drums: number; drums_muted: boolean }
 export interface PracticeGroove {
   progression: ProgressionId;
   bars_per_chord: BarsPerChord;
@@ -549,7 +550,7 @@ export const DEFAULT_INSTRUMENT_SETTINGS: InstrumentSettings = {
   count_in_bars: 1,
   seed: 1,
   ramp: { on: false, start: 80, target: 120, step: 5, every_loops: 2 },
-  levels: { click: 0.7, ref: 0.8, ref_muted: false, backing: 0.6, backing_muted: false, chords: 0.5, chords_muted: false, drums: 0.6, drums_muted: false },
+  levels: { click: 0.7, click_muted: false, ref: 0.8, ref_muted: false, backing: 0.6, backing_muted: false, chords: 0.5, chords_muted: false, drums: 0.6, drums_muted: false },
   groove: {
     progression: 'pop', bars_per_chord: 1, notes: 'root_fifth_octave', rhythm: 'quarter', approach: 'chromatic',
     style: 'open', strum: 'folk', position: 'auto',

@@ -54,7 +54,7 @@ function setup(settings: InstrumentSettings = DEFAULT_INSTRUMENT_SETTINGS) {
 }
 
 test('gainsFor: each part in its slot, mutes as zero', () => {
-  const levels = { click: 0.7, ref: 0.8, ref_muted: false, backing: 0.6, backing_muted: true, chords: 0.5, chords_muted: false, drums: 0.4, drums_muted: false };
+  const levels = { click: 0.7, click_muted: false, ref: 0.8, ref_muted: false, backing: 0.6, backing_muted: true, chords: 0.5, chords_muted: false, drums: 0.4, drums_muted: false };
   expect(gainsFor('bass', levels)).toEqual({ vocals: 0, drums: 0.4, bass: 0.8, other: 0.5 });
   expect(gainsFor('guitar', levels)).toEqual({ vocals: 0, drums: 0.4, bass: 0, other: 0.8 });
   expect(gainsFor('bass', { ...levels, drums_muted: true, chords_muted: true }).drums).toBe(0);
@@ -144,4 +144,11 @@ test('changing the groove re-renders; changing a level does not', async () => {
   expect(engine.replaceStems).not.toHaveBeenCalled();
   hook.rerender({ settings: { ...DEFAULT_INSTRUMENT_SETTINGS, backing: { chord_sound: 'pad', drum_groove: 'funk' } }, loop });
   await waitFor(() => expect(engine.replaceStems).toHaveBeenCalledTimes(1));
+});
+
+test('a muted click is level 0, so the count-in is silent too', async () => {
+  const muted = { ...DEFAULT_INSTRUMENT_SETTINGS, levels: { ...DEFAULT_INSTRUMENT_SETTINGS.levels, click_muted: true } };
+  const { engine, hook } = setup(muted);
+  await waitFor(() => expect(hook.result.current.rendered).not.toBeNull());
+  expect(engine.setMetronomeLevel).toHaveBeenLastCalledWith(0);
 });
