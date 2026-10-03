@@ -156,7 +156,14 @@ function Loaded({
             )}
           </>
         )}
-        <SoundPanel instrument={instrument} levels={settings.levels} onChange={(levels) => change({ ...settings, levels })} />
+        <SoundPanel
+          instrument={instrument}
+          levels={settings.levels}
+          backing={settings.backing}
+          hasHarmony={loop?.bars.some((b) => b.chord !== null) ?? true}
+          onChange={(levels) => change({ ...settings, levels })}
+          onBacking={(backing) => change({ ...settings, backing })}
+        />
         <p className={styles.help}>{helpFor(instrument, settings)}</p>
       </section>
     </div>

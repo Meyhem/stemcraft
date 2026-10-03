@@ -1,11 +1,12 @@
 // The Practice sound panel (D-22): the click and the reference parts, each with
-// a level and (for the parts you play against) a mute. Chords and drums are
-// Phase B, shown disabled so the layout does not move when they arrive.
-import type { PracticeInstrument, PracticeLevels } from '../api/client';
+// a level and (for the parts you play against) a mute. Chords (bass mode) and
+// drums come with a sound or groove picker (Phase B).
+import type { DrumGroove, PracticeBacking, PracticeInstrument, PracticeLevels } from '../api/client';
+import { Segmented } from '../ui';
 import styles from './Practice.module.css';
 
-type LevelKey = 'click' | 'ref' | 'backing';
-type MuteKey = 'ref_muted' | 'backing_muted';
+type LevelKey = 'click' | 'ref' | 'backing' | 'chords' | 'drums';
+type MuteKey = 'ref_muted' | 'backing_muted' | 'chords_muted' | 'drums_muted';
 
 function Channel({
   label,
@@ -45,25 +46,20 @@ function Channel({
   );
 }
 
-function Later({ label, hue }: { label: string; hue: string }) {
-  return (
-    <div className={`${styles.channel} ${styles.later}`}>
-      <span className={styles.channelName} style={{ color: hue }}>
-        {label}
-      </span>
-      <span className={styles.chip}>Phase B</span>
-    </div>
-  );
-}
-
 export function SoundPanel({
   instrument,
   levels,
+  backing,
+  hasHarmony,
   onChange,
+  onBacking,
 }: {
   instrument: PracticeInstrument;
   levels: PracticeLevels;
+  backing: PracticeBacking;
+  hasHarmony: boolean;
   onChange(next: PracticeLevels): void;
+  onBacking(next: PracticeBacking): void;
 }) {
   const level = (key: LevelKey) => (v: number) => onChange({ ...levels, [key]: v });
   const mute = (key: MuteKey) => () => onChange({ ...levels, [key]: !levels[key] });
@@ -74,7 +70,19 @@ export function SoundPanel({
       {instrument === 'bass' ? (
         <>
           <Channel label="Ref. bass" hue="var(--ds-bass)" level={levels.ref} muted={levels.ref_muted} onLevel={level('ref')} onMute={mute('ref_muted')} />
-          <Later label="Chords" hue="var(--ds-other)" />
+          <div className={styles.channelWide}>
+            <Channel label="Chords" hue="var(--ds-other)" level={levels.chords} muted={levels.chords_muted} onLevel={level('chords')} onMute={mute('chords_muted')} />
+            <Segmented
+              label="Chord sound"
+              value={backing.chord_sound}
+              onChange={(chord_sound) => onBacking({ ...backing, chord_sound })}
+              options={[
+                { value: 'pad', label: 'Pad' },
+                { value: 'keys', label: 'Keys' },
+              ]}
+            />
+            {!hasHarmony && <span className={styles.dim}>Drills have no chords.</span>}
+          </div>
         </>
       ) : (
         <>
@@ -82,7 +90,16 @@ export function SoundPanel({
           <Channel label="Backing bass" hue="var(--ds-bass)" level={levels.backing} muted={levels.backing_muted} onLevel={level('backing')} onMute={mute('backing_muted')} />
         </>
       )}
-      <Later label="Drums" hue="var(--ds-drums)" />
+      <div className={styles.channelWide}>
+        <Channel label="Drums" hue="var(--ds-drums)" level={levels.drums} muted={levels.drums_muted} onLevel={level('drums')} onMute={mute('drums_muted')} />
+        <select className={styles.select} aria-label="Drum groove" value={backing.drum_groove} onChange={(e) => onBacking({ ...backing, drum_groove: e.target.value as DrumGroove })}>
+          <option value="rock">Rock</option>
+          <option value="shuffle">Shuffle</option>
+          <option value="half_time">Half-time</option>
+          <option value="funk">Funk</option>
+          <option value="four_floor">Four on the floor</option>
+        </select>
+      </div>
     </div>
   );
 }

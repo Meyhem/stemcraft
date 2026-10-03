@@ -204,10 +204,6 @@
   color: var(--ds-on-warn);
 }
 
-.later {
-  opacity: 0.45;
-}
-
 .chip {
   display: inline-flex;
   align-items: center;
@@ -335,4 +331,12 @@
 
 .rampStrip > :nth-child(3) {
   flex: 1;
+}
+
+.channelWide {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-3);
+  min-width: 480px;
+  flex-wrap: wrap;
 }
