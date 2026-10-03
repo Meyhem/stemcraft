@@ -34,12 +34,12 @@
 | `packages/stemcraft_lib/src/stemcraft_lib/theory.py` (+ `tests/test_theory.py`) | `EarQuizSettings`, `"ear"` quiz kind, `"guess-note"` tool |
 | `frontend/src/api/client.ts` | mirror: `EarQuizSettings`, `QuizAnswer.quiz`, `TheoryTool`, `DEFAULT_THEORY` |
 | `frontend/src/theory/InstrumentFooter.tsx` | carry the ear focus over on an instrument change |
-| `frontend/src/music/quiz.ts` | export `checkFocus`, `INTERVAL_NAMES`; `QuizKind` gains `'ear'` |
+| `frontend/src/music/quiz.ts` | export `checkFocus`, `SEMITONE_NAMES`; `QuizKind` gains `'ear'` |
 | `frontend/src/music/earQuiz.ts` (+ test) | **new**: `referenceMidi`, `pitchLabel`, `earQuestion`, `judgeName`, `judgeNeck` |
 | `frontend/src/theory/audio/guessRender.ts` (+ test) | **new**: `renderGuess` |
 | `frontend/src/theory/useGuessSound.ts` (+ test) | **new**: one engine per visit, play/replay |
 | `frontend/src/theory/FocusControls.tsx` | **new**: the strings/frets/notes row, taken out of `FretboardQuiz` |
-| `frontend/src/theory/tools/FretboardQuiz.tsx` | use `FocusControls` and `INTERVAL_NAMES` from `quiz.ts` |
+| `frontend/src/theory/tools/FretboardQuiz.tsx` | use `FocusControls` and `SEMITONE_NAMES` from `quiz.ts` |
 | `frontend/src/theory/tools/GuessNote.tsx` (+ `guessNote.test.tsx`) | **new**: the screen |
 | `frontend/src/theory/tools.ts` | register `guess-note` after Fretboard quiz |
 | `design/*`, the Theory spec, `README.md`, `docs/screenshots/` | D-23, the amended non-goal, the README, a screenshot |
@@ -208,8 +208,8 @@ git commit -m "feat(theory): theory.json learns the ear quiz's settings and answ
 ### Task 2: The question and the judging (`earQuiz.ts`)
 
 **Files:**
-- Modify: `frontend/src/music/quiz.ts` (export `checkFocus`; add `INTERVAL_NAMES`; `QuizKind` gains `'ear'`)
-- Modify: `frontend/src/theory/tools/FretboardQuiz.tsx` (import `INTERVAL_NAMES` from `quiz.ts` and delete the local copy)
+- Modify: `frontend/src/music/quiz.ts` (export `checkFocus`; add `SEMITONE_NAMES`; `QuizKind` gains `'ear'`)
+- Modify: `frontend/src/theory/tools/FretboardQuiz.tsx` (import `SEMITONE_NAMES` from `quiz.ts` and delete the local copy)
 - Create: `frontend/src/music/earQuiz.ts`
 - Test: `frontend/src/music/earQuiz.test.ts`
 
@@ -231,10 +231,10 @@ Change `function checkFocus` to `export function checkFocus`, change `QuizKind` 
 
 ```ts
 /** Interval names by semitones, 0–11, as the quizzes' feedback says them. */
-export const INTERVAL_NAMES = ['unison', 'minor 2nd', 'major 2nd', 'minor 3rd', 'major 3rd', '4th', 'tritone', '5th', 'minor 6th', 'major 6th', 'minor 7th', 'major 7th'];
+export const SEMITONE_NAMES = ['unison', 'minor 2nd', 'major 2nd', 'minor 3rd', 'major 3rd', '4th', 'tritone', '5th', 'minor 6th', 'major 6th', 'minor 7th', 'major 7th'];
 ```
 
-In `FretboardQuiz.tsx` delete its `INTERVAL_NAMES` constant and import it from `../../music/quiz`.
+In `FretboardQuiz.tsx` delete its `SEMITONE_NAMES` constant and import it from `../../music/quiz`.
 
 - [ ] **Step 2: Write the failing tests** (`earQuiz.test.ts`)
 
@@ -341,7 +341,7 @@ Expected: FAIL, "Failed to resolve import './earQuiz'"
 import type { QuizAnswer } from '../api/client';
 import { mod12 } from './chordTones';
 import { positionAt } from './positions';
-import { checkFocus, focusCells, INTERVAL_NAMES, pickItem, plainName, QuizFocusError, weakness, type FretboardFocus, type Rng } from './quiz';
+import { checkFocus, focusCells, SEMITONE_NAMES, pickItem, plainName, QuizFocusError, weakness, type FretboardFocus, type Rng } from './quiz';
 import { pretty } from './spell';
 import type { Instrument } from './tuning';
 
@@ -403,7 +403,7 @@ export function judgeNeck(target: number, tapped: number): string | null {
   const n = Math.abs(d);
   if (n % 12 === 0) return `✕ right note, ${n === 12 ? 'an octave' : `${n / 12} octaves`} too ${dir}`;
   const that = `✕ that's ${pitchLabel(tapped)}`;
-  return n > 12 ? `${that}, more than an octave too ${dir}` : `${that}, a ${INTERVAL_NAMES[n]} too ${dir}`;
+  return n > 12 ? `${that}, more than an octave too ${dir}` : `${that}, a ${SEMITONE_NAMES[n]} too ${dir}`;
 }
 ```
 

@@ -12,6 +12,7 @@ import type { Cell } from '../../music/positions';
 import {
   focusFrets,
   focusRows,
+  SEMITONE_NAMES,
   fretboardQuestion,
   pcAt,
   plainName,
@@ -34,8 +35,6 @@ const MODES = [
   { value: 'find-interval', label: 'Find the interval' },
   { value: 'spell-chord', label: 'Spell the chord' },
 ] as const;
-
-const INTERVAL_NAMES = ['unison', 'minor 2nd', 'major 2nd', 'minor 3rd', 'major 3rd', '4th', 'tritone', '5th', 'minor 6th', 'major 6th', 'minor 7th', 'major 7th'];
 
 /** Keys 1–9, 0, -, = answer C … B in note-picker order (ui-spec §7). */
 export const NOTE_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='];
@@ -151,7 +150,7 @@ export function FretboardQuiz() {
       if (q.targets.some((t) => same(t, cell))) return finish(a);
       if (pc === q.answerPc) return miss(a, cell, `✕ that's ${name}, ${OUTSIDE}`);
       const d = mod12(pc - pcAt(inst, q.cell));
-      return miss(a, cell, d === 0 ? `✕ that's ${name}, the note you started from` : `✕ that's ${name}, a ${INTERVAL_NAMES[d]} above`);
+      return miss(a, cell, d === 0 ? `✕ that's ${name}, the note you started from` : `✕ that's ${name}, a ${SEMITONE_NAMES[d]} above`);
     }
     if (a.found.some((c) => same(c, cell))) return;
     if (q.targets.some((t) => same(t, cell))) {

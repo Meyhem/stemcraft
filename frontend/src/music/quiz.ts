@@ -24,7 +24,7 @@ export function mulberry32(seed: number): Rng {
   };
 }
 
-export type QuizKind = 'fretboard' | 'theory';
+export type QuizKind = 'fretboard' | 'theory' | 'ear';
 export type FretboardMode = 'name-note' | 'find-note' | 'find-interval' | 'spell-chord';
 export type TheoryTopic = 'keys' | 'chords' | 'intervals';
 
@@ -177,7 +177,7 @@ export function focusFor<T extends { strings: number[]; frets: [number, number] 
 }
 
 /** Throws the accurate `QuizFocusError` when the strings or the fret range leave no cell at all. */
-function checkFocus(inst: Instrument, focus: FretboardFocus): void {
+export function checkFocus(inst: Instrument, focus: FretboardFocus): void {
   if (focusRows(inst, focus).length === 0) throw new QuizFocusError('strings');
   const [lo, hi] = focusFrets(inst, focus);
   if (lo > hi) throw new QuizFocusError('frets');
@@ -200,6 +200,9 @@ export function focusCells(inst: Instrument, focus: FretboardFocus): Cell[] {
   }
   return out;
 }
+
+/** Interval names by semitones, 0–11, as the quizzes' feedback says them. */
+export const SEMITONE_NAMES = ['unison', 'minor 2nd', 'major 2nd', 'minor 3rd', 'major 3rd', '4th', 'tritone', '5th', 'minor 6th', 'major 6th', 'minor 7th', 'major 7th'];
 
 export const INTERVALS = [
   { name: '3m', label: 'minor 3rd' },
