@@ -14,7 +14,7 @@ from stemcraft_lib.practice import (
 
 def test_missing_file_reads_as_defaults(tmp_path):
     doc = read_practice(tmp_path)
-    assert doc.version == 1
+    assert doc.version == 2
     assert doc.instrument == "bass"
     assert doc.bass.exercise == "groove"
     assert doc.bass.key == 7
@@ -70,3 +70,18 @@ def test_unknown_values_are_rejected_not_coerced():
         Practice.model_validate({"bass": {"key": 12}})
     with pytest.raises(ValidationError):
         Practice.model_validate({"bass": {"drill": {"from_fret": 10}}})
+
+
+def test_v1_file_reads_as_v2_with_defaults(tmp_path):
+    practice_path(tmp_path).write_text(json.dumps({"version": 1, "bass": {"bpm": 90}}))
+    doc = read_practice(tmp_path)
+    assert doc.version == 2
+    assert doc.bass.bpm == 90
+    assert doc.bass.levels.drums == 0.6
+    assert doc.bass.backing.drum_groove == "rock"
+    assert doc.guitar.backing.chord_sound == "pad"
+
+
+def test_unknown_groove_is_rejected():
+    with pytest.raises(ValidationError):
+        Practice.model_validate({"bass": {"backing": {"drum_groove": "polka"}}})

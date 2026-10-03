@@ -17,7 +17,7 @@ def test_first_run_gets_defaults_without_writing(client, tmp_path):
     resp = client.get("/api/practice")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["version"] == 1
+    assert body["version"] == 2
     assert body["bass"]["groove"]["notes"] == "root_fifth_octave"
     assert body["guitar"]["levels"]["backing"] == 0.6
     assert not practice_path(tmp_path / "data").exists()

@@ -480,8 +480,11 @@ export type ProgressionId =
   | 'andalusian' | 'minor-one-four-five' | 'mixolydian' | 'minor-two-five-one' | 'canon'
   | 'one-four-six-five' | 'epic-minor' | 'one-three-four-five';
 
+export type ChordSound = 'pad' | 'keys';
+export type DrumGroove = 'rock' | 'shuffle' | 'half_time' | 'funk' | 'four_floor';
+export interface PracticeBacking { chord_sound: ChordSound; drum_groove: DrumGroove }
 export interface PracticeRamp { on: boolean; start: number; target: number; step: number; every_loops: number }
-export interface PracticeLevels { click: number; ref: number; ref_muted: boolean; backing: number; backing_muted: boolean }
+export interface PracticeLevels { click: number; ref: number; ref_muted: boolean; backing: number; backing_muted: boolean; chords: number; chords_muted: boolean; drums: number; drums_muted: boolean }
 export interface PracticeGroove {
   progression: ProgressionId;
   bars_per_chord: BarsPerChord;
@@ -527,10 +530,11 @@ export interface InstrumentSettings {
   scale: PracticeScale;
   arpeggio: PracticeArpeggio;
   drill: PracticeDrill;
+  backing: PracticeBacking;
 }
 export interface PracticePreset { name: string; instrument: PracticeInstrument; settings: InstrumentSettings }
 export interface PracticeDoc {
-  version: 1;
+  version: 2;
   instrument: PracticeInstrument;
   bass: InstrumentSettings;
   guitar: InstrumentSettings;
@@ -545,7 +549,7 @@ export const DEFAULT_INSTRUMENT_SETTINGS: InstrumentSettings = {
   count_in_bars: 1,
   seed: 1,
   ramp: { on: false, start: 80, target: 120, step: 5, every_loops: 2 },
-  levels: { click: 0.7, ref: 0.8, ref_muted: false, backing: 0.6, backing_muted: false },
+  levels: { click: 0.7, ref: 0.8, ref_muted: false, backing: 0.6, backing_muted: false, chords: 0.5, chords_muted: false, drums: 0.6, drums_muted: false },
   groove: {
     progression: 'pop', bars_per_chord: 1, notes: 'root_fifth_octave', rhythm: 'quarter', approach: 'chromatic',
     style: 'open', strum: 'folk', position: 'auto',
@@ -556,10 +560,11 @@ export const DEFAULT_INSTRUMENT_SETTINGS: InstrumentSettings = {
     path: 'up', rhythm: 'quarter',
   },
   drill: { drill: 'chromatic', from_fret: 5, direction: 'up_back', rhythm: 'eighth' },
+  backing: { chord_sound: 'pad', drum_groove: 'rock' },
 };
 
 export const DEFAULT_PRACTICE: PracticeDoc = {
-  version: 1,
+  version: 2,
   instrument: 'bass',
   bass: DEFAULT_INSTRUMENT_SETTINGS,
   guitar: DEFAULT_INSTRUMENT_SETTINGS,

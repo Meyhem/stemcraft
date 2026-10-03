@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from .atomic import atomic_write_json
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 PRESET_CAP = 100
 
 # music/progressions.ts PROGRESSIONS ids, in its order.
@@ -95,6 +95,12 @@ class Levels(_Strict):
     ref_muted: bool = False
     backing: float = Field(0.6, ge=0, le=1)
     backing_muted: bool = False
+    # Phase B (v2): the band. Chords play in bass mode only (in guitar mode the
+    # reference guitar is the chords); drums in both.
+    chords: float = Field(0.5, ge=0, le=1)
+    chords_muted: bool = False
+    drums: float = Field(0.6, ge=0, le=1)
+    drums_muted: bool = False
 
 
 class Groove(_Strict):
@@ -145,6 +151,11 @@ class Drill(_Strict):
     rhythm: LineRhythm = "eighth"
 
 
+class Backing(_Strict):
+    chord_sound: Literal["pad", "keys"] = "pad"
+    drum_groove: Literal["rock", "shuffle", "half_time", "funk", "four_floor"] = "rock"
+
+
 class InstrumentSettings(_Strict):
     exercise: Literal["groove", "scale", "arpeggio", "drill"] = "groove"
     key: int = Field(7, ge=0, le=11)  # pitch class of the tonic; 7 = G
@@ -157,6 +168,7 @@ class InstrumentSettings(_Strict):
     scale: Scale = Field(default_factory=Scale)
     arpeggio: Arpeggio = Field(default_factory=Arpeggio)
     drill: Drill = Field(default_factory=Drill)
+    backing: Backing = Field(default_factory=Backing)
 
 
 class Preset(_Strict):
@@ -174,7 +186,15 @@ class Preset(_Strict):
 
 
 class Practice(_Strict):
-    version: Literal[1] = SCHEMA_VERSION
+    version: Literal[2] = SCHEMA_VERSION
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade(cls, raw: object) -> object:
+        # v1 -> v2 is additive: the new fields take their defaults.
+        if isinstance(raw, dict) and raw.get("version") == 1:
+            return {**raw, "version": 2}
+        return raw
     instrument: Literal["bass", "guitar"] = "bass"
     bass: InstrumentSettings = Field(default_factory=InstrumentSettings)
     guitar: InstrumentSettings = Field(default_factory=InstrumentSettings)

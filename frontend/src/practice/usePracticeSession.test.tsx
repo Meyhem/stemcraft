@@ -54,7 +54,7 @@ function setup(settings: InstrumentSettings = DEFAULT_INSTRUMENT_SETTINGS) {
 }
 
 test('gainsFor: the reference in its slot, mutes as zero, the rest silent', () => {
-  const levels = { click: 0.7, ref: 0.8, ref_muted: false, backing: 0.6, backing_muted: true };
+  const levels = { ...DEFAULT_INSTRUMENT_SETTINGS.levels, backing_muted: true };
   expect(gainsFor('bass', levels)).toEqual({ vocals: 0, drums: 0, bass: 0.8, other: 0 });
   expect(gainsFor('guitar', levels)).toEqual({ vocals: 0, drums: 0, bass: 0, other: 0.8 });
   expect(gainsFor('guitar', { ...levels, backing_muted: false, ref_muted: true })).toEqual({ vocals: 0, drums: 0, bass: 0.6, other: 0 });
