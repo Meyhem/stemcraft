@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_PLAY_ALONG, type Analysis, type PlayAlongGuitar, type Song } from '../api/client';
 import { buildGrid } from './grid';
-import { describeGuitarBar, guitarEmptyText, guitarSource, guitarSummaries, strokeIndexAt } from './guitarSource';
+import { describeGuitarBar, guitarBars, guitarEmptyText, guitarSource, guitarSummaries, strokeIndexAt } from './guitarSource';
 import type { LoopBars } from './tabSource';
 
 function analysisOf(chords: string[]): Analysis {
@@ -124,4 +124,18 @@ describe('guitarSource', () => {
     const s = guitarSummaries(bars(['N', 'X', 'G']));
     expect(s.map((x) => [x.text, x.cell])).toEqual([['no chord', '–'], ['unclassified', '?'], ['G', 'G']]);
   });
+});
+
+test('guitarBars runs the D-20 pipeline over bare labels', () => {
+  const key = { tonicPc: 7, mode: 'major' as const };
+  const bars = guitarBars(
+    ['G', 'D', 'E:min', 'C'],
+    key,
+    { style: 'open', strum: 'folk', position: 'auto', simplify: false },
+    4,
+    0,
+    (bar) => (bar + 1) % 4,
+  );
+  expect(bars.map((b) => b.chord)).toEqual(['G', 'D', 'Em', 'C']);
+  expect(bars.every((b) => b.shape !== null && b.strokes.length === 6)).toBe(true);
 });

@@ -149,6 +149,58 @@ function chooseShapes(drafts: Draft[]): (GuitarShape | null)[] {
   return chosen;
 }
 
+/** D-20's pipeline over bare chord labels: draft each bar, choose shapes, add strums and pushes. */
+export function guitarBars(
+  labels: readonly string[],
+  key: ResolvedKey,
+  settings: PlayAlongGuitar,
+  beatsPerBar: number,
+  transpose: number,
+  nextOf: (bar: number) => number | null,
+): GuitarBar[] {
+  const drafts = labels.map((label, bar) => draftBar(bar, label, key, settings, transpose));
+  const chosen = chooseShapes(drafts);
+
+  const bars: GuitarBar[] = drafts.map((d, index) => {
+    const shape = chosen[index] ?? null;
+    const substitutions = [...d.substitutions];
+    if (shape && d.missedWindow) substitutions.push(`no ${d.missedWindow}-position ${d.chord}, fret ${shape.anchor}`);
+    let strokes = shape ? strumStrokes(settings.strum, beatsPerBar) : [];
+    let pushChord: string | null = null;
+    const early = strokes.findIndex((s) => s.early);
+    if (early >= 0) {
+      const target = nextOf(index);
+      if (target !== null && chosen[target]) {
+        pushChord = drafts[target]!.chord;
+      } else {
+        strokes = strokes.map((s) => ({ ...s, early: false }));
+        substitutions.push(target === null ? 'no push past the last bar' : 'no push into an empty bar');
+      }
+    }
+    return {
+      bar: d.bar,
+      label: d.label,
+      empty: d.empty,
+      reason: d.reason,
+      heard: d.heard,
+      chord: d.chord,
+      shape,
+      degrees: shape && d.tones ? degreesOf(shape, d.tones) : [],
+      strokes,
+      pushChord,
+      substitutions,
+    };
+  });
+
+  // A bar pushed into has its downbeat tied over from the push.
+  bars.forEach((b, index) => {
+    if (b.pushChord === null) return;
+    const target = nextOf(index)!;
+    bars[target] = { ...bars[target]!, strokes: withoutDownbeat(bars[target]!.strokes) };
+  });
+  return bars;
+}
+
 export const guitarSource: TabSource<GuitarBar> = {
   barsFor({ song, analysis, grid, loop }) {
     const transpose = song.playback.pitch_semitones;
@@ -156,51 +208,9 @@ export const guitarSource: TabSource<GuitarBar> = {
     if (!key) {
       return { ok: false, error: 'The analysis found no key candidates, so there is no key to spell the chords in.' };
     }
-    const settings = song.play_along.guitar;
     const labels = chordLabels(analysis);
     const nextOf = nextBarOf(labels.length, loop);
-    const drafts = labels.map((label, bar) => draftBar(bar, label, key, settings, transpose));
-    const chosen = chooseShapes(drafts);
-
-    const bars: GuitarBar[] = drafts.map((d, index) => {
-      const shape = chosen[index] ?? null;
-      const substitutions = [...d.substitutions];
-      if (shape && d.missedWindow) substitutions.push(`no ${d.missedWindow}-position ${d.chord}, fret ${shape.anchor}`);
-      let strokes = shape ? strumStrokes(settings.strum, grid.beatsPerBar) : [];
-      let pushChord: string | null = null;
-      const early = strokes.findIndex((s) => s.early);
-      if (early >= 0) {
-        const target = nextOf(index);
-        if (target !== null && chosen[target]) {
-          pushChord = drafts[target]!.chord;
-        } else {
-          strokes = strokes.map((s) => ({ ...s, early: false }));
-          substitutions.push(target === null ? 'no push past the last bar' : 'no push into an empty bar');
-        }
-      }
-      return {
-        bar: d.bar,
-        label: d.label,
-        empty: d.empty,
-        reason: d.reason,
-        heard: d.heard,
-        chord: d.chord,
-        shape,
-        degrees: shape && d.tones ? degreesOf(shape, d.tones) : [],
-        strokes,
-        pushChord,
-        substitutions,
-      };
-    });
-
-    // A bar pushed into has its downbeat tied over from the push.
-    bars.forEach((b, index) => {
-      if (b.pushChord === null) return;
-      const target = nextOf(index)!;
-      bars[target] = { ...bars[target]!, strokes: withoutDownbeat(bars[target]!.strokes) };
-    });
-
-    return { ok: true, key, bars, nextOf };
+    return { ok: true, key, bars: guitarBars(labels, key, song.play_along.guitar, grid.beatsPerBar, transpose, nextOf), nextOf };
   },
 };
 
