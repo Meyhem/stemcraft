@@ -19,6 +19,8 @@ import { AppShell } from './AppShell';
 // D-19: the Theory tab and tonal load only when the tab is opened, keeping the
 // main bundle under Vite's 500 kB warning.
 const Theory = lazy(() => import('../screens/Theory').then((m) => ({ default: m.Theory })));
+// D-22: Practice loads its music and audio code only when the tab is opened.
+const Practice = lazy(() => import('../screens/Practice').then((m) => ({ default: m.Practice })));
 
 // Task 8: dev-only manual verification page for the playback engine (R-01).
 // The `import.meta.env.DEV` check must gate the dynamic import() itself, not
@@ -62,6 +64,7 @@ export function AppRoutes() {
           {/* D-19: the tool is in the path, the shared selection in the query string. */}
           <Route path="theory" element={<Suspense fallback={<Loader size="page" label="Loading theory…" />}><Theory /></Suspense>} />
           <Route path="theory/:tool" element={<Suspense fallback={<Loader size="page" label="Loading theory…" />}><Theory /></Suspense>} />
+          <Route path="practice" element={<Suspense fallback={<Loader size="page" label="Loading practice…" />}><Practice /></Suspense>} />
           {/* D-18: one session per song, above the content that plays it. SongScreen is
               the shared header, transport and Stems / Tab / Play along switch; the child
               routes are only the content under it, so switching never stops playback and

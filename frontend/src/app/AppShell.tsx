@@ -11,6 +11,7 @@ const NAV = [
   { to: '/', label: 'Library' },
   { to: '/splitter', label: 'Album splitter' },
   { to: '/theory', label: 'Theory' },
+  { to: '/practice', label: 'Practice' },
   // Operational, not a place you practise in: parked at the far end of the bar.
   { to: '/jobs', label: 'Job queue', far: true },
 ];
