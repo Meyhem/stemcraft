@@ -468,3 +468,100 @@ export const DEFAULT_THEORY: TheoryDoc = {
     history: [],
   },
 };
+
+// Mirrors packages/stemcraft_lib/src/stemcraft_lib/practice.py (D-22). The API is
+// practice.json's only writer; the browser GETs it and PUTs the whole document.
+export type PracticeInstrument = 'bass' | 'guitar';
+export type ExerciseKind = 'groove' | 'scale' | 'arpeggio' | 'drill';
+export type LineRhythm = 'quarter' | 'eighth' | 'triplet' | 'sixteenth';
+export type BarsPerChord = 1 | 2 | 4;
+export type ProgressionId =
+  | 'pop' | 'fifties' | 'two-five-one' | 'one-four-five' | 'twelve-bar' | 'minor-blues' | 'sensitive'
+  | 'andalusian' | 'minor-one-four-five' | 'mixolydian' | 'minor-two-five-one' | 'canon'
+  | 'one-four-six-five' | 'epic-minor' | 'one-three-four-five';
+
+export interface PracticeRamp { on: boolean; start: number; target: number; step: number; every_loops: number }
+export interface PracticeLevels { click: number; ref: number; ref_muted: boolean; backing: number; backing_muted: boolean }
+export interface PracticeGroove {
+  progression: ProgressionId;
+  bars_per_chord: BarsPerChord;
+  notes: PatternNotes;
+  rhythm: PatternRhythm;
+  approach: PatternApproach;
+  style: GuitarStyle;
+  strum: GuitarStrum;
+  position: GuitarPosition;
+}
+export interface PracticeScale {
+  scale: import('../music/spell').ScaleId;
+  shape: 'position' | 'two_octaves';
+  from_fret: number;
+  path: 'up' | 'down' | 'up_down' | 'thirds' | 'groups3' | 'groups4';
+  rhythm: LineRhythm;
+}
+export interface PracticeArpeggio {
+  over: 'chord' | 'progression';
+  quality: 'maj' | 'min' | '7' | 'maj7' | 'min7' | 'dim' | 'hdim7';
+  progression: ProgressionId;
+  bars_per_chord: BarsPerChord;
+  tones: 'triad' | 'seventh';
+  path: 'up' | 'down' | 'up_down' | 'inversions';
+  rhythm: LineRhythm;
+}
+export interface PracticeDrill {
+  drill: 'chromatic' | 'permutations' | 'spider' | 'crossing' | 'octaves';
+  from_fret: number;
+  direction: 'up' | 'up_back';
+  rhythm: LineRhythm;
+}
+export interface InstrumentSettings {
+  exercise: ExerciseKind;
+  /** Pitch class of the tonic, 0-11. */
+  key: number;
+  bpm: number;
+  count_in_bars: 0 | 1 | 2;
+  seed: number;
+  ramp: PracticeRamp;
+  levels: PracticeLevels;
+  groove: PracticeGroove;
+  scale: PracticeScale;
+  arpeggio: PracticeArpeggio;
+  drill: PracticeDrill;
+}
+export interface PracticePreset { name: string; instrument: PracticeInstrument; settings: InstrumentSettings }
+export interface PracticeDoc {
+  version: 1;
+  instrument: PracticeInstrument;
+  bass: InstrumentSettings;
+  guitar: InstrumentSettings;
+  presets: PracticePreset[];
+}
+
+/** The server's defaults (practice.py), for tests and "Reset to defaults". */
+export const DEFAULT_INSTRUMENT_SETTINGS: InstrumentSettings = {
+  exercise: 'groove',
+  key: 7,
+  bpm: 100,
+  count_in_bars: 1,
+  seed: 1,
+  ramp: { on: false, start: 80, target: 120, step: 5, every_loops: 2 },
+  levels: { click: 0.7, ref: 0.8, ref_muted: false, backing: 0.6, backing_muted: false },
+  groove: {
+    progression: 'pop', bars_per_chord: 1, notes: 'root_fifth_octave', rhythm: 'quarter', approach: 'chromatic',
+    style: 'open', strum: 'folk', position: 'auto',
+  },
+  scale: { scale: 'minor-pentatonic', shape: 'position', from_fret: 5, path: 'up_down', rhythm: 'eighth' },
+  arpeggio: {
+    over: 'progression', quality: 'maj7', progression: 'two-five-one', bars_per_chord: 1, tones: 'seventh',
+    path: 'up', rhythm: 'quarter',
+  },
+  drill: { drill: 'chromatic', from_fret: 5, direction: 'up_back', rhythm: 'eighth' },
+};
+
+export const DEFAULT_PRACTICE: PracticeDoc = {
+  version: 1,
+  instrument: 'bass',
+  bass: DEFAULT_INSTRUMENT_SETTINGS,
+  guitar: DEFAULT_INSTRUMENT_SETTINGS,
+  presets: [],
+};
